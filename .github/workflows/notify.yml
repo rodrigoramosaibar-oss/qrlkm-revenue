@@ -19,6 +19,9 @@ jobs:
           ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
           ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_API_KEY }}
         run: |
-          curl -sS -X POST https://api.onesignal.com/notifications \
+          curl -sS --fail-with-body -X POST https://api.onesignal.com/notifications \
             -H "Authorization: Key $ONESIGNAL_API_KEY" -H "Content-Type: application/json" \
-            -d "{\"app_id\":\"$ONESIGNAL_APP_ID\",\"included_segments\":[\"Total Subscriptions\"],\"target_channel\":\"push\",\"headings\":{\"en\":\"Revenue Control\",\"es\":\"Revenue Control\"},\"contents\":{\"en\":\"Datos actualizados\",\"es\":\"Datos actualizados: ya puedes ver el cierre de ayer.\"},\"url\":\"https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/\"}"
+            -d "{\"app_id\":\"$ONESIGNAL_APP_ID\",\"included_segments\":[\"Total Subscriptions\"],\"target_channel\":\"push\",\"headings\":{\"en\":\"Revenue Control\",\"es\":\"Revenue Control\"},\"contents\":{\"en\":\"Datos actualizados\",\"es\":\"Datos actualizados: ya puedes ver el cierre de ayer.\"},\"url\":\"https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/\"}" > resp.json
+          cat resp.json; echo
+          grep -Eq '"id": ?"[^"]' resp.json || { echo 'OneSignal no devolvio id: aviso NO enviado'; exit 1; }
+          if grep -q '"errors"' resp.json; then echo 'OneSignal devolvio errores'; exit 1; fi

@@ -1780,7 +1780,7 @@ function hMonthTable(P){
     const L=P.L,Pc={L,m:L.m,ytd:false,a:hAgg(L.m,L.d)},pr=hProjection(Pc),F=HOT.ref.forecast26,B=HOT.ref.budget26;
     const tv=(R,m)=>(R&&R.total&&R.total[m-1])||0;
     let sR=0,sF=0,sB=0,sE=0,sx={rr:0,fb:0,ot:0};
-    const pcell=(num,den)=>den&&num!=null?`<td class="${dcls(num/den-1)}">${hp(num/den,0)}</td>`:'<td>—</td>';
+    const pcell=(num,den)=>den&&num!=null?`<td class="${dcls(Math.round(num/den*100)/100-1)}">${hp(num/den,0)}</td>`:'<td>—</td>';
     const rows=Array.from({length:12},(_,i)=>i+1).map(m=>{
       const past=m<L.m,cur=m===L.m,fut=m>L.m,x=fut?null:hAgg(m),f=tv(F,m),b=tv(B,m);
       const est=past?x.tot:cur?(pr?pr.tot:f):f;

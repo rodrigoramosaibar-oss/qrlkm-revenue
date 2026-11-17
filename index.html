@@ -529,6 +529,11 @@ body.has-hot .areaSw{display:flex}.areaSw button{flex:1;padding:.5rem;border:0;b
 body.area-fb [data-area="hotel"].tab,body.area-fb .sbGroup[data-area="hotel"],body:not(.area-fb) .tab[data-area="fb"],body:not(.area-fb) .sbGroup[data-area="fb"]{display:none}
 body:not(.has-hot) [data-hot]{display:none}
 body.area-hotel .dashOnly{display:none!important}
+/* selector Hotel / F&B en la cabecera (siempre visible, también en móvil) */
+.ctx .areaSw{margin:0 0 0 .3rem;flex:0 0 auto;background:var(--panel)}
+.ctx .areaSw button{padding:.4rem .95rem;color:var(--ink);font-size:.8rem}
+.ctx .areaSw button.on{background:var(--accent);color:var(--accentInk)}
+@media(max-width:900px){.ctx .ctxTitle{display:none}.ctx .areaSw{margin-left:.1rem}}
 
 /* ---- marca ---- */
 .brandBar{display:none}
@@ -631,7 +636,6 @@ body[data-layout="bento"] .hc{border:0}
   <div class="sbLogo"><img data-logo="lock" alt="Kimpton Los Monteros Marbella"></div>
   <div class="sbApp">QRLKM <b>Revenue Control</b></div>
   <div class="sbUser" id="sbUser"></div>
-  <div class="areaSw" id="areaSw"><button data-area="hotel" onclick="setArea('hotel')">Hotel</button><button data-area="fb" class="on" onclick="setArea('fb')">F&amp;B</button></div>
   <div data-area="hotel" class="sbGroup">Hotel</div>
   <button data-area="hotel" class="tab" data-view="hotel" onclick="setArea('hotel')"><svg viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13M9 21v-6h6v6"/></svg>Resumen hotel</button>
   <button data-area="hotel" class="tab" data-view="rooms" onclick="setArea('rooms')"><svg viewBox="0 0 24 24"><path d="M3 18v-7a3 3 0 013-3h12a3 3 0 013 3v7M3 15h18M3 21v-3M21 21v-3"/></svg>Rooms</button>
@@ -668,10 +672,9 @@ body[data-layout="bento"] .hc{border:0}
   <div class="backupBanner" id="backupBanner"><span id="backupMsg"></span><button class="btn" data-edit onclick="publishData()">Publicar ahora</button></div>
   <div class="ctx">
     <button class="hamb" aria-label="Menú" onclick="document.body.classList.toggle('navopen')"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <div class="areaSw" id="areaSw"><button data-area="hotel" onclick="setArea('hotel')">Hotel</button><button data-area="fb" class="on" onclick="setArea('fb')">F&amp;B</button></div>
     <div class="ctxTitle" id="ctxTitle">Dashboard</div>
     <div class="spacer"></div>
-    <button class="styleBtn dashOnly" data-edit id="flashBtn" onclick="flashOpen()">Cargar Flash</button>
-    <button class="styleBtn dashOnly" id="styleBtn" onclick="cycleLayout()">Estilo</button>
     <div class="ctl dashOnly"><span>Mes</span><select id="quickMonth" onchange="setDashboardMonth(this.value)"></select></div>
     <div class="ctl dashOnly opt"><span>Objetivo</span><select id="scenarioSel" onchange="setActiveScenarioFromDash(this.value)"></select></div>
     <div class="ctl dashOnly opt"><span>Comparar con</span><select id="compareSel" onchange="setCompareScenario(this.value)"></select></div>

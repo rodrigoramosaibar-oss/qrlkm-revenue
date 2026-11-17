@@ -1834,10 +1834,6 @@ function hFcstAcc(P){ // precisión del forecast: cierre real vs forecast del pr
   }catch(e){return''}
 }
 
-async function hFaImport(fa){ // guarda el archivo de forecasts en los datos cifrados del hotel y publica (solo editor)
-  if(!HOT_EDIT||!fa||!fa.m)return false;
-  HOT.fa=fa;HST.dirty=true;await hotDraftSave();return hotelPublish();
-}
 function hCL(P){ // etiqueta corta del comparador: FCT / BUD / 2025 (+ MTD o YTD)
   const b={forecast26:'FCT',budget26:'BUD',py25:'2025'}[HST.cmp]||'comp.';
   return b+(P.ytd?' YTD':(P.m===P.L.m&&P.L.partial?' MTD':''));
@@ -2065,6 +2061,10 @@ async function hotDraftLoad(){
   try{const o=JSON.parse(localStorage.getItem(HDRAFT)||'null');if(!o)return;
     if(o.updated&&o.updated>=HOT.updated&&o.dirtyAt){const d=await Crypto44.decryptData(window.__DEKH,o);if(JSON.stringify(d)!==JSON.stringify(HOT)){Object.keys(HOT).forEach(k=>delete HOT[k]);Object.assign(HOT,d);HST.dirty=true;toast('Tienes datos del hotel cargados sin publicar. Pulsa «Publicar datos».',8000)}}
     else localStorage.removeItem(HDRAFT)}catch(e){}
+}
+async function hFaImport(fa){ // guarda el archivo de forecasts en los datos cifrados del hotel y publica (solo editor)
+  if(!HOT_EDIT||!fa||!fa.m)return false;
+  HOT.fa=fa;HST.dirty=true;await hotDraftSave();return hotelPublish();
 }
 async function hotelPublish(){
   if(!HOT_EDIT||!HST.dirty)return true;

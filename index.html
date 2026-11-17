@@ -1818,18 +1818,18 @@ function hFcstAcc(P){ // precisión del forecast: cierre real vs forecast del pr
     const rows=Array.from({length:L.m-1},(_,i)=>i+1).map(m=>{
       const f=FA.m[m];if(!f){miss.push(MS3[m-1]);return`<tr><td class="vn">${MS3[m-1]}</td><td colspan="7" class="hm" style="color:var(--muted)">sin forecast guardado</td></tr>`}
       const x=hAgg(m),a={tot:x.tot,rr:x.rr,fb:x.fb,ot:x.ot},e={};
-      ks.forEach(k=>{e[k]=a[k]?(f[k]-a[k])/a[k]:0;acc[k].push(e[k])});
-      if(f.occ!=null)oc.push(f.occ-kpis(x).occ);
-      return`<tr><td class="vn">${MS3[m-1]}</td><td>${hn(a.tot)}</td><td>${hn(f.tot)}</td><td class="${cl(e.tot)}">${hsg(f.tot-a.tot)}</td><td class="${cl(e.tot)}"><b>${sg(e.tot)}</b></td><td class="hm ${cl(e.rr)}">${sg(e.rr)}</td><td class="hm ${cl(e.fb)}">${sg(e.fb)}</td><td class="hm ${cl(e.ot)}">${sg(e.ot)}</td></tr>`}).join('');
+      ks.forEach(k=>{e[k]=f[k]?(a[k]-f[k])/f[k]:0;acc[k].push(e[k])});
+      if(f.occ!=null)oc.push(kpis(x).occ-f.occ);
+      return`<tr><td class="vn">${MS3[m-1]}</td><td>${hn(a.tot)}</td><td>${hn(f.tot)}</td><td class="${cl(e.tot)}">${hsg(a.tot-f.tot)}</td><td class="${cl(e.tot)}"><b>${sg(e.tot)}</b></td><td class="hm ${cl(e.rr)}">${sg(e.rr)}</td><td class="hm ${cl(e.fb)}">${sg(e.fb)}</td><td class="hm ${cl(e.ot)}">${sg(e.ot)}</td></tr>`}).join('');
     const n=acc.tot.length;if(!n)return'';
     const bias=k=>acc[k].reduce((s,v)=>s+v,0)/n,mape=k=>acc[k].reduce((s,v)=>s+Math.abs(v),0)/n;
     const sumr=(t,fn)=>`<tr class="tot"><td class="vn">${t}</td><td></td><td></td><td></td>${['tot','rr','fb','ot'].map((k,i)=>`<td class="${i?'hm ':''}${cl(fn(k))}"><b>${sg(fn(k))}</b></td>`).join('')}</tr>`;
     const mape1=k=>mape(k);
-    const tbl=`<div class="fscroll facc"><table class="ftab htab"><thead><tr><th>Mes</th><th>Real</th><th>Forecast</th><th>Error €</th><th>Error %</th><th class="hm">Rooms</th><th class="hm">F&amp;B</th><th class="hm">Otros</th></tr></thead><tbody>${rows}${sumr('Sesgo medio',bias)}${sumr('Error medio abs.',mape1)}</tbody></table></div>`;
+    const tbl=`<div class="fscroll facc"><table class="ftab htab"><thead><tr><th>Mes</th><th>Real</th><th>Forecast</th><th>Desv. €</th><th>Desv. %</th><th class="hm">Rooms</th><th class="hm">F&amp;B</th><th class="hm">Otros</th></tr></thead><tbody>${rows}${sumr('Desv. media',bias)}${sumr('Desv. media abs.',mape1)}</tbody></table></div>`;
     const tb=bias('tot'),rb=bias('rr');
-    const ex=FA.x?Object.keys(FA.x).map(m=>{const x=hAgg(+m);if(+m>=L.m||!x||!x.tot)return'';const f=FA.x[m].f;return` ${MS3[m-1]} con ${FA.x[m].l}: ${sg((f.tot-x.tot)/x.tot)} (más antelación, más error).`}).join(''):'';
-    const ocn=oc.length?` Ocupación: el forecast se pasó de media ${(oc.reduce((s,v)=>s+v,0)/oc.length*100>=0?'+':'−')}${Math.abs(oc.reduce((s,v)=>s+v,0)/oc.length*100).toFixed(1).replace('.',',')} pts.`:'';
-    const note=`<p class="hnote">Error = (Forecast − Real) / Real: positivo = forecast por encima del real (optimista). Forecast = versión definitiva del propio mes (≈ día 10).${miss.length?' Sin forecast guardado: '+miss.join(', ')+'.':''} Sesgo total ${sg(tb)}${Math.abs(tb)<.01?'':tb>0?': tiende a ser optimista':': tiende a quedarse corto'}; Rooms ${sg(rb)}.${ocn}${ex}</p>`;
+    const ex=FA.x?Object.keys(FA.x).map(m=>{const x=hAgg(+m);if(+m>=L.m||!x||!x.tot)return'';const f=FA.x[m].f;return` ${MS3[m-1]} con ${FA.x[m].l}: ${sg((x.tot-f.tot)/f.tot)} (más antelación, más desviación).`}).join(''):'';
+    const ocn=oc.length?` Ocupación real vs forecast: ${(oc.reduce((s,v)=>s+v,0)/oc.length*100>=0?'+':'−')}${Math.abs(oc.reduce((s,v)=>s+v,0)/oc.length*100).toFixed(1).replace('.',',')} pts de media.`:'';
+    const note=`<p class="hnote">Desviación = (Real − Forecast) / Forecast: positivo = el real superó al forecast (forecast corto); negativo = el real no llegó (forecast optimista). Forecast = versión definitiva del propio mes (≈ día 10).${miss.length?' Sin forecast guardado: '+miss.join(', ')+'.':''} Desviación media total ${sg(tb)}${Math.abs(tb)<.01?'':tb>0?': el forecast tiende a quedarse corto':': el forecast tiende a ser optimista'}; Rooms ${sg(rb)}.${ocn}${ex}</p>`;
     return hCard('Precisión del forecast','real vs forecast del mes · '+n+' meses',tbl+note);
   }catch(e){return''}
 }

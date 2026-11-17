@@ -2140,7 +2140,7 @@ async function otbCommit(publish){
   if(publish){const ok=await hotelPublish();if(ok&&ghConfigured())toast('Ocupación en libros publicada ✓',6000)}else toast('Opera guardada en este dispositivo.');
 }
 if(HAS_HOT){hotDraftLoad();}
-Object.assign(window,{hSet,setArea,otbOpen,otbHandle,otbCommit,hotelCardSVG,hotelPublish,renderHotel,renderRooms,renderOtb});
+Object.assign(window,{hSet,setArea,otbOpen,otbHandle,otbCommit,hotelCardSVG,hotelPublish,hFaImport,renderHotel,renderRooms,renderOtb});
 
 // ======================= v47 · avisos de datos nuevos =======================
 const PUSH=window.__PUSH||{appId:''};

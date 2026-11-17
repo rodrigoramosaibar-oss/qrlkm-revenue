@@ -1796,19 +1796,57 @@ const hBul=items=>'<ul class="hbul">'+items.filter(Boolean).map(t=>`<li>${t}</li
 const hHead=(tag,title,intro,ctl)=>`<div class="hTop"><div><div class="eyebrow">KIMPTON LOS MONTEROS MARBELLA · ${tag}</div><h1 class="hTitle">${title}</h1>${intro?`<p class="hIntro">${intro}</p>`:''}</div>${ctl}</div>`;
 const hCell=(k,v,s,cls,sub)=>`<div class="hc"><span class="hk">${k}</span><b class="hv ${sub?'':cls||''}">${v}</b><i class="hs ${sub?cls||'':''}">${s||''}</i></div>`;
 const hCard=(t,r,body)=>`<section class="card hcard"><div class="cardHead"><h2>${t}</h2><span class="muted">${r||''}</span></div><div class="cardBody">${body}</div></section>`;
+// ---- comparativa con Forecast: A LA FECHA (MTD) y MES COMPLETO ----
+function hProjLines(P,pr){
+  const a=P.a;
+  if(!(P.m===P.L.m&&P.L.partial))return{rr:a.rr,fb:a.fb,ot:a.ot,tot:a.tot,so:a.so,av:a.av};
+  if(!pr)return null;
+  const k=a.so?(pr.so-a.so)/a.so:0;
+  return{rr:pr.rr,fb:a.fb*(1+k),ot:a.ot*(1+k),tot:pr.tot,so:pr.so,av:pr.av};
+}
+function hDualCards(P,pr){
+  try{
+    if(P.ytd)return'';
+    const a=P.a,r=P.r,f=P.full,pj=hProjLines(P,pr),cur=P.m===P.L.m&&P.L.partial,nm=HCMP[HST.cmp].split(' ')[0];
+    const L=[['Total hotel','tot',1],['Rooms','rr'],['F&amp;B','fb'],['Otros','ot']];
+    const pc=(x,y)=>y?hp(x/y,1):'—';
+    const rows=(A,B)=>L.map(([n,k,b])=>`<tr class="${b?'tot':''}"><td class="vn">${n}</td><td>${hn(A[k])}</td><td>${hn(B[k])}</td><td class="${dcls(A[k]-B[k])}">${hsg(A[k]-B[k])}</td><td class="${dcls(A[k]-B[k])}">${pc(A[k],B[k])}</td></tr>`).join('');
+    const head=(x,y)=>`<thead><tr><th>Línea</th><th>${x}</th><th>${y}</th><th>Δ €</th><th>%</th></tr></thead>`;
+    const t1=`<div class="fscroll"><table class="ftab htab">${head('Actual',nm)}<tbody>${rows(a,r)}</tbody></table></div>`;
+    const t2=pj?`<div class="fscroll"><table class="ftab htab">${head(nm+' mes',cur?'Cierre est.':'Real')}<tbody>${L.map(([n,k,b])=>`<tr class="${b?'tot':''}"><td class="vn">${n}</td><td>${hn(f[k])}</td><td>${hn(pj[k])}</td><td class="${dcls(pj[k]-f[k])}">${hsg(pj[k]-f[k])}</td><td class="${dcls(pj[k]-f[k])}">${pc(pj[k],f[k])}</td></tr>`).join('')}</tbody></table></div>`:`<p class="hnote">Aún no hay Opera en libros: sin cierre estimado del mes.</p>`;
+    return hCard('A la fecha (MTD) vs '+nm,cur?'hasta el '+P.L.d+(P.exact?' · comparador del Flash':' · prorrateo lineal'):'mes cerrado',t1)
+      +hCard('Mes completo vs '+nm,cur?'cierre estimado con Opera en libros':'mes cerrado',t2);
+  }catch(e){return''}
+}
+function hRoomsDual(P,pr){
+  try{
+    if(P.ytd)return'';
+    const a=P.a,r=P.r,f=P.full,pj=hProjLines(P,pr),cur=P.m===P.L.m&&P.L.partial,nm=HCMP[HST.cmp].split(' ')[0];
+    const k=o=>({rr:o.rr,occ:o.av?o.so/o.av:0,adr:o.so?o.rr/o.so:0,rp:o.av?o.rr/o.av:0});
+    const L=[['Room revenue','rr',0],['Ocupación','occ',1],['ADR','adr',2],['RevPAR','rp',2]];
+    const rows=(A,B,inv)=>L.map(([n,key,t])=>{const p=A[key],q=B[key],x=inv?q:p,y=inv?p:q,d=x-y,c=dcls(d);
+      const fx=t===1?hp(p):hn(p,t),fy=t===1?hp(q):hn(q,t),fd=t===1?(d>=0?'+':'−')+hn(Math.abs(d)*100,1)+' pts':(t===2?(d>=0?'+':'−')+hn(Math.abs(d),2):hsg(d));
+      return`<tr><td class="vn">${n}</td><td>${fx}</td><td>${fy}</td><td class="${c}">${fd}</td><td class="${c}">${t===1||!y?'—':hp(x/y,1)}</td></tr>`}).join('');
+    const head=(x,y)=>`<thead><tr><th>Línea</th><th>${x}</th><th>${y}</th><th>Δ</th><th>%</th></tr></thead>`;
+    const t1=`<div class="fscroll"><table class="ftab htab">${head('Actual',nm)}<tbody>${rows(k(a),k(r))}</tbody></table></div>`;
+    const t2=pj?`<div class="fscroll"><table class="ftab htab">${head(nm+' mes',cur?'Cierre est.':'Real')}<tbody>${rows(k(f),k(pj),1)}</tbody></table></div>`:`<p class="hnote">Aún no hay Opera en libros: sin cierre estimado del mes.</p>`;
+    return hCard('Rooms · a la fecha (MTD) vs '+nm,cur?'hasta el '+P.L.d+(P.exact?' · comparador del Flash':' · prorrateo lineal'):'mes cerrado',t1)
+      +hCard('Rooms · mes completo vs '+nm,cur?'cierre estimado con Opera en libros':'mes cerrado',t2);
+  }catch(e){return''}
+}
 function renderHotel(){
   const host=$('hotel');if(!HAS_HOT){host.innerHTML='<div class="hwrap"><p>No tienes acceso a esta sección.</p></div>';return}
   const P=hPeriod(),a=P.a,r=P.r,K=kpis(a),Kr=kpis(r),pr=hProjection(P),C=HCMP[HST.cmp],dm=a.tot||1;
-  const partial=!P.ytd&&!P.exact&&P.m===P.L.m&&P.L.partial,tp=partial?a.tot/(P.full.tot||1):a.tot/(r.tot||1);
+  const partial=!P.ytd&&!P.exact&&P.m===P.L.m&&P.L.partial,tp=a.tot/(r.tot||1);
   const dayKeys=hkeys().filter(k=>+k.slice(5,7)===P.m),vals=dayKeys.map(k=>{const x=HOT.days[k];return x.rr+x.fb+x.ot});
   const intro=`A día <b>${P.L.d}</b> de ${months[P.L.m-1].toLowerCase()} el hotel suma <b>${hn(a.tot)} €</b> (Rooms ${hp(a.rr/dm,0)}, F&amp;B ${hp(a.fb/dm,0)}, Otros ${hp(a.ot/dm,0)}), <b class="${dcls(a.tot-r.tot)}">${hsg(a.tot-r.tot)} €</b> frente a ${C}${P.exact?' a la fecha':''}.`+(pr?` Con lo que Opera tiene en libros, cerraría en <b>${hn(pr.tot)} €</b> (${hsg(pr.tot-P.full.tot)} € sobre el mes completo del comparador).`:'');
-  const strip=`<div class="hstrip">${hCell('Revenue total',hn(a.tot)+' €',hn(a.tot/Math.max(1,P.upto<99?P.upto:P.L.d),0)+' €/día')}${hCell('Vs '+C.split(' ')[0],hp(tp,1),partial?'del mes completo':'cumplimiento',dcls(tp-1))}${hCell('Rooms',hn(a.rr)+' €',hsg(a.rr-r.rr)+' €',dcls(a.rr-r.rr),1)}${hCell('F&B',hn(a.fb)+' €',hsg(a.fb-r.fb)+' €',dcls(a.fb-r.fb),1)}${hCell('Otros',hn(a.ot)+' €',hsg(a.ot-r.ot)+' €',dcls(a.ot-r.ot),1)}${pr?hCell('Cierre estimado',hn(pr.tot)+' €',hsg(pr.tot-P.full.tot)+' € vs mes',dcls(pr.tot-P.full.tot),1):''}</div>`;
+  const strip=`<div class="hstrip">${hCell('Revenue total',hn(a.tot)+' €',hn(a.tot/Math.max(1,P.upto<99?P.upto:P.L.d),0)+' €/día')}${hCell('Vs '+C.split(' ')[0],hp(tp,1),(P.m===P.L.m&&P.L.partial&&!P.ytd)?'a la fecha':'cumplimiento',dcls(tp-1))}${hCell('Rooms',hn(a.rr)+' €',hsg(a.rr-r.rr)+' €',dcls(a.rr-r.rr),1)}${hCell('F&B',hn(a.fb)+' €',hsg(a.fb-r.fb)+' €',dcls(a.fb-r.fb),1)}${hCell('Otros',hn(a.ot)+' €',hsg(a.ot-r.ot)+' €',dcls(a.ot-r.ot),1)}${pr?hCell('Cierre estimado',hn(pr.tot)+' €',hsg(pr.tot-P.full.tot)+' € vs mes',dcls(pr.tot-P.full.tot),1):''}</div>`;
   const kp=`<div class="hstrip k4">${hCell('Ocupación',hp(K.occ),hp(Kr.occ)+' comp.')}${hCell('ADR',hn(K.adr,2)+' €',hn(Kr.adr,2)+' € comp.')}${hCell('RevPAR',hn(K.revpar,2)+' €',hn(Kr.revpar,2)+' € comp.')}${hCell('Hab. vendidas',hn(a.so),hn(r.so)+' comp.')}</div>`;
   const tbl=`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Línea</th><th>Actual</th><th>Comparador</th><th class="hm">Δ €</th><th>% cumpl.</th><th class="hm">Mes completo</th></tr></thead><tbody>${hRow('Rooms',a.rr,r.rr,P.full.rr)}${hRow('F&amp;B',a.fb,r.fb,P.full.fb)}${hRow('Otros ingresos',a.ot,r.ot,P.full.ot)}${hRow('Total hotel',a.tot,r.tot,P.full.tot,1)}</tbody></table></div>`;
-  const bul=hBul([`<b>${hn(a.tot)} €</b> en total · <span class="${dcls(a.tot-r.tot)}">${hsg(a.tot-r.tot)} €</span> vs comp. (${hp(tp,0)}${partial?' del mes':''})`,
+  const bul=hBul([`<b>${hn(a.tot)} €</b> en total · <span class="${dcls(a.tot-r.tot)}">${hsg(a.tot-r.tot)} €</span> vs comp. (${hp(tp,0)})`,
     `Rooms <b>${hn(a.rr)} €</b> <span class="${dcls(a.rr-r.rr)}">${hsg(a.rr-r.rr)}</span> · F&amp;B <b>${hn(a.fb)} €</b> <span class="${dcls(a.fb-r.fb)}">${hsg(a.fb-r.fb)}</span>`,
     `Otros <b>${hn(a.ot)} €</b> · Ocupación <b>${hp(K.occ)}</b> (${hp(Kr.occ)})`,`ADR <b>${hn(K.adr,2)} €</b> · RevPAR <b>${hn(K.revpar,2)} €</b>`,pr?`Cierre estimado <b>${hn(pr.tot)} €</b> (<span class="${dcls(pr.tot-P.full.tot)}">${hsg(pr.tot-P.full.tot)}</span> vs mes)`:'']);
-  const left=hCard('Rooms · F&B · Otros','vs '+C+(P.m===P.L.m&&P.L.partial?(P.exact?' · a la fecha':' · prorrateo lineal'):''),tbl)+hCard('Evolución mensual','total hotel · * mes en curso',hMonthTable(P));
+  const left=(P.ytd?hCard('Rooms · F&B · Otros','vs '+C,tbl):hDualCards(P,pr))+hCard('Evolución mensual','total hotel · * mes en curso',hMonthTable(P));
   const right=(P.ytd?hCard('Ocupación por mes','%',hBars(Array.from({length:P.m},(_,i)=>kpis(hAgg(i+1)).occ*100),MS3.slice(0,P.m))):hCard('Revenue total por día','mes de '+months[P.m-1].toLowerCase(),hBars(vals,dayKeys.map(k=>+k.slice(8,10)))))
     +hCard('Ocupación en libros · próximos 14 días','Opera',hOtbMini())+(P.ytd?'':hCard('Mejores días del mes','revenue total',hTopDays(P)));
   host.innerHTML=`<div class="hwrap">${hHead('HOTEL',P.ytd?'Informe de ingresos · acumulado':'Informe de ingresos del hotel',intro,hCtl())}<div class="mOnly">${bul}</div>${strip}<div class="dOnly">${kp}</div>
@@ -1827,7 +1865,7 @@ function renderRooms(){
   const chart=P.ytd?hBars(Array.from({length:P.m},(_,i)=>kpis(hAgg(i+1)).occ*100),MS3.slice(0,P.m)):hBars(dk.map(k=>HOT.days[k].av?HOT.days[k].so/HOT.days[k].av*100:0),dk.map(k=>+k.slice(8,10)));
   const tbl=`<div class="fscroll"><table class="ftab htab"><thead><tr><th>${P.ytd?'Mes':'Día'}</th><th>Ocup.</th><th>ADR</th><th>RevPAR</th><th>Room rev.</th><th class="${P.ytd?'':'hm'}">${P.ytd?'Δ vs comp.':'Vendidas'}</th></tr></thead><tbody>${tr}</tbody></table></div>`;
   const bul=hBul([`Ocupación <b>${hp(K.occ)}</b> · <span class="${dcls(K.occ-Kr.occ)}">${K.occ>=Kr.occ?'+':'−'}${hn(Math.abs(K.occ-Kr.occ)*100,1)} pts</span> vs comp.`,`ADR <b>${hn(K.adr,2)} €</b> <span class="${dcls(K.adr-Kr.adr)}">${hsg(K.adr-Kr.adr)}</span> · RevPAR <b>${hn(K.revpar,2)} €</b> <span class="${dcls(K.revpar-Kr.revpar)}">${hsg(K.revpar-Kr.revpar)}</span>`,`Room revenue <b>${hn(a.rr)} €</b> <span class="${dcls(a.rr-r.rr)}">${hsg(a.rr-r.rr)}</span> · ${hn(a.so)} hab. vendidas`,!P.ytd&&best?`Mejor día: ${dn[new Date(best.k+'T12:00:00').getDay()].toLowerCase()} ${+best.k.slice(8,10)} (${hp(best.o,0)})`:'']);
-  const left=hCard(P.ytd?'Ocupación por mes':'Ocupación diaria','%',chart)+(P.ytd?'':hCard('ADR por día','€',hAdrBars(dk)))+hCard('Ocupación en libros · próximos 14 días','Opera',hOtbMini());
+  const left=hRoomsDual(P,hProjection(P))+hCard(P.ytd?'Ocupación por mes':'Ocupación diaria','%',chart)+(P.ytd?'':hCard('ADR por día','€',hAdrBars(dk)))+hCard('Ocupación en libros · próximos 14 días','Opera',hOtbMini());
   host.innerHTML=`<div class="hwrap">${hHead('ROOMS',P.ytd?'Habitaciones · acumulado':'Habitaciones',intro,hCtl())}<div class="mOnly">${bul}</div>${strip}
   <div class="hgrid"><div class="hcol">${left}</div><div class="hcol">${hCard(P.ytd?'Detalle por mes':'Detalle por día',P.ytd?'':'* día estimado',tbl)}</div></div>${hNote(P)}</div>`;
 }

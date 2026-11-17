@@ -534,6 +534,14 @@ body.area-hotel .dashOnly{display:none!important}
 .ctx .areaSw button{padding:.4rem .95rem;color:var(--ink);font-size:.8rem}
 .ctx .areaSw button.on{background:var(--accent);color:var(--accentInk)}
 @media(max-width:900px){.ctx .ctxTitle{display:none}.ctx .areaSw{margin-left:.1rem}}
+/* barras diarias con cifra en cada día (Rooms) */
+.hbars{display:flex;align-items:stretch;gap:2px;height:210px}
+.hb{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center}
+.hb .bw{flex:1;width:100%;min-height:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center}
+.hb .bw i{display:block;width:78%;background:var(--accent);border-radius:2px 2px 0 0;min-height:1px}
+.hb .bv{font-size:.62rem;font-weight:650;color:var(--ink);line-height:1;margin-bottom:2px;white-space:nowrap}
+.hb .bl{font-size:.58rem;color:var(--muted);line-height:1;margin-top:3px}
+@media(max-width:900px){.hbars{height:190px;gap:1px}.hb .bv{writing-mode:vertical-rl;transform:rotate(180deg);font-size:.6rem}.hb .bl{font-size:.54rem}}
 
 /* ---- marca ---- */
 .brandBar{display:none}
@@ -609,7 +617,7 @@ body[data-layout="bento"] .hc{border:0}
   .hTop .hIntro{display:none}.hTitle{font-size:1.45rem;margin-bottom:.6rem}
   .hgrid{gap:.8rem}.hcol{gap:.8rem}
   .hstrip{margin-bottom:.8rem}.hv{font-size:1.3rem}.hch{height:130px}
-  .hcol .hcard:nth-child(n+3){display:none}
+  .hcol .hcard:nth-child(n+3):not(:has(.hbars)){display:none}
   .hcard .cardBody{padding:.7rem .8rem}
 }
 @media(max-width:900px){.htab td,.htab th{padding:.5rem .22rem;font-size:.74rem}.htab th{letter-spacing:.06em;font-size:.56rem}.hcard .cardBody{padding:.5rem .6rem}.fscroll{overflow-x:auto}}
@@ -1801,7 +1809,11 @@ function hOtbMini(n=14){
   const tot=s.rows.slice(0,n).reduce((a,r)=>a+r[1],0),rev=s.rows.slice(0,n).reduce((a,r)=>a+r[4],0);
   return hOccBars(rows)+`<p class="hnote">Próximos ${rows.length} días en libros: ${hn(tot)} hab. · ${hp(tot/(rows.length*195))} · ${hn(rev)} € Rooms (Opera ${s.asof.slice(5,10)}).</p>`;
 }
-function hAdrBars(dk){return hBars(dk.map(k=>HOT.days[k].so?HOT.days[k].rr/HOT.days[k].so:0),dk.map(k=>+k.slice(8,10)))}
+function hBarsV(vals,labels){ // barras en HTML con la cifra de cada día encima (nítidas también en móvil)
+  const mx=Math.max(1,...vals.map(v=>Math.abs(v)));
+  return`<div class="hbars">`+vals.map((v,i)=>`<div class="hb"><div class="bw"><span class="bv">${v?hn(v,0):'–'}</span><i style="height:${(Math.abs(v)/mx*78).toFixed(1)}%"></i></div><span class="bl">${labels[i]}</span></div>`).join('')+`</div>`;
+}
+function hAdrBars(dk){return hBarsV(dk.map(k=>HOT.days[k].so?HOT.days[k].rr/HOT.days[k].so:0),dk.map(k=>+k.slice(8,10)))}
 const hBul=items=>'<ul class="hbul">'+items.filter(Boolean).map(t=>`<li>${t}</li>`).join('')+'</ul>';
 // ---------------- vista Hotel (mismo lenguaje visual que el informe F&B) ----------------
 const hHead=(tag,title,intro,ctl)=>`<div class="hTop"><div><div class="eyebrow">KIMPTON LOS MONTEROS MARBELLA · ${tag}</div><h1 class="hTitle">${title}</h1>${intro?`<p class="hIntro">${intro}</p>`:''}</div>${ctl}</div>`;
@@ -1873,7 +1885,7 @@ function renderRooms(){
   const strip=`<div class="hstrip k4">${hCell('Ocupación',hp(K.occ),hp(Kr.occ)+' comp. · '+(K.occ>=Kr.occ?'+':'−')+hn(Math.abs(K.occ-Kr.occ)*100,1)+' pts',dcls(K.occ-Kr.occ),1)}${hCell('ADR',hn(K.adr,2)+' €',hsg(K.adr-Kr.adr)+' vs comp.',dcls(K.adr-Kr.adr),1)}${hCell('RevPAR',hn(K.revpar,2)+' €',hsg(K.revpar-Kr.revpar)+' vs comp.',dcls(K.revpar-Kr.revpar),1)}${hCell('Room revenue',hn(a.rr)+' €',hsg(a.rr-r.rr)+' vs comp.',dcls(a.rr-r.rr),1)}</div>`;
   const tr=P.ytd?Array.from({length:P.m},(_,i)=>i+1).map(m=>{const x=hAgg(m),k=kpis(x),rf=hRef(HST.cmp,m,m,m===P.L.m?P.L.d/hdim(P.L.y,m):1);return`<tr><td class="vn">${MS3[m-1]}</td><td>${hp(k.occ)}</td><td>${hn(k.adr,2)}</td><td>${hn(k.revpar,2)}</td><td>${hn(x.rr)}</td><td class="${dcls(x.rr-rf.rr)}">${hsg(x.rr-rf.rr)}</td></tr>`}).join('')
    :dk.slice().reverse().map(k=>{const x=HOT.days[k],occ=x.av?x.so/x.av:0,dt=new Date(k+'T12:00:00');return`<tr><td class="vn">${dn[dt.getDay()]} ${+k.slice(8,10)}${x.est?' *':''}</td><td>${hp(occ,0)}</td><td>${x.so?hn(x.rr/x.so,2):'—'}</td><td>${x.av?hn(x.rr/x.av,2):'—'}</td><td>${hn(x.rr)}</td><td class="hm">${hn(x.so)}</td></tr>`}).join('');
-  const chart=P.ytd?hBars(Array.from({length:P.m},(_,i)=>kpis(hAgg(i+1)).occ*100),MS3.slice(0,P.m)):hBars(dk.map(k=>HOT.days[k].av?HOT.days[k].so/HOT.days[k].av*100:0),dk.map(k=>+k.slice(8,10)));
+  const chart=P.ytd?hBarsV(Array.from({length:P.m},(_,i)=>kpis(hAgg(i+1)).occ*100),MS3.slice(0,P.m)):hBarsV(dk.map(k=>HOT.days[k].av?HOT.days[k].so/HOT.days[k].av*100:0),dk.map(k=>+k.slice(8,10)));
   const tbl=`<div class="fscroll"><table class="ftab htab"><thead><tr><th>${P.ytd?'Mes':'Día'}</th><th>Ocup.</th><th>ADR</th><th>RevPAR</th><th>Room rev.</th><th class="${P.ytd?'':'hm'}">${P.ytd?'Δ vs comp.':'Vendidas'}</th></tr></thead><tbody>${tr}</tbody></table></div>`;
   const bul=hBul([`Ocupación <b>${hp(K.occ)}</b> · <span class="${dcls(K.occ-Kr.occ)}">${K.occ>=Kr.occ?'+':'−'}${hn(Math.abs(K.occ-Kr.occ)*100,1)} pts</span> vs comp.`,`ADR <b>${hn(K.adr,2)} €</b> <span class="${dcls(K.adr-Kr.adr)}">${hsg(K.adr-Kr.adr)}</span> · RevPAR <b>${hn(K.revpar,2)} €</b> <span class="${dcls(K.revpar-Kr.revpar)}">${hsg(K.revpar-Kr.revpar)}</span>`,`Room revenue <b>${hn(a.rr)} €</b> <span class="${dcls(a.rr-r.rr)}">${hsg(a.rr-r.rr)}</span> · ${hn(a.so)} hab. vendidas`,!P.ytd&&best?`Mejor día: ${dn[new Date(best.k+'T12:00:00').getDay()].toLowerCase()} ${+best.k.slice(8,10)} (${hp(best.o,0)})`:'']);
   const left=hRoomsDual(P,hProjection(P))+hCard(P.ytd?'Ocupación por mes':'Ocupación diaria','%',chart)+(P.ytd?'':hCard('ADR por día','€',hAdrBars(dk)))+hCard('Ocupación en libros · próximos 14 días','Opera',hOtbMini());

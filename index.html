@@ -2060,7 +2060,7 @@ function pushInit(){
   window.OneSignalDeferred=window.OneSignalDeferred||[];
   const s=document.createElement('script');s.src='https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';s.defer=true;document.head.appendChild(s);
   window.OneSignalDeferred.push(async OS=>{
-    try{await OS.init({appId:PUSH.appId,serviceWorkerPath:'sw.js',notifyButton:{enable:false},allowLocalhostAsSecureOrigin:true});
+    try{await OS.init({appId:PUSH.appId,serviceWorkerPath:'qrlkm-revenue/sw.js',serviceWorkerParam:{scope:'/qrlkm-revenue/'},notifyButton:{enable:false},allowLocalhostAsSecureOrigin:true});
       window.__OS=OS;try{await OS.login(PUB.name)}catch(e){}
       OS.User.PushSubscription.addEventListener('change',pushUi);pushUi();
     }catch(e){console.warn('push',e)}
@@ -2561,5 +2561,5 @@ function init(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
-<script>if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
+<script>if('serviceWorker' in navigator&&location.protocol.startsWith('http')&&!(window.__PUSH&&window.__PUSH.appId))navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
 </body></html>

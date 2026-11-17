@@ -1776,9 +1776,20 @@ function hRow(name,a,r,full,bold){
 
 const dnm=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 function hMonthTable(P){
-  const rows=Array.from({length:P.L.m},(_,i)=>i+1).map(m=>{const x=hAgg(m),cur=m===P.L.m,ex=cur?hPtdRef(m):null,rf=ex||hRef(HST.cmp,m,m,cur?P.L.d/hdim(P.L.y,m):1);
-    return`<tr class="${m===P.m?'sel':''}"><td class="vn">${MS3[m-1]}${cur&&P.L.partial?' *':''}</td><td class="hm">${hn(x.rr)}</td><td class="hm">${hn(x.fb)}</td><td class="hm">${hn(x.ot)}</td><td>${hn(x.tot)}</td><td class="${dcls(x.tot-rf.tot)}">${rf.tot&&!(HST.cmp==='forecast26'&&m<P.L.m)?hp(x.tot/rf.tot,0):'—'}</td></tr>`}).join('');
-  return`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Mes</th><th class="hm">Rooms</th><th class="hm">F&amp;B</th><th class="hm">Otros</th><th>Total</th><th>% comp.</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  try{
+    const L=P.L,Pc={L,m:L.m,ytd:false,a:hAgg(L.m,L.d)},pr=hProjection(Pc),F=HOT.ref.forecast26,B=HOT.ref.budget26;
+    const tv=(R,m)=>(R&&R.total&&R.total[m-1])||0;
+    let sR=0,sF=0,sB=0,sE=0,sx={rr:0,fb:0,ot:0};
+    const pcell=(num,den)=>den&&num!=null?`<td class="${dcls(num/den-1)}">${hp(num/den,0)}</td>`:'<td>—</td>';
+    const rows=Array.from({length:12},(_,i)=>i+1).map(m=>{
+      const past=m<L.m,cur=m===L.m,fut=m>L.m,x=fut?null:hAgg(m),f=tv(F,m),b=tv(B,m);
+      const est=past?x.tot:cur?(pr?pr.tot:f):f;
+      sF+=f;sB+=b;sE+=est;if(x){sR+=x.tot;sx.rr+=x.rr;sx.fb+=x.fb;sx.ot+=x.ot}
+      const vf=past?x.tot:cur?(pr?pr.tot:null):null;
+      return`<tr class="${m===P.m?'sel':''}"><td class="vn">${MS3[m-1]}${cur&&L.partial?' *':''}</td><td class="hm">${x?hn(x.rr):'—'}</td><td class="hm">${x?hn(x.fb):'—'}</td><td class="hm">${x?hn(x.ot):'—'}</td><td>${x?hn(x.tot):'—'}</td><td class="hm">${hn(f)}</td><td class="hm">${hn(b)}</td>${pcell(vf,f)}${pcell(est,b)}</tr>`}).join('');
+    const tot=`<tr class="tot"><td class="vn">Año</td><td class="hm">${hn(sx.rr)}</td><td class="hm">${hn(sx.fb)}</td><td class="hm">${hn(sx.ot)}</td><td>${hn(sR)}</td><td class="hm">${hn(sF)}</td><td class="hm">${hn(sB)}</td>${pcell(sE,sF)}${pcell(sE,sB)}</tr>`;
+    return`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Mes</th><th class="hm">Rooms</th><th class="hm">F&amp;B</th><th class="hm">Otros</th><th>Real</th><th class="hm">Forecast</th><th class="hm">Budget</th><th>% Fcst</th><th>% Bud.</th></tr></thead><tbody>${rows}${tot}</tbody></table></div><p class="hnote">Forecast = último forecast (en meses cerrados coincide con el real). * mes en curso: Real a la fecha y % sobre el cierre estimado con Opera. Meses sin cerrar: Forecast frente a Budget. «Año» = real + cierre estimado + forecast de lo que falta.</p>`;
+  }catch(e){return''}
 }
 function hTopDays(P,n=5){
   const dk=hkeys().filter(k=>+k.slice(5,7)===P.m).map(k=>({k,v:HOT.days[k].rr+HOT.days[k].fb+HOT.days[k].ot,x:HOT.days[k]})).sort((a,b)=>b.v-a.v).slice(0,n);
@@ -1846,7 +1857,7 @@ function renderHotel(){
   const bul=hBul([`<b>${hn(a.tot)} €</b> en total · <span class="${dcls(a.tot-r.tot)}">${hsg(a.tot-r.tot)} €</span> vs comp. (${hp(tp,0)})`,
     `Rooms <b>${hn(a.rr)} €</b> <span class="${dcls(a.rr-r.rr)}">${hsg(a.rr-r.rr)}</span> · F&amp;B <b>${hn(a.fb)} €</b> <span class="${dcls(a.fb-r.fb)}">${hsg(a.fb-r.fb)}</span>`,
     `Otros <b>${hn(a.ot)} €</b> · Ocupación <b>${hp(K.occ)}</b> (${hp(Kr.occ)})`,`ADR <b>${hn(K.adr,2)} €</b> · RevPAR <b>${hn(K.revpar,2)} €</b>`,pr?`Cierre estimado <b>${hn(pr.tot)} €</b> (<span class="${dcls(pr.tot-P.full.tot)}">${hsg(pr.tot-P.full.tot)}</span> vs mes)`:'']);
-  const left=(P.ytd?hCard('Rooms · F&B · Otros','vs '+C,tbl):hDualCards(P,pr))+hCard('Evolución mensual','total hotel · * mes en curso',hMonthTable(P));
+  const left=(P.ytd?hCard('Rooms · F&B · Otros','vs '+C,tbl):hDualCards(P,pr))+hCard('Evolución mensual','total hotel · vs Forecast y Budget',hMonthTable(P));
   const right=(P.ytd?hCard('Ocupación por mes','%',hBars(Array.from({length:P.m},(_,i)=>kpis(hAgg(i+1)).occ*100),MS3.slice(0,P.m))):hCard('Revenue total por día','mes de '+months[P.m-1].toLowerCase(),hBars(vals,dayKeys.map(k=>+k.slice(8,10)))))
     +hCard('Ocupación en libros · próximos 14 días','Opera',hOtbMini())+(P.ytd?'':hCard('Mejores días del mes','revenue total',hTopDays(P)));
   host.innerHTML=`<div class="hwrap">${hHead('HOTEL',P.ytd?'Informe de ingresos · acumulado':'Informe de ingresos del hotel',intro,hCtl())}<div class="mOnly">${bul}</div>${strip}<div class="dOnly">${kp}</div>

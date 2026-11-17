@@ -1790,13 +1790,13 @@ function hMonthTable(P){
     let sR=0,sF=0,sB=0,sE=0,sx={rr:0,fb:0,ot:0};
     const pcell=(num,den)=>den&&num!=null?`<td class="${dcls(Math.round(num/den*100)/100-1)}">${hp(num/den,0)}</td>`:'<td>—</td>';
     const rows=Array.from({length:12},(_,i)=>i+1).map(m=>{
-      const past=m<L.m,cur=m===L.m,fut=m>L.m,x=fut?null:hAgg(m),f=tv(F,m),b=tv(B,m);
+      const past=m<L.m,cur=m===L.m,fut=m>L.m,x=fut?null:hAgg(m),f=(past&&HOT.fa&&HOT.fa.m&&HOT.fa.m[m])?HOT.fa.m[m].tot:tv(F,m),b=tv(B,m);
       const est=past?x.tot:cur?(pr?pr.tot:f):f;
       sF+=f;sB+=b;sE+=est;if(x){sR+=x.tot;sx.rr+=x.rr;sx.fb+=x.fb;sx.ot+=x.ot}
       const vf=past?x.tot:cur?(pr?pr.tot:null):null;
       return`<tr class="${m===P.m?'sel':''}"><td class="vn">${MS3[m-1]}${cur&&L.partial?' *':''}</td><td class="hm">${x?hn(x.rr):'—'}</td><td class="hm">${x?hn(x.fb):'—'}</td><td class="hm">${x?hn(x.ot):'—'}</td><td>${x?hn(x.tot):'—'}</td><td class="hm">${hn(f)}</td><td class="hm">${hn(b)}</td>${pcell(vf,f)}${pcell(est,b)}</tr>`}).join('');
     const tot=`<tr class="tot"><td class="vn">Año</td><td class="hm">${hn(sx.rr)}</td><td class="hm">${hn(sx.fb)}</td><td class="hm">${hn(sx.ot)}</td><td>${hn(sR)}</td><td class="hm">${hn(sF)}</td><td class="hm">${hn(sB)}</td>${pcell(sE,sF)}${pcell(sE,sB)}</tr>`;
-    return`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Mes</th><th class="hm">Rooms</th><th class="hm">F&amp;B</th><th class="hm">Otros</th><th>Real</th><th class="hm">Forecast</th><th class="hm">Budget</th><th>% Fcst</th><th>% Bud.</th></tr></thead><tbody>${rows}${tot}</tbody></table></div><p class="hnote">Forecast = último forecast (en meses cerrados coincide con el real). * mes en curso: Real a la fecha y % sobre el cierre estimado con Opera. Meses sin cerrar: Forecast frente a Budget. «Año» = real + cierre estimado + forecast de lo que falta.</p>`;
+    return`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Mes</th><th class="hm">Rooms</th><th class="hm">F&amp;B</th><th class="hm">Otros</th><th>Real</th><th class="hm">Forecast</th><th class="hm">Budget</th><th>% Fcst</th><th>% Bud.</th></tr></thead><tbody>${rows}${tot}</tbody></table></div><p class="hnote">Forecast: en meses cerrados, el forecast del propio mes (≈ día 10); en el mes en curso y siguientes, el último forecast. * mes en curso: Real a la fecha y % sobre el cierre estimado con Opera. Meses sin cerrar: Forecast frente a Budget. «Año» = real + cierre estimado + forecast de lo que falta.</p>`;
   }catch(e){return''}
 }
 function hTopDays(P,n=5){

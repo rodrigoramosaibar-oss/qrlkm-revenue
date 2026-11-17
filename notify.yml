@@ -1,0 +1,24 @@
+name: Avisar de datos nuevos
+# Cuando se publica data.enc.json o hotel.enc.json, manda un aviso (sin cifras) a quien tenga la app con avisos activados.
+on:
+  push:
+    paths:
+      - 'data.enc.json'
+      - 'hotel.enc.json'
+concurrency:
+  group: notify
+  cancel-in-progress: true
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Esperar a que terminen las dos publicaciones (F&B y hotel)
+        run: sleep 75
+      - name: Enviar aviso
+        env:
+          ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
+          ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_API_KEY }}
+        run: |
+          curl -sS -X POST https://api.onesignal.com/notifications \
+            -H "Authorization: Key $ONESIGNAL_API_KEY" -H "Content-Type: application/json" \
+            -d "{\"app_id\":\"$ONESIGNAL_APP_ID\",\"included_segments\":[\"Total Subscriptions\"],\"target_channel\":\"push\",\"headings\":{\"en\":\"Revenue Control\",\"es\":\"Revenue Control\"},\"contents\":{\"en\":\"Datos actualizados\",\"es\":\"Datos actualizados: ya puedes ver el cierre de ayer.\"},\"url\":\"https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/\"}"

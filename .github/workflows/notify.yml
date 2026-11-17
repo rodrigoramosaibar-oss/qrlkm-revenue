@@ -1,6 +1,7 @@
 name: Avisar de datos nuevos
 # Cuando se publica data.enc.json o hotel.enc.json, manda un aviso (sin cifras) a quien tenga la app con avisos activados.
 on:
+  workflow_dispatch:
   push:
     paths:
       - 'data.enc.json'

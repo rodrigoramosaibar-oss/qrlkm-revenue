@@ -1445,7 +1445,7 @@ function flashRows(pages){
 function parseFlash(pages){
   const rows=flashRows(pages);
   const head=rows.slice(0,12).map(r=>r.text).join(' ');
-  if(!/REVENUE FLASH/i.test(head))throw new Error('Este PDF no parece un Revenue Flash.');
+  if(!/REVENUE FLASH/i.test(head))throw new Error(/H&F|Occ\.%|Arr\.\s*Rooms/i.test(head)?'Este PDF es el informe de ocupación de Opera (H&F), no el Revenue Flash. Ciérralo y usa «Cargar ocupación Opera (OTB)».':'Este PDF no parece un Revenue Flash.');
   let date=null;
   for(const r of rows.slice(0,14)){const m=r.text.match(/([A-Za-z]+),\s+([A-Za-z]+)\s+(\d{1,2}),\s+(\d{4})/);if(m&&FLASH_MONTHS[m[2].toLowerCase()]){date={y:+m[4],m:FLASH_MONTHS[m[2].toLowerCase()],d:+m[3]};break}}
   if(!date)throw new Error('No encuentro la fecha del informe.');
@@ -1519,7 +1519,7 @@ const $f=id=>document.getElementById(id);
 function flashModalEl(){
   let m=$f('flashModal');if(m)return m;
   m=document.createElement('div');m.id='flashModal';m.className='fmodal';
-  m.innerHTML='<div class="fsheet"><div class="fhead"><b>Cargar Revenue Flash</b><button class="fx" onclick="flashClose()" aria-label="Cerrar">✕</button></div><div class="fbody" id="flashBody"></div></div>';
+  m.innerHTML='<div class="fsheet"><div class="fhead"><b id="flashTitle">Cargar Revenue Flash</b><button class="fx" onclick="flashClose()" aria-label="Cerrar">✕</button></div><div class="fbody" id="flashBody"></div></div>';
   document.body.appendChild(m);
   m.addEventListener('click',e=>{if(e.target===m)flashClose()});
   m.addEventListener('dragover',e=>{e.preventDefault()});
@@ -1530,7 +1530,7 @@ function flashClose(){const m=$f('flashModal');if(m)m.classList.remove('show');F
 function flashOpen(){
   if(!IS_EDITOR){toast('Tu usuario no puede cargar datos.');return}
   document.body.classList.remove('navopen');
-  const m=flashModalEl();m.classList.add('show');flashStep1();
+  const m=flashModalEl();m.classList.add('show');$f('flashTitle').textContent='Cargar Revenue Flash';flashStep1();
 }
 function flashStep1(msg){
   $f('flashBody').innerHTML=`<p class="fp">Elige el PDF del <b>Revenue Flash</b> que llega por correo cada mañana. Se lee en este dispositivo: el archivo no se envía a ningún servidor. Los importes del Flash son netos, sin IVA.</p>
@@ -2090,6 +2090,7 @@ async function hotelPublish(){
 // ---------------- carga del PDF de Opera (ocupación en libros) ----------------
 function parseOpera(pages){
   const rows=flashRows(pages),texts=rows.map(r=>r.text.replace(/\s+/g,' ').trim());
+  if(/REVENUE FLASH/i.test(texts.slice(0,12).join(' ')))throw new Error('Este PDF es el Revenue Flash, no el informe de ocupación de Opera. Ciérralo y usa «Cargar Revenue Flash».');
   if(!/H&F|History|Forecast/i.test(texts.slice(0,12).join(' ')))throw new Error('Este PDF no parece el H&F de Opera (ocupación en libros).');
   let asof=null;for(const t of texts.slice(0,6)){const m=t.match(/\b(\d{2})\/(\d{2})\/(\d{2})\b/);if(m){asof='20'+m[3]+'-'+m[2]+'-'+m[1];break}}
   let tm='08:00';for(const t of texts.slice(0,8)){const m=t.match(/^(\d{1,2}):(\d{2})$/);if(m){tm=p2(m[1])+':'+m[2];break}}
@@ -2114,7 +2115,7 @@ function parseOpera(pages){
 let OTB_ST=null;
 function otbOpen(){
   if(!HOT_EDIT){toast('Tu usuario no puede cargar datos.');return}
-  document.body.classList.remove('navopen');const m=flashModalEl();m.classList.add('show');OTB_ST=null;
+  document.body.classList.remove('navopen');const m=flashModalEl();m.classList.add('show');OTB_ST=null;$f('flashTitle').textContent='Cargar ocupación Opera (OTB)';
   $f('flashBody').innerHTML=`<p class="fp"><b>Ocupación en libros (Opera).</b> Elige el PDF «H&amp;F mes actual, +1» que llega por correo. Se guarda una foto en cada carga para calcular el pickup. No hace falta subirlo cada día.</p>
   <label class="fpick"><input type="file" accept="application/pdf,.pdf" hidden onchange="otbHandle(this.files[0])"><span>Elegir PDF de Opera</span><small>o arrástralo aquí</small></label><div class="ferr" id="otbErr"></div>`;
 }

@@ -1523,7 +1523,7 @@ function flashModalEl(){
   document.body.appendChild(m);
   m.addEventListener('click',e=>{if(e.target===m)flashClose()});
   m.addEventListener('dragover',e=>{e.preventDefault()});
-  m.addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer&&e.dataTransfer.files[0];if(f)flashHandleFile(f)});
+  m.addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer&&e.dataTransfer.files[0];if(f)pdfAutoHandle(f)});
   return m;
 }
 function flashClose(){const m=$f('flashModal');if(m)m.classList.remove('show');FLASH_ST=null}
@@ -1534,7 +1534,7 @@ function flashOpen(){
 }
 function flashStep1(msg){
   $f('flashBody').innerHTML=`<p class="fp">Elige el PDF del <b>Revenue Flash</b> que llega por correo cada mañana. Se lee en este dispositivo: el archivo no se envía a ningún servidor. Los importes del Flash son netos, sin IVA.</p>
-  <label class="fpick"><input type="file" id="flashFile" accept="application/pdf,.pdf" hidden onchange="flashHandleFile(this.files[0])"><span>Elegir PDF</span><small>o arrástralo aquí</small></label>
+  <label class="fpick"><input type="file" id="flashFile" accept="application/pdf,.pdf" hidden onchange="pdfAutoHandle(this.files[0])"><span>Elegir PDF</span><small>o arrástralo aquí</small></label>
   ${msg?`<div class="ferr">${escapeHTML(msg)}</div>`:''}
   <p class="fp small">Se descarta el Minibar. La Pool no figura en el Flash, así que su dato se mantiene como está.</p>
   <div class="fgh"><a href="#" onclick="flashSettings();return false">${ghConfigured()?'Publicación automática activada · ajustes':'Configurar publicación automática'}</a></div>`;
@@ -1551,6 +1551,23 @@ async function flashHandleFile(file){
     if(Object.values(c0.res).some(r=>r.save<-0.5)){FLASH_ST.mode='day';FLASH_ST.autoDay=true}
     flashStep2();
   }catch(e){console.error(e);flashStep1(e.message||String(e))}
+}
+// Enruta el PDF al lector correcto según su contenido (Revenue Flash u ocupación Opera H&F), sea cual sea el cargador abierto y se suelte o se elija.
+async function pdfAutoHandle(file){
+  if(!file)return;
+  let kind='';
+  try{
+    const head=flashRows(await flashReadPdf(file)).slice(0,12).map(r=>r.text).join(' ');
+    if(/REVENUE FLASH/i.test(head))kind='flash';
+    else if(/H&F|Occ\.%|Arr\.\s*Rooms/i.test(head))kind='otb';
+  }catch(e){console.error(e)}
+  if(kind==='otb'){
+    if(!HOT_EDIT){toast('Tu usuario no puede cargar la ocupación.');return}
+    $f('flashTitle').textContent='Cargar ocupación Opera (OTB)';
+    return otbHandle(file);
+  }
+  $f('flashTitle').textContent='Cargar Revenue Flash';
+  return flashHandleFile(file);
 }
 function flashCompute(){
   const {F,B,mode}=FLASH_ST,{m,d,y}=F.date,rows=rowsForMonth(m),res={},later=[];
@@ -1695,7 +1712,7 @@ async function ghPublish(){
 }
 // precarga del lector de PDF para que funcione también sin conexión
 if(IS_EDITOR){setTimeout(()=>{try{fetch('pdf.min.js');fetch('pdf.worker.min.js')}catch(e){}},4000)}
-Object.assign(window,{flashOpen,flashClose,flashHandleFile,flashMode,flashCommit,flashSettings,ghTest,ghForget,flashStep1,flashStep2});
+Object.assign(window,{pdfAutoHandle,flashOpen,flashClose,flashHandleFile,flashMode,flashCommit,flashSettings,ghTest,ghForget,flashStep1,flashStep2});
 
 // ======================= v47 · Hotel (Rooms + F&B + Otros) =======================
 const HOT=window.__HOT||null,HAS_HOT=!!HOT,HOT_EDIT=HAS_HOT&&IS_EDITOR;
@@ -2117,7 +2134,7 @@ function otbOpen(){
   if(!HOT_EDIT){toast('Tu usuario no puede cargar datos.');return}
   document.body.classList.remove('navopen');const m=flashModalEl();m.classList.add('show');OTB_ST=null;$f('flashTitle').textContent='Cargar ocupación Opera (OTB)';
   $f('flashBody').innerHTML=`<p class="fp"><b>Ocupación en libros (Opera).</b> Elige el PDF «H&amp;F mes actual, +1» que llega por correo. Se guarda una foto en cada carga para calcular el pickup. No hace falta subirlo cada día.</p>
-  <label class="fpick"><input type="file" accept="application/pdf,.pdf" hidden onchange="otbHandle(this.files[0])"><span>Elegir PDF de Opera</span><small>o arrástralo aquí</small></label><div class="ferr" id="otbErr"></div>`;
+  <label class="fpick"><input type="file" accept="application/pdf,.pdf" hidden onchange="pdfAutoHandle(this.files[0])"><span>Elegir PDF de Opera</span><small>o arrástralo aquí</small></label><div class="ferr" id="otbErr"></div>`;
 }
 async function otbHandle(file){
   if(!file)return;const body=$f('flashBody');body.innerHTML='<p class="fp">Leyendo «'+escapeHTML(file.name)+'»…</p>';

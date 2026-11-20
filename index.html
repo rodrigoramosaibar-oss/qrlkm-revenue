@@ -681,6 +681,7 @@ body[data-layout="bento"] .hc{border:0}
     <button class="sbBtn primary" data-edit onclick="flashOpen()">Cargar Revenue Flash</button>
     <button class="sbBtn" data-edit data-hot onclick="otbOpen()">Cargar ocupación Opera (OTB)</button>
     <button class="sbBtn" data-edit data-hot onclick="puOpen()">Cargar PickUp (Excel)</button>
+    <button class="sbBtn" data-edit data-hot onclick="b27Open()">Cargar Budget (Excel)</button>
     <button class="sbBtn" data-edit onclick="publishData()">Publicar datos</button>
     <div class="sbRow" data-edit><button class="sbBtn" onclick="manualSave()">Grabar</button><button class="sbBtn" onclick="downloadState()">Exportar</button></div>
     <button class="sbBtn" data-edit onclick="resetApp()">Reset borrador</button>
@@ -2197,6 +2198,7 @@ function puOpen(){
 }
 async function puHandle(files){
   files=(Array.isArray(files)?files:[files]).filter(Boolean);if(!files.length)return;
+  if(files.some(f=>/budget|pnl/i.test(f.name)))return b27Handle(files.find(f=>/budget|pnl/i.test(f.name)));
   const body=$f('flashBody');body.innerHTML='<p class="fp">Leyendo '+files.map(f=>'«'+escapeHTML(f.name)+'»').join(' y ')+'…</p>';
   try{
     const parsed=[];let asof='';
@@ -2347,6 +2349,7 @@ function fzMonth(Y,M,h,ctx){
   if(S&&S.budRn>0)rnv.b=S.budRn;if(S&&S.budRv>0)rvv.b=S.budRv;
   if(ty&&P&&P.sold&&HOT.ref.budget26){const B=HOT.ref.budget26;if(!rnv.b&&B.sold[M-1]>0)rnv.b=B.sold[M-1];if(!rvv.b&&B.rooms[M-1]>0)rvv.b=B.rooms[M-1]}
   if(ty&&HOT.ref.forecast26){const F=HOT.ref.forecast26;if(F.sold[M-1]>0)rnv.u=F.sold[M-1];if(F.rooms[M-1]>0)rvv.u=F.rooms[M-1]}
+  b27Inject(Y,M,rnv,rvv);
   const rn=fzBlend('rn',rnv,h,conf,flRn),rv=fzBlend('rv',rvv,h,conf,flRv);if(!rn)return null;
   const RN=rn.val,RV=rv?rv.val:null;
   // F&B hotel
@@ -2355,7 +2358,7 @@ function fzMonth(Y,M,h,ctx){
   const fbv={};if(sea)fbv.r=(cur0?mt.fb+Math.max(0,RN-mt.so)*sea*(ty&&yoy?yoy.fbr:1):RN*sea*(ty&&yoy?yoy.fbr:1));
   if(ty&&HOT.ref.forecast26&&HOT.ref.forecast26.fb[M-1]>0)fbv.u=HOT.ref.forecast26.fb[M-1];
   if(ty&&HOT.ref.budget26&&HOT.ref.budget26.fb[M-1]>0)fbv.b=HOT.ref.budget26.fb[M-1];
-  const fb=fzBlend('fbh',fbv,h,1,mt.fb);
+  b27Fb(Y,M,fbv);const fb=fzBlend('fbh',fbv,h,1,mt.fb);
   // F&B por venue
   const ven={},hasPUm=!!(PU&&Object.keys(PU.d).some(k=>+k.slice(5,7)===M));
   // grupos (habitaciones de grupo) que quedan en libros: los banquetes solo existen si hay segmento grupo
@@ -2367,7 +2370,7 @@ function fzMonth(Y,M,h,ctx){
     const sea=closed[M]?null:fzSeason(pr,M,true),vv={},done=cur0?((V[v][M]||{t:0}).t):0;if(sea)vv.r=done+Math.max(0,RN-mt.so)*sea;
     const mo=M<=12&&DATA.config.year===Y?monthObjectives(M)[v]||{}:{},scs=Object.keys(mo).filter(k=>/^Forecast/i.test(k)).sort((a,b)=>(parseFloat(a.replace(/\D+/,''))||0)-(parseFloat(b.replace(/\D+/,''))||0)),last=scs[scs.length-1];
     if(last&&+mo[last]>0)vv.f=+mo[last];if(+mo.Original>0)vv.b=+mo.Original;
-    const b=fzBlend('ven',vv,h,1,done);
+    b27VenV(Y,M,v,vv);const b=fzBlend('ven',vv,h,1,done);
     if(b&&isBq&&PU&&hasPUm){const before=b.val;if(gRem<=0)b.val=done;else{const sh=nRem>0?gRem/nRem:0,typ=gAllTyp(PU,ctx);if(typ>0&&sh<typ)b.val=done+(b.val-done)*(sh/typ)}b.cut=before-b.val;banqCut+=b.cut}
     if(b)ven[v]=b;
   });
@@ -2501,6 +2504,80 @@ function fzPage(){
   <div class="hcol">${hCard('Racional','por qué sale esta cifra',t4)}${hCard('Aprendizaje','cuánto ha acertado cada método',t5)}</div></div></div>`;
 }
 Object.assign(window,{fzSet,renderFz});
+// ======================= v54 · Budget 2027 (P&L mensual de IHG) =======================
+const B27_MC=Array.from({length:12},(_,i)=>18+13*i);
+const B27_SH=[['rooms',/^Rooms Totals/],['fb',/^F&B Department Totals/],['cb',/^C&B Totals/],['jara',/^Restaurant1/],['azul',/^Bar1/],['pool',/^Bar2/],['esc',/^Bar3/],['raq',/^Bar4/],['rs',/^Room Service/]];
+let B27_ST=null;
+async function b27Read(file){
+  const z=await puZip(await file.arrayBuffer());
+  const wb=await z.get('xl/workbook.xml'),rels=await z.get('xl/_rels/workbook.xml.rels');
+  if(!wb||!rels)throw new Error('Este Excel no tiene el formato esperado.');
+  const rid={};for(const m of rels.matchAll(/<Relationship\b[^>]*>/g)){const a=m[0],i=/\bId="([^"]+)"/.exec(a),t=/\bTarget="([^"]+)"/.exec(a);if(i&&t)rid[i[1]]=t[1]}
+  const sheets=[];for(const m of wb.matchAll(/<sheet\b[^>]*>/g)){const a=m[0],n=/\bname="([^"]*)"/.exec(a),r=/\br:id="([^"]+)"/.exec(a);if(n&&r)sheets.push({name:puUnesc(n[1]),path:rid[r[1]]})}
+  const ss=[],sst=await z.get('xl/sharedStrings.xml');
+  if(sst)for(const m of sst.matchAll(/<si>([\s\S]*?)<\/si>/g)){let t='';for(const x of m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g))t+=x[1];ss.push(puUnesc(t))}
+  const out={};
+  for(const [key,re] of B27_SH){
+    const s=sheets.find(x=>re.test(x.name)&&x.path);if(!s)continue;
+    const xml=await z.get(s.path.startsWith('/')?s.path.slice(1):'xl/'+s.path);if(!xml)continue;const g={};
+    for(const m of xml.matchAll(/<c r="([A-Z]+)(\d+)"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)){
+      const r=+m[2];if(r>135||m[4]==null)continue;const c=puCol(m[1]);if(c>170||!(c===2||c===3||(c>=18&&[0,3,6].includes((c-18)%13))))continue;
+      const t=/\bt="(\w+)"/.exec(m[3]),v=/<v>([\s\S]*?)<\/v>/.exec(m[4]);let val=null;
+      if(t&&t[1]==='s'&&v)val=ss[+v[1]];else if(t&&t[1]==='inlineStr'){const x=/<t[^>]*>([\s\S]*?)<\/t>/.exec(m[4]);val=x?puUnesc(x[1]):null}
+      else if(t&&(t[1]==='e'||t[1]==='b'))val=null;else if(t&&t[1]==='str')val=v?puUnesc(v[1]):null;else if(v){const f=parseFloat(v[1]);val=isFinite(f)?f:null}
+      if(val!==null&&val!=='')(g[r]=g[r]||{})[c]=val;
+    }
+    out[key]=g;
+  }
+  return out;
+}
+function b27Parse(sh){
+  if(!sh.rooms)throw new Error('No encuentro la hoja «Rooms Totals». ¿Es el P&L mensual del Budget?');
+  const R={year:0,b:{},f:{},a:{}};
+  const t11=Object.values(sh.rooms[11]||{}).join(' ');if(!/Budget\s+(\d{4})/.test(t11))throw new Error('No reconozco el escenario Budget en la hoja de Rooms.');R.year=+/Budget\s+(\d{4})/.exec(t11)[1];
+  const find=(g,label,pre)=>{for(const r of Object.keys(g).map(Number).sort((a,b)=>a-b)){const row=g[r];if(row[2]===label&&(!pre||String(row[3]||'').startsWith(pre)))return row}return null};
+  const pull=(row,off)=>row?B27_MC.map(c=>{const v=row[c+off];return typeof v==='number'?Math.round(v*100)/100:0}):null;
+  const put=(k,row)=>{[['b',0],['f',3],['a',6]].forEach(([s,o])=>{const v=pull(row,o);if(v)R[s][k]=v})};
+  put('av',find(sh.rooms,'Rooms Available'));put('sold',find(sh.rooms,'Rooms Sold'));put('rev',find(sh.rooms,'Total Revenue','C00200'));
+  put('tr',find(sh.rooms,'Total Transient Segments'));put('gr',find(sh.rooms,'Total Group Segments'));
+  ['fb','cb','jara','azul','pool','esc','raq','rs'].forEach(k=>{if(sh[k])put(k,find(sh[k],'Total Revenue','C00200'))});
+  if(!R.b.sold||!R.b.rev)throw new Error('Faltan filas de habitaciones vendidas o revenue en el Budget.');
+  const sum=a=>a?a.reduce((s,x)=>s+x,0):0;
+  R.chk={sold:sum(R.b.sold),av:sum(R.b.av),rev:sum(R.b.rev),fb:sum(R.b.fb),cb:sum(R.b.cb),venues:['jara','azul','pool','esc','raq','rs'].filter(k=>R.b[k]).length};
+  return R;
+}
+function b27Open(){
+  if(!HOT_EDIT){toast('Tu usuario no puede cargar datos.');return}
+  document.body.classList.remove('navopen');const m=flashModalEl();m.classList.add('show');B27_ST=null;$f('flashTitle').textContent='Cargar Budget (P&L mensual de IHG)';
+  $f('flashBody').innerHTML=`<p class="fp"><b>Excel «MonthlyPnL» del Budget.</b> Lee las hojas de Rooms, F&amp;B, banquetes y cada venue (presupuesto, forecast y año anterior por mes). El forecast de la app lo usa como ancla y aprende cuánto acierta.</p>
+  <label class="fpick"><input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden onchange="b27Handle(this.files[0])"><span>Elegir Excel del Budget</span><small>o arrástralo aquí</small></label>`;
+}
+async function b27Handle(file){
+  if(!file)return;const body=$f('flashBody');body.innerHTML='<p class="fp">Leyendo «'+escapeHTML(file.name)+'»…</p>';
+  try{
+    const R=b27Parse(await b27Read(file));R.src=file.name;R.upd=new Date().toISOString();B27_ST=R;const c=R.chk,had=HOT.ref&&HOT.ref.b27;
+    const ok=c.sold>0&&c.rev>0&&c.av>0;
+    body.innerHTML=`<ul class="fchk"><li class="${ok?'ok':'ko'}">${ok?'✓':'✗'} <b>Budget ${R.year}</b> · ${fmtNum(c.sold)} hab. vendidas de ${fmtNum(c.av)} (${hp(c.sold/c.av,1)}) · room revenue ${fmtNum(c.rev)} €</li>
+    <li class="ok">✓ F&amp;B total ${fmtNum(c.fb)} € · banquetes (C&amp;B) ${fmtNum(c.cb)} € · ${c.venues} venues leídos</li>
+    ${R.f.sold?'<li class="ok">✓ Incluye el Forecast del año anterior y el Actual para comparar</li>':''}${had?'<li class="ko">Sustituye al Budget guardado ('+escapeHTML(HOT.ref.b27.src)+')</li>':''}</ul>
+    <div class="fbtns"><button class="fb" onclick="flashClose()">Cancelar</button><button class="fb" ${ok?'':'disabled'} onclick="b27Commit(false)">Guardar</button><button class="fb primary" ${ok?'':'disabled'} onclick="b27Commit(true)">${ghConfigured()?'Guardar y publicar para todos':'Guardar y descargar para publicar'}</button></div>`;
+  }catch(e){console.error(e);body.innerHTML=`<div class="ferr">${escapeHTML(e.message||String(e))}</div><div class="fbtns"><button class="fb" onclick="b27Open()">Reintentar</button></div>`}
+}
+async function b27Commit(publish){
+  if(!B27_ST)return;HOT.ref=HOT.ref||{};HOT.ref.b27=B27_ST;B27_ST=null;
+  HOT.loads=(HOT.loads||[]).slice(-60);HOT.loads.push({at:new Date().toISOString(),what:'Budget '+HOT.ref.b27.year+' ('+HOT.ref.b27.src+')',by:PUB.name});
+  HST.dirty=true;await hotDraftSave();flashClose();hRender();
+  if(publish){const ok=await hotelPublish();if(ok&&ghConfigured())toast('Budget publicado ✓',6000)}else toast('Budget guardado en este dispositivo.');
+}
+const b27Ven=v=>/jara/i.test(v)?'jara':/azul/i.test(v)?'azul':/pool/i.test(v)?'pool':/escond/i.test(v)?'esc':/ra[c]?quet/i.test(v)?'raq':/room\s*serv/i.test(v)?'rs':/banquet/i.test(v)?'cb':null;
+function b27Inject(Y,M,rnv,rvv){const B=HOT.ref&&HOT.ref.b27;if(!B)return;const i=M-1;
+  if(Y===B.year){if(B.b.sold&&B.b.sold[i]>0)rnv.b=B.b.sold[i];if(B.b.rev&&B.b.rev[i]>0)rvv.b=B.b.rev[i]}
+  else if(Y===B.year-1&&B.f.sold){if(B.f.sold[i]>0&&!rnv.u)rnv.u=B.f.sold[i];if(B.f.rev[i]>0&&!rvv.u)rvv.u=B.f.rev[i]}}
+function b27Fb(Y,M,fbv){const B=HOT.ref&&HOT.ref.b27;if(!B)return;const i=M-1;
+  if(Y===B.year&&B.b.fb&&B.b.fb[i]>0)fbv.b=B.b.fb[i];else if(Y===B.year-1&&B.f.fb&&B.f.fb[i]>0&&!fbv.u)fbv.u=B.f.fb[i]}
+function b27VenV(Y,M,v,vv){const B=HOT.ref&&HOT.ref.b27,k=b27Ven(v);if(!B||!k)return;const i=M-1;
+  if(Y===B.year&&B.b[k]&&B.b[k][i]>0)vv.b=B.b[k][i];else if(Y===B.year-1&&B.f[k]&&B.f[k][i]>0&&!vv.f)vv.f=B.f[k][i]}
+Object.assign(window,{b27Open,b27Handle,b27Commit});
 function hRender(){const v=document.body.dataset.view;if(v==='hotel')renderHotel();else if(v==='rooms')renderRooms();else if(v==='otb')renderOtb();else if(v==='wx')renderWx();else if(v==='pu')renderPu();else if(v==='fz')renderFz()}
 // ---------------- áreas ----------------
 function setArea(a,go){

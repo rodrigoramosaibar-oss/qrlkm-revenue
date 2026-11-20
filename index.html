@@ -2329,7 +2329,7 @@ function fzMape(metric,est,h){
 }
 function fzBlend(metric,vals,h,conf,floor){
   const pr=FZ_PRIOR[metric],ws={};let sw=0,s=0;floor=floor||0;
-  Object.keys(pr).forEach(e=>{const v=vals[e];if(!(v>0)||v<floor*0.98)return;const m=fzMape(metric,e,h);let w=pr[e]/(m.mape+0.03);if(e==='p')w*=Math.max(0.05,conf);ws[e]=w;sw+=w;s+=w*v});
+  Object.keys(pr).forEach(e=>{const v0=vals[e];if(!(v0>0)||v0<floor*0.98)return;const v=v0*fzDeb(metric,e,h),m=fzMape(metric,e,h);let w=pr[e]/(m.mape+0.03);if(e==='p')w*=Math.max(0.05,conf);ws[e]=w;sw+=w;s+=w*v});
   if(!sw)return null;let mp=0;Object.keys(ws).forEach(e=>{ws[e]/=sw;mp+=ws[e]*fzMape(metric,e,h).mape});
   return{val:Math.max(floor,s/sw),ws,mape:Math.min(0.35,Math.max(0.04,mp*0.85)),vals};
 }
@@ -2382,7 +2382,7 @@ function fzRun(){
   FZ_BK=null;
   const A=fzAct(),P=HOT.ref&&HOT.ref.py25,V=fzVen(),L=hLastInfo(),yoy=fzYoy(A,P,L.partial?L.m-1:L.m),ctx={A,P,V,yoy,L};
   const out=[];
-  for(let h=0;h<=3;h++){const t=new Date(L.y,L.m-1+h,1),Y=t.getFullYear(),M=t.getMonth()+1;const r=fzMonth(Y,M,h,ctx);if(r)out.push(r)}
+  for(let h=0;h<=3;h++){const t=new Date(L.y,L.m-1+h,1),Y=t.getFullYear(),M=t.getMonth()+1;const r=fzMonth(Y,M,h,ctx);if(r){fzMan(r);out.push(r)}}
   return{res:out,A,P,V,yoy,L};
 }
 // ---- días: reparto del mes en días con el OTB de Revenue ----
@@ -2420,12 +2420,12 @@ function fzWeeks(days){
 // ---- aprendizaje: foto de lo pronosticado y puntuación al cerrar cada mes ----
 function fzLearn(run){
   if(!HOT_EDIT)return false;const z=HOT.fzl=HOT.fzl||{snaps:{},err:{},done:{}};let ch=false;const today=wxToday();
-  if(!z.snaps[today]){const q=ob=>{const x={};Object.keys(ob||{}).forEach(e=>{x[e]=Math.round(ob[e])});return x},t={};run.res.forEach(r=>{const key=r.Y+'-'+wxP(r.M),o={h:r.h,rn:q(r.rn.vals),rv:q(r.rv&&r.rv.vals),fb:q(r.fb&&r.fb.vals),ven:{},bl:{rn:Math.round(r.RN),rv:Math.round(r.RV||0),fb:Math.round(r.fb?r.fb.val:0)}};Object.keys(r.ven).forEach(v=>{o.ven[v]=q(r.ven[v].vals)});t[key]=o});
-    z.snaps[today]=t;const ks=Object.keys(z.snaps).sort();while(ks.length>40)delete z.snaps[ks.shift()];ch=true}
+  if(!z.snaps[today]){const q=ob=>{const x={};Object.keys(ob||{}).forEach(e=>{x[e]=Math.round(ob[e])});return x},t={};run.res.forEach(r=>{const key=r.Y+'-'+wxP(r.M),o={h:r.h,rn:q(r.rn.vals),rv:q(r.rv&&r.rv.vals),fb:q(r.fb&&r.fb.vals),ven:{},bl:{rn:Math.round(r.RN),rv:Math.round(r.RV||0),fb:Math.round(r.fb?r.fb.val:0)},bl0:r.bl0?{rn:Math.round(r.bl0.rn),rv:Math.round(r.bl0.rv||0),fb:Math.round(r.bl0.fb)}:null,man:r.man||null};Object.keys(r.ven).forEach(v=>{o.ven[v]=q(r.ven[v].vals)});t[key]=o});
+    z.snaps[today]=t;const ks=Object.keys(z.snaps).sort();while(ks.length>200)delete z.snaps[ks.shift()];ch=true}
   const L=run.L,A=run.A,V=run.V;
   Object.keys(z.snaps).forEach(day=>{Object.keys(z.snaps[day]).forEach(key=>{
     const Y=+key.slice(0,4),M=+key.slice(5),id=day+'|'+key;if(z.done[id]||Y!==L.y)return;const a=A[M];if(!a||!a.full)return;
-    const s=z.snaps[day][key],h=Math.max(0,Math.min(3,s.h)),bump=(k,e,pred,act)=>{if(!(pred>0)||!(act>0))return;const o=z.err[k+'|'+e+'|'+h]=z.err[k+'|'+e+'|'+h]||[0,0];o[0]++;o[1]+=Math.abs(pred-act)/act};
+    const s=z.snaps[day][key],h=Math.max(0,Math.min(3,s.h)),bump=(k,e,pred,act)=>{if(!(pred>0)||!(act>0))return;const o=z.err[k+'|'+e+'|'+h]=z.err[k+'|'+e+'|'+h]||[0,0,0];o[0]++;o[1]+=Math.abs(pred-act)/act;o[2]=(o[2]||0)+(pred-act)/act};
     Object.keys(s.rn||{}).forEach(e=>bump('rn',e,s.rn[e],a.so));Object.keys(s.rv||{}).forEach(e=>bump('rv',e,s.rv[e],a.rr));Object.keys(s.fb||{}).forEach(e=>bump('fbh',e,s.fb[e],a.fb));
     Object.keys(s.ven||{}).forEach(v=>{const act=V[v]&&V[v][M]&&V[v][M].t;Object.keys(s.ven[v]).forEach(e=>bump('ven',e,s.ven[v][e],act))});
     z.done[id]=1;ch=true;
@@ -2447,7 +2447,7 @@ function renderFz(){
 }
 function fzPage(){
   const run=fzRun(),R=run.res,L=run.L;if(!R.length)return`<div class="hwrap">${hHead('FORECAST','Forecast 1-2-3 meses','','')}<p class="hnote">Necesito cargar el PickUp de Revenue para poder proyectar. Usa «Cargar PickUp (Excel)».</p></div>`;
-  fzLearn(run);
+  fzLearn2(run);
   const sel=R.find(r=>r.h===(FZST.m==null?1:FZST.m))||R[R.length-1],lab=r=>months[r.M-1]+(r.Y!==L.y?' '+r.Y:'');
   const hasPU=!!(HOT.pu&&Object.keys(HOT.pu.years||{}).length);
   const intro=`Datos hasta el <b>${L.d}/${wxP(L.m)}</b>${hasPU?' · PickUp de Revenue del <b>'+HOT.pu.asof.slice(8)+'/'+HOT.pu.asof.slice(5,7)+'</b>':' · <b>sin PickUp cargado</b>: el forecast pierde la parte de reservas en libros'}. Cada estimación mezcla varios métodos; el peso de cada uno sale de lo bien que ha acertado antes.`;
@@ -2501,9 +2501,94 @@ function fzPage(){
   ${hCard('Resumen · rooms y F&B','mezcla de métodos con su rango',t1)}
   ${hCard('F&B por venue','mes completo',t2)}
   <div class="hgrid"><div class="hcol">${hCard('Detalle del mes','<span style="display:inline-flex;gap:.6rem;align-items:center">'+msel+tabs+'</span>',tdet)}</div>
-  <div class="hcol">${hCard('Racional','por qué sale esta cifra',t4)}${hCard('Aprendizaje','cuánto ha acertado cada método',t5)}</div></div></div>`;
+  <div class="hcol">${hCard('Racional','por qué sale esta cifra',t4)}${hCard('Aprendizaje','cuánto ha acertado cada método',t5)}</div></div>${fzCardsExtra(run)}</div>`;
 }
 Object.assign(window,{fzSet,renderFz});
+// ======================= v55 · Memoria de predicciones, ajustes manuales y análisis =======================
+// Cada día se guarda lo que la app pronostica; al cerrar el mes se compara con lo real. Con ese historial:
+//  · se corrige el sesgo de cada método (si un método suele pasarse un 8 %, se le resta),
+//  · se mide si tus ajustes manuales mejoran o empeoran el forecast,
+//  · se redacta un análisis de lo que ha cambiado y de dónde falla el modelo.
+const FZ_MKEY={rn:'Habitaciones',rv:'Room revenue',fb:'F&B hotel'};
+function fzDeb(metric,e,h){
+  const bk=fzBack(),L=(HOT.fzl&&HOT.fzl.err)||{},key=metric+'|'+e+'|',b=bk[key+h]||(h>1?bk[key+1]:null),l=L[key+h];
+  let n=0,s=0;if(b){n+=b.n;s+=b.b}if(l&&l[2]!=null){n+=2*l[0];s+=2*l[2]}
+  if(n<3)return 1;const bias=Math.max(-.25,Math.min(.25,s/n*(n/(n+3))));return 1/(1+bias);
+}
+function fzManList(){return(HOT.fzl&&HOT.fzl.man)||[]}
+function fzMan(r){
+  const key=r.Y+'-'+wxP(r.M),L=fzManList().filter(x=>x.m===key),d={rn:0,rv:0,fb:0,bq:0};
+  r.bl0={rn:r.RN,rv:r.RV,fb:r.fb?r.fb.val:0};if(!L.length){r.man=null;return}
+  L.forEach(x=>{if(d[x.k]!=null)d[x.k]+=+x.v||0});
+  r.RN=Math.max(0,r.RN+d.rn);if(r.RV!=null)r.RV=Math.max(0,r.RV+d.rv);r.ADR=r.RV&&r.RN?r.RV/r.RN:r.ADR;
+  if(r.fb)r.fb.val=Math.max(0,r.fb.val+d.fb+d.bq);
+  const bv=Object.keys(r.ven).find(v=>/banquet/i.test(v));if(bv&&d.bq)r.ven[bv].val=Math.max(0,r.ven[bv].val+d.bq);
+  r.man=d;
+}
+function fzManAdd(){
+  if(!HOT_EDIT)return;const m=$('fzManM').value,k=$('fzManK').value,v=parseFloat(String($('fzManV').value).replace(/\s/g,'').replace(/\.(?=\d{3}(\D|$))/g,'').replace(',','.')),n=($('fzManN').value||'').trim();
+  if(!m||!k||!isFinite(v)||v===0){toast('Indica mes, concepto e importe (positivo suma, negativo resta).');return}
+  const z=HOT.fzl=HOT.fzl||{snaps:{},err:{},done:{}};z.man=z.man||[];z.man.push({id:Date.now().toString(36),m,k,v,note:n.slice(0,160),by:PUB.name,at:wxToday()});
+  HST.dirty=true;hotDraftSave();FZ_BK=null;renderFz();
+}
+function fzManDel(id){if(!HOT_EDIT)return;const z=HOT.fzl;if(!z||!z.man)return;z.man=z.man.filter(x=>x.id!==id);HST.dirty=true;hotDraftSave();renderFz()}
+// aprendizaje ampliado: archivo permanente de predicción vs real
+function fzLearn2(run){
+  if(!HOT_EDIT)return false;{const z0=HOT.fzl=HOT.fzl||{snaps:{},err:{},done:{}},mc=fzManList().length;if(z0.mc!==mc){delete z0.snaps[wxToday()];z0.mc=mc}}let ch=fzLearn(run);
+  const z=HOT.fzl;z.hist=z.hist||[];z.hdone=z.hdone||{};const L=run.L,A=run.A,V=run.V;
+  Object.keys(z.snaps).forEach(day=>Object.keys(z.snaps[day]).forEach(key=>{
+    const Y=+key.slice(0,4),M=+key.slice(5),id=day+'|'+key;if(z.hdone[id]||Y!==L.y)return;const a=A[M];if(!a||!a.full)return;
+    const s=z.snaps[day][key],bq=Object.keys(V).find(v=>/banquet/i.test(v));
+    z.hist.push({m:key,d:day,h:s.h,bl:s.bl||{},bl0:s.bl0||null,man:s.man||null,ac:{rn:Math.round(a.so),rv:Math.round(a.rr),fb:Math.round(a.fb)}});z.hdone[id]=1;ch=true;
+  }));
+  if(z.hist.length>300)z.hist=z.hist.slice(-300);
+  // poda: diario los últimos 14 días, después solo los lunes; y fuera lo ya puntuado con más de 30 días
+  const today=Date.parse(wxToday()+'T12:00:00');
+  Object.keys(z.snaps).forEach(day=>{const age=(today-Date.parse(day+'T12:00:00'))/864e5,mon=new Date(day+'T12:00:00').getDay()===1;
+    const pending=Object.keys(z.snaps[day]).some(k=>!z.hdone[day+'|'+k]);
+    if((age>14&&!mon)||(age>30&&!pending)){delete z.snaps[day];ch=true}});
+  if(ch){HST.dirty=true;hotDraftSave()}return ch;
+}
+// estadística de lo ya cerrado
+function fzHistStats(){
+  const H=(HOT.fzl&&HOT.fzl.hist)||[],out={};
+  H.forEach(e=>['rn','rv','fb'].forEach(k=>{const p=e.bl&&e.bl[k],a=e.ac&&e.ac[k];if(!(p>0)||!(a>0))return;
+    const o=out[k+'|'+Math.min(3,e.h)]=out[k+'|'+Math.min(3,e.h)]||{n:0,s:0,b:0,mn:0,mp:0,mnw:0,mpw:0};const er=(p-a)/a;o.n++;o.s+=Math.abs(er);o.b+=er;
+    const p0=e.bl0&&e.bl0[k];if(e.man&&p0>0){o.mn++;o.mp+=Math.abs(er);o.mnw+=Math.abs((p0-a)/a)}}));
+  return out;
+}
+function fzNarr(run){
+  const R=run.res,z=HOT.fzl||{},L=[],lab=0;
+  const days=Object.keys(z.snaps||{}).sort(),prevDay=days.filter(d=>d<wxToday()).pop();
+  // 1. qué ha cambiado desde la última foto
+  if(prevDay){const ps=z.snaps[prevDay];R.slice(0,3).forEach(r=>{const o=ps[r.Y+'-'+wxP(r.M)];if(!o||!o.bl||!o.bl.rn)return;
+    const dn=r.RN-o.bl.rn,dr=(r.RV||0)-o.bl.rv,df=(r.fb?r.fb.val:0)-o.bl.fb;
+    if(Math.abs(dn)<5&&Math.abs(dr)<2000&&Math.abs(df)<2000)return;
+    const why=Object.keys(r.rn.vals).map(e=>({e,d:r.rn.vals[e]-(o.rn[e]||r.rn.vals[e])})).sort((a,b)=>Math.abs(b.d)-Math.abs(a.d))[0];
+    L.push(`<b>${months[r.M-1]}</b> desde el ${prevDay.slice(8)}/${prevDay.slice(5,7)}: ${dn>=0?'+':'−'}${hn(Math.abs(dn),0)} hab., ${dr>=0?'+':'−'}${hn(Math.abs(dr),0)} € rooms, ${df>=0?'+':'−'}${hn(Math.abs(df),0)} € F&amp;B${why&&Math.abs(why.d)>=5?'; lo que más ha movido es «'+FZ_NAME[why.e].toLowerCase()+'» ('+(why.d>=0?'+':'−')+hn(Math.abs(why.d),0)+' hab.)':''}.`)})}
+  // 2. cómo ha acertado la app en meses cerrados
+  const st=fzHistStats();Object.keys(st).sort().forEach(k=>{const o=st[k];if(o.n<2)return;const [m,h]=k.split('|'),bias=o.b/o.n;
+    L.push(`Con ${h} mes${h>1?'es':''} de antelación, ${FZ_MKEY[m].toLowerCase()}: error medio <b>${hn(o.s/o.n*100,1)}%</b> en ${o.n} cierres${Math.abs(bias)>=0.03?'; tiende a '+(bias>0?'pasarse':'quedarse corto')+' un '+hn(Math.abs(bias)*100,1)+'% (ya se corrige)':'; sin sesgo apreciable'}.`)});
+  // 3. ¿ayudan tus ajustes?
+  Object.keys(st).forEach(k=>{const o=st[k];if(o.mn>=2){const w=o.mp/o.mn,n0=o.mnw/o.mn;L.push(`Tus ajustes manuales (${FZ_MKEY[k.split('|')[0]].toLowerCase()}, ${o.mn} casos): con ajuste el error es ${hn(w*100,1)}% frente a ${hn(n0*100,1)}% sin él → <b>${w<n0?'mejoran':'empeoran'}</b> el forecast.`)}});
+  // 4. salud del ritmo de reservas
+  const p=R.find(r=>r.h>=1&&r.S&&r.S.lyRn>0&&r.LY);if(p){const g=p.S.otbRn/p.S.lyRn-1;L.push(`Ritmo de reservas en <b>${months[p.M-1].toLowerCase()}</b>: ${g>=0?'+':'−'}${hn(Math.abs(g)*100,0)}% de habitaciones en libros frente a esta misma fecha del año pasado.`)}
+  const mn=fzManList();if(mn.length)L.push(`Ajustes manuales activos: ${mn.length} (${[...new Set(mn.map(x=>x.m))].join(', ')}).`);
+  if(!L.length)L.push('Todavía no hay cierres guardados para evaluar. La app guarda cada día lo que pronostica y lo compara con lo real al cerrar cada mes; el primer análisis aparecerá con el cierre de noviembre.');
+  return L;
+}
+function fzCardsExtra(run){
+  const R=run.res,opts=R.map(r=>`<option value="${r.Y+'-'+wxP(r.M)}">${months[r.M-1]} ${r.Y}</option>`).join('');
+  const lst=fzManList(),mk={rn:'Habitaciones',rv:'Room revenue €',fb:'F&B hotel €',bq:'Banquetes €'};
+  const rows=lst.map(x=>`<tr><td class="vn">${x.m}</td><td>${mk[x.k]||x.k}</td><td>${x.v>=0?'+':''}${hn(x.v,0)}</td><td style="white-space:normal;text-align:left">${escapeHTML(x.note||'')}</td><td>${HOT_EDIT?`<button class="fb" onclick="fzManDel('${x.id}')">Quitar</button>`:''}</td></tr>`).join('');
+  const form=HOT_EDIT?`<div style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:end;margin-bottom:.7rem"><label>Mes<select id="fzManM">${opts}</select></label><label>Concepto<select id="fzManK"><option value="rn">Habitaciones</option><option value="rv">Room revenue €</option><option value="fb">F&amp;B hotel €</option><option value="bq">Banquetes €</option></select></label><label>Importe<input id="fzManV" type="text" inputmode="decimal" placeholder="+30000" style="width:7rem"></label><label>Motivo<input id="fzManN" type="text" placeholder="p. ej. boda confirmada 12 dic" style="width:14rem"></label><button class="fb primary" onclick="fzManAdd()">Añadir</button></div>`:'';
+  const t=`${form}${lst.length?`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Mes</th><th>Concepto</th><th>Importe</th><th>Motivo</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:'<p class="hnote">Sin ajustes. Lo que añadas aquí suma o resta al forecast del mes (positivo suma, negativo resta) y se guarda con su motivo. La app comprobará al cierre si tu ajuste acertó más que el modelo solo.</p>'}`;
+  const nar=fzNarr(run).map(x=>`<li>${x}</li>`).join('');
+  const hist=((HOT.fzl&&HOT.fzl.hist)||[]).slice(-12).reverse().map(e=>`<tr><td class="vn">${e.m}</td><td>${e.h===0?'cierre':'+'+e.h}</td><td>${fzEur(e.bl.rn)} / ${fzEur(e.ac.rn)}</td><td>${fzEur(e.bl.rv)} / ${fzEur(e.ac.rv)}</td><td>${fzEur(e.bl.fb)} / ${fzEur(e.ac.fb)}</td></tr>`).join('');
+  const th=hist?`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Mes</th><th>Plazo</th><th>Hab. pronóstico / real</th><th>Room rev. € pronóstico / real</th><th>F&amp;B € pronóstico / real</th></tr></thead><tbody>${hist}</tbody></table></div>`:'';
+  return hCard('Análisis de la app','lo que ha aprendido',`<ul class="hbul">${nar}</ul>${th}`)+hCard('Ajustes manuales','lo que tú sabes y la app no',t);
+}
+Object.assign(window,{fzManAdd,fzManDel});
 // ======================= v54 · Budget 2027 (P&L mensual de IHG) =======================
 const B27_MC=Array.from({length:12},(_,i)=>18+13*i);
 const B27_SH=[['rooms',/^Rooms Totals/],['fb',/^F&B Department Totals/],['cb',/^C&B Totals/],['jara',/^Restaurant1/],['azul',/^Bar1/],['pool',/^Bar2/],['esc',/^Bar3/],['raq',/^Bar4/],['rs',/^Room Service/]];

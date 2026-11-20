@@ -678,9 +678,7 @@ body[data-layout="bento"] .hc{border:0}
     <button class="sbBtn" onclick="openCard()">Tarjeta WhatsApp</button>
     <button class="sbBtn" id="pushBtn" hidden onclick="pushToggle()">Activar avisos de datos nuevos</button>
     <details class="sbMore"><summary>Más opciones</summary>
-    <select class="theme sbSel" id="layoutSel" title="Estilo del dashboard" onchange="setLayout(this.value)"><option value="exec">Informe (escritorio)</option><option value="graphite">Graphite · oscuro</option><option value="navy">Navy · app</option><option value="bento">Bento · tarjetas</option><option value="tabla">Tabla · analítico</option></select>
-    <select class="theme sbSel" title="Paleta corporativa" onchange="setPalette(this.value)"><option value="kimpton">Kimpton · Amarillo</option><option value="ihg">IHG · Verde</option><option value="navy">Corporativo · Azul</option></select>
-    <div class="sbRow"><button class="sbBtn" id="modeBtn" onclick="toggleMode()">Oscuro</button><button class="sbBtn" onclick="toggleScreenshot()">Pantallazo</button></div>
+    <button class="sbBtn" onclick="toggleScreenshot()">Pantallazo</button>
     <button class="sbBtn" onclick="window.print()">PDF / Imprimir</button>
     <div class="sbRow" data-edit><button class="sbBtn" onclick="manualSave()">Grabar</button><button class="sbBtn" onclick="downloadState()">Exportar</button></div>
     <button class="sbBtn" data-edit onclick="resetApp()">Reset borrador</button>
@@ -1174,12 +1172,11 @@ async function shareCard(){
 function toast(msg,ms=4500){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),ms)}
 
 // ======================= v45 · estilos intercambiables =======================
-const LAYOUT_KEY='fbLayoutV44';
-const LAYOUTS=[['exec','Informe (escritorio)'],['graphite','Graphite · oscuro'],['navy','Navy · app'],['bento','Bento · tarjetas'],['tabla','Tabla · analítico']];
-let LAYOUT=(()=>{try{const v=localStorage.getItem(LAYOUT_KEY);if(v&&LAYOUTS.some(l=>l[0]===v))return v}catch(e){}return window.innerWidth<=900?'graphite':'exec'})();
+const LAYOUTS=[['exec','Informe'],['bento','Tarjetas']];
+let LAYOUT=window.innerWidth<=900?'bento':'exec';
 function setLayout(v){
   if(!LAYOUTS.some(l=>l[0]===v))return;
-  LAYOUT=v;try{localStorage.setItem(LAYOUT_KEY,v)}catch(e){}
+  LAYOUT=v;
   document.body.dataset.layout=v;
   const sel=$('layoutSel');if(sel)sel.value=v;
   const b=$('styleBtn');if(b)b.textContent='Estilo: '+(LAYOUTS.find(l=>l[0]===v)[1].split(' ')[0]);
@@ -1433,6 +1430,7 @@ function cardTabla(m){
   return cardWrap(o);
 }
 function buildCardSVG(){
+  return fbWaCard();
   if(LAYOUT==='exec')return buildCardSVGExec();
   return ({graphite:cardGraphite,navy:cardNavy,bento:cardBento,tabla:cardTabla})[LAYOUT](altModel());
 }
@@ -2848,42 +2846,74 @@ function setArea(a,go){
   if(t==='dash'){document.querySelector('.tab[data-view="dash"]').classList.add('active');renderDashboard()}
 }
 // ---------------- tarjetas WhatsApp (Hotel y Rooms) ----------------
+// ======================= v59 · tarjetas WhatsApp: Hotel, Rooms y F&B con vs Budget y vs Forecast =======================
 const HPAL={exec:{bg:'#F3F2EE',pn:'#FFFFFF',ink:'#161616',mut:'#6F6E68',acc:'#F4C20D',hdr:'#141414',hi:'#F4C20D',pos:'#1E8A4C',neg:'#C23B4F',ln:'#E4E2DB'},
-  graphite:{bg:'#0B0B0B',pn:'#1A1A1A',ink:'#F3F3EF',mut:'#A09F97',acc:'#F4C20D',hdr:'#000',hi:'#F4C20D',pos:'#4CC27E',neg:'#FF7A8C',ln:'#2E2E2C'},
-  navy:{bg:'#0E1B33',pn:'#16284A',ink:'#F2F5FB',mut:'#9FB0CC',acc:'#7FB2FF',hdr:'#0A1427',hi:'#7FB2FF',pos:'#5FD39A',neg:'#FF8A9A',ln:'#2A4170'},
-  bento:{bg:'#EDEAE2',pn:'#FFFFFF',ink:'#1B1B1B',mut:'#77756C',acc:'#F4C20D',hdr:'#1B1B1B',hi:'#F4C20D',pos:'#1E8A4C',neg:'#C23B4F',ln:'#DDD9CE'},
-  tabla:{bg:'#FFFFFF',pn:'#F7F6F2',ink:'#111',mut:'#666',acc:'#111',hdr:'#111',hi:'#F4C20D',pos:'#1E8A4C',neg:'#C23B4F',ln:'#CFCDC4'}};
+  bento:{bg:'#EDEAE2',pn:'#FFFFFF',ink:'#1B1B1B',mut:'#77756C',acc:'#F4C20D',hdr:'#1B1B1B',hi:'#F4C20D',pos:'#1E8A4C',neg:'#C23B4F',ln:'#DDD9CE'}};
 const xe=s=>String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
-function hWaCard(kind){
-  const P=hPeriod(),a=P.a,r=P.r,K=kpis(a),Kr=kpis(r),c=HPAL[LAYOUT]||HPAL.exec,F="Inter,Segoe UI,Helvetica,Arial,sans-serif",W=1080,H=1350,tab=LAYOUT==='tabla',bento=LAYOUT==='bento';
-  const pc=(x,y)=>y?x/y:0,col=v=>v>=0?c.pos:c.neg;
-  let o=`<rect width="${W}" height="${H}" fill="${c.bg}"/><rect width="${W}" height="190" fill="${c.hdr}"/>`;
-  o+=`<rect x="0" y="186" width="${W}" height="6" fill="${c.hi}"/><text x="60" y="84" font-family="${F}" font-size="26" letter-spacing="4" fill="${c.hi}" font-weight="700">KIMPTON LOS MONTEROS · ${kind==='rooms'?'ROOMS':'HOTEL'}</text>`;
-  o+=`<text x="60" y="146" font-family="${F}" font-size="50" fill="#fff" font-weight="800">${xe(P.label)}</text>`;
+function hPer(cmp){const o=HST.cmp;HST.cmp=cmp;try{return hPeriod()}finally{HST.cmp=o}}
+const cv=(x,y)=>Math.abs(y||0)<0.5?null:x/y-1;
+const cvs=(v,d=1)=>v==null||!isFinite(v)?'—':(v>0.00005?'+':v<-0.00005?'−':'')+hn(Math.abs(v)*100,d)+'%';
+const cpp=(a,b)=>b==null||!isFinite(b)?null:(a-b);
+const cpps=v=>v==null?'—':(v>0.00005?'+':v<-0.00005?'−':'')+hn(Math.abs(v)*100,1)+' pp';
+function waBase(c,F,sub,label){
   const t=(x,y,s,sz,w,f,an)=>`<text x="${x}" y="${y}" font-family="${F}" font-size="${sz}" font-weight="${w}" fill="${f}" ${an?`text-anchor="${an}"`:''}>${s}</text>`;
+  let o=`<rect width="1080" height="1350" fill="${c.bg}"/><rect width="1080" height="190" fill="${c.hdr}"/><rect x="0" y="186" width="1080" height="6" fill="${c.hi}"/>`;
+  o+=t(60,84,'KIMPTON LOS MONTEROS · '+sub,26,700,c.hi).replace('font-size="26"','font-size="26" letter-spacing="4"');
+  o+=t(60,146,xe(label),50,800,'#fff');
+  return{o,t};
+}
+function waChip(t,c,x,y,lab,txt,v,tone){const col=v==null||!isFinite(v)?c.mut:(tone||v)>=0?c.pos:c.neg;return t(x,y,lab,20,700,c.mut)+t(x,y+38,txt,34,800,col)}
+function hWaCard(kind){
+  const P=hPeriod(),a=P.a,K=kpis(a),F="Inter,Segoe UI,Helvetica,Arial,sans-serif",c=HPAL[LAYOUT]||HPAL.exec,rx=LAYOUT==='bento'?24:10;
+  const Pb=HOT.ref&&HOT.ref.budget26?hPer('budget26'):null,Pf=HOT.ref&&HOT.ref.forecast26?hPer('forecast26'):null;
+  const rb=Pb&&Pb.r,rf=Pf&&Pf.r,Kb=rb?kpis(rb):null,Kf=rf?kpis(rf):null;
+  const {o:o0,t}=waBase(c,F,kind==='rooms'?'ROOMS':'HOTEL',P.label);let o=o0;
+  const V=(f,r)=>r?cv(a[f],r[f]):null;
   if(kind==='hotel'){
-    o+=t(60,282,'REVENUE TOTAL',24,600,c.mut)+t(60,382,hn(a.tot)+' €',104,800,c.ink);
-    {const pt=!P.ytd&&!P.exact&&P.m===P.L.m&&P.L.partial;o+=pt?t(60,440,hp(pc(a.tot,P.full.tot))+' del '+xe(HCMP[HST.cmp])+' del mes ('+hn(P.full.tot)+' €)',30,700,col(1)):t(60,440,hsg(a.tot-r.tot)+' € vs '+xe(HCMP[HST.cmp])+' · '+hp(pc(a.tot,r.tot))+' cumpl.',30,700,col(a.tot-r.tot))}
-    const lines=[['ROOMS',a.rr,r.rr],['F&amp;B',a.fb,r.fb],['OTROS INGRESOS',a.ot,r.ot]];
-    lines.forEach((l,i)=>{const y=500+i*168,pct=pc(l[1],l[2]);
-      o+=`<rect x="48" y="${y}" width="984" height="148" rx="${tab?0:18}" fill="${c.pn}" ${tab?`stroke="${c.ln}"`:''}/>`;
-      o+=t(76,y+44,l[0],24,700,c.mut)+t(76,y+112,hn(l[1])+' €',54,800,c.ink);
-      o+=t(1004,y+44,'comp. '+hn(l[2])+' €',24,500,c.mut,'end')+t(1004,y+112,hsg(l[1]-l[2])+' · '+hp(pct,0),38,800,col(l[1]-l[2]),'end');
-      o+=`<rect x="76" y="${y+128}" width="600" height="6" rx="3" fill="${c.ln}"/><rect x="76" y="${y+128}" width="${Math.min(1,Math.max(0,pct))*600}" height="6" rx="3" fill="${c.acc}"/>`});
-    [['OCUPACIÓN',hp(K.occ),hp(Kr.occ)],['ADR',hn(K.adr,2)+' €',hn(Kr.adr,2)],['RevPAR',hn(K.revpar,2)+' €',hn(Kr.revpar,2)]].forEach((k,i)=>{const x=48+i*332;
-      o+=`<rect x="${x}" y="1020" width="320" height="150" rx="${tab?0:18}" fill="${c.pn}" ${tab?`stroke="${c.ln}"`:''}/>`+t(x+24,1064,k[0],22,700,c.mut)+t(x+24,1126,k[1],48,800,c.ink)+t(x+24,1156,'comp. '+k[2],20,500,c.mut)});
+    o+=t(60,266,'REVENUE TOTAL',24,600,c.mut)+t(60,350,hn(a.tot)+' €',96,800,c.ink);
+    o+=waChip(t,c,60,398,'VS BUDGET',cvs(V('tot',rb)),V('tot',rb))+waChip(t,c,430,398,'VS FORECAST',cvs(V('tot',rf)),V('tot',rf));
+    [['ROOMS','rr'],['F&amp;B','fb'],['OTROS INGRESOS','ot']].forEach((l,i)=>{const y=480+i*140,f=l[1];
+      o+=`<rect x="48" y="${y}" width="984" height="124" rx="${rx}" fill="${c.pn}"/>`+t(76,y+42,l[0],22,700,c.mut)+t(76,y+98,hn(a[f])+' €',50,800,c.ink);
+      const vb=V(f,rb),vf=V(f,rf);
+      o+=t(700,y+42,'BUD',18,700,c.mut)+t(700,y+92,cvs(vb),34,800,vb==null?c.mut:vb>=0?c.pos:c.neg)+t(880,y+42,'FC',18,700,c.mut)+t(880,y+92,cvs(vf),34,800,vf==null?c.mut:vf>=0?c.pos:c.neg)});
+    [['OCC',hp(K.occ),Kb&&cpp(K.occ,Kb.occ),Kf&&cpp(K.occ,Kf.occ),1],['ADR',hn(K.adr,0)+' €',Kb&&cv(K.adr,Kb.adr),Kf&&cv(K.adr,Kf.adr)],['RevPAR',hn(K.revpar,0)+' €',Kb&&cv(K.revpar,Kb.revpar),Kf&&cv(K.revpar,Kf.revpar)]].forEach((k,i)=>{const x=48+i*332,col=v=>v==null?c.mut:v>=0?c.pos:c.neg,fm=k[4]?cpps:cvs;
+      o+=`<rect x="${x}" y="920" width="320" height="196" rx="${rx}" fill="${c.pn}"/>`+t(x+24,962,k[0],22,700,c.mut)+t(x+24,1024,k[1],50,800,c.ink)+t(x+24,1068,'BUD '+fm(k[2]),26,700,col(k[2]))+t(x+24,1100,'FC '+fm(k[3]),26,700,col(k[3]))});
     const pr=hProjection(P);
-    if(pr)o+=t(60,1232,'Cierre estimado: '+hn(pr.tot)+' €',34,800,c.ink)+t(60,1272,'vs comp. mes completo '+hn(P.full.tot)+' € ('+hsg(pr.tot-P.full.tot)+')',24,500,col(pr.tot-P.full.tot));
+    if(pr){const vb=Pb?cv(pr.tot,Pb.full.tot):null,vf=Pf?cv(pr.tot,Pf.full.tot):null;
+      o+=t(60,1166,'Cierre estimado del mes: '+hn(pr.tot)+' €',32,800,c.ink)+t(60,1204,'vs budget '+cvs(vb)+' · vs forecast '+cvs(vf),26,700,(vb==null?vf:vb)>=0?c.pos:c.neg)}
+    const ld=HOT.days[P.L.key];
+    if(ld){const tot=ld.rr+ld.fb+ld.ot;o+=t(60,1262,'Último día ('+P.L.d+'/'+P.L.m+'): '+hn(tot)+' € · OCC '+hp(ld.av?ld.so/ld.av:0,0)+' · ADR '+hn(ld.so?ld.rr/ld.so:0,0)+' €',24,600,c.mut)}
   }else{
-    o+=t(60,282,'OCUPACIÓN',24,600,c.mut)+t(60,382,hp(K.occ),110,800,c.ink)+t(60,440,hn(Kr.occ*100,1)+'% '+xe(HCMP[HST.cmp])+' · '+(K.occ>=Kr.occ?'+':'−')+hn(Math.abs(K.occ-Kr.occ)*100,1)+' pts',30,700,col(K.occ-Kr.occ));
-    [['ADR',hn(K.adr,2)+' €',K.adr-Kr.adr,hn(Kr.adr,2)],['RevPAR',hn(K.revpar,2)+' €',K.revpar-Kr.revpar,hn(Kr.revpar,2)],['ROOM REVENUE',hn(a.rr)+' €',a.rr-r.rr,hn(r.rr)],['HAB. VENDIDAS',hn(a.so),a.so-r.so,hn(r.so)]].forEach((k,i)=>{const x=48+(i%2)*500,y=500+Math.floor(i/2)*190;
-      o+=`<rect x="${x}" y="${y}" width="484" height="170" rx="${tab?0:18}" fill="${c.pn}" ${tab?`stroke="${c.ln}"`:''}/>`+t(x+26,y+46,k[0],22,700,c.mut)+t(x+26,y+112,k[1],54,800,c.ink)+t(x+26,y+148,hsg(k[2])+' vs comp. ('+k[3]+')',22,600,col(k[2]))});
+    o+=t(60,266,'OCUPACIÓN',24,600,c.mut)+t(60,376,hp(K.occ),110,800,c.ink);
+    const pb=Kb?cpp(K.occ,Kb.occ):null,pf=Kf?cpp(K.occ,Kf.occ):null;
+    o+=waChip(t,c,480,306,'VS BUDGET',cpps(pb),pb)+waChip(t,c,730,306,'VS FORECAST',cpps(pf),pf);
+    const tiles=[['ADR',hn(K.adr,2)+' €',Kb&&cv(K.adr,Kb.adr),Kf&&cv(K.adr,Kf.adr)],['RevPAR',hn(K.revpar,2)+' €',Kb&&cv(K.revpar,Kb.revpar),Kf&&cv(K.revpar,Kf.revpar)],['ROOM REVENUE',hn(a.rr)+' €',V('rr',rb),V('rr',rf)],['HAB. VENDIDAS',hn(a.so),V('so',rb),V('so',rf)]];
+    tiles.forEach((k,i)=>{const x=48+(i%2)*500,y=470+Math.floor(i/2)*220,col=v=>v==null?c.mut:v>=0?c.pos:c.neg;
+      o+=`<rect x="${x}" y="${y}" width="484" height="200" rx="${rx}" fill="${c.pn}"/>`+t(x+26,y+44,k[0],22,700,c.mut)+t(x+26,y+106,k[1],54,800,c.ink)+t(x+26,y+148,'vs BUD '+cvs(k[2]),26,700,col(k[2]))+t(x+26,y+182,'vs FC '+cvs(k[3]),26,700,col(k[3]))});
     const dk=hkeys().filter(k=>+k.slice(5,7)===P.m).slice(-14),bw=984/14;
-    o+=t(60,930,'OCUPACIÓN · ÚLTIMOS '+dk.length+' DÍAS',22,700,c.mut);
-    dk.forEach((k,i)=>{const x=HOT.days[k],oc=x.av?x.so/x.av:0,h=oc*220;o+=`<rect x="${48+i*bw+6}" y="${1210-h}" width="${bw-12}" height="${h}" rx="4" fill="${c.acc}"/>`+t(48+i*bw+bw/2,1236,+k.slice(8,10),20,500,c.mut,'middle')+t(48+i*bw+bw/2,1204-h,Math.round(oc*100),18,700,c.ink,'middle')});
+    o+=t(60,950,'OCUPACIÓN · ÚLTIMOS '+dk.length+' DÍAS',22,700,c.mut);
+    dk.forEach((k,i)=>{const x=HOT.days[k],oc=x.av?x.so/x.av:0,h=oc*220;o+=`<rect x="${48+i*bw+6}" y="${1236-h}" width="${bw-12}" height="${h}" rx="4" fill="${c.acc}"/>`+t(48+i*bw+bw/2,1262,+k.slice(8,10),20,500,c.mut,'middle')+t(48+i*bw+bw/2,1230-h,Math.round(oc*100),18,700,c.ink,'middle')});
   }
-  o+=t(60,1318,'Kimpton Los Monteros Marbella · datos hasta el '+P.L.d+'/'+P.L.m+' · importes netos sin IVA',20,500,c.mut);
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${o}</svg>`;
+  o+=t(60,1318,'Datos hasta el '+P.L.d+'/'+P.L.m+' · netos sin IVA · '+xe(HCMP.forecast26),20,500,c.mut);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">${o}</svg>`;
+}
+function fbWaCard(){
+  const s=calcState(),isYTD=(DATA.dashboardMode||'month')==='ytd',F="Inter,Segoe UI,Helvetica,Arial,sans-serif",c=HPAL[LAYOUT]||HPAL.exec,rx=LAYOUT==='bento'?24:10;
+  const label=isYTD?'Acumulado '+DATA.config.year:monthName()+' '+DATA.config.year+(s.lastDay&&s.lastDay<s.monthDays?' · hasta el '+s.lastDay:'');
+  const {o:o0,t}=waBase(c,F,'F&amp;B',label);let o=o0;
+  const rev=isYTD?s.ytdRevenue:s.revenue,obj=isYTD?s.ytdObjective:s.expectedRevenue,vb=obj?rev/obj-1:null;
+  o+=t(60,266,'REVENUE F&amp;B',24,600,c.mut)+t(60,350,hn(rev)+' €',96,800,c.ink);
+  let fcv=null;
+  if(HAS_HOT&&!isYTD&&DATA.config.year===2026&&HOT.ref&&HOT.ref.forecast26&&HOT.ref.forecast26.fb[DATA.config.month-1]>0)fcv=cv(s.projectedTotal,HOT.ref.forecast26.fb[DATA.config.month-1]);
+  o+=waChip(t,c,60,398,'VS BUDGET A LA FECHA',cvs(vb),vb)+(fcv==null?'':waChip(t,c,520,398,'CIERRE PROY. VS FORECAST',cvs(fcv),fcv));
+  if(!isYTD)o+=`<rect x="48" y="470" width="984" height="120" rx="${rx}" fill="${c.hi}"/>`+t(76,512,'PROYECCIÓN DE CIERRE',20,700,'#3A3000')+t(76,566,hn(s.projectedTotal)+' €',46,800,'#161616')+t(1004,566,cvs(s.projectedTotal&&s.totalObjective?s.projectedTotal/s.totalObjective-1:null)+' vs objetivo del mes',26,700,'#161616','end');
+  const list=s.outlets.map(x=>({n:x.Outlet,real:isYTD?x.YTDReal:x.Real,obj:isYTD?x.YTDObjetivo:x.Objetivo,p:isYTD?x.YTDPct:x['% Ritmo'],ytd:isYTD})).filter(x=>x.obj>0||x.real>0).sort((a,b)=>b.real-a.real);
+  const y0=isYTD?480:620,rh=Math.max(46,Math.min(84,Math.floor((1270-y0-40)/Math.max(1,list.length))));
+  o+=t(76,y0,'VENUE',20,700,c.mut)+t(700,y0,'REAL',20,700,c.mut,'end')+t(1004,y0,'VS BUDGET',20,700,c.mut,'end');
+  list.forEach((v,i)=>{const y=y0+12+i*rh,d=v.obj>0?v.p-1:null;
+    o+=`<rect x="48" y="${y}" width="984" height="${rh-8}" rx="${Math.min(rx,14)}" fill="${c.pn}"/>`+t(76,y+(rh-8)/2+10,xe(v.n),30,700,c.ink)+t(700,y+(rh-8)/2+10,hn(v.real)+' €',30,600,c.ink,'end')+t(1004,y+(rh-8)/2+10,cvs(d),32,800,d==null?c.mut:d>=0?c.pos:c.neg,'end')});
+  o+=t(60,1318,'Datos hasta el '+(s.lastDay?dayLabel(DATA.config.month,s.lastDay):'—')+' · netos · desviación vs objetivo al ritmo del mes',20,500,c.mut);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">${o}</svg>`;
 }
 function hotelCardSVG(){
   if(!HAS_HOT)return null;const v=document.body.dataset.view;
@@ -3405,7 +3435,6 @@ function copySummary(){navigator.clipboard?.writeText($('summaryText')?.value||'
 // ---- navigation / theme / lifecycle ----
 const THEME_KEY2='fbThemeV44';
 let THEME={pal:'kimpton',mode:'light'};
-try{const t=JSON.parse(localStorage.getItem(THEME_KEY2)||'null');if(t&&['kimpton','ihg','navy'].includes(t.pal)&&['light','dark'].includes(t.mode))THEME=t}catch(e){}
 function applyTheme(){
   document.body.classList.remove('pal-kimpton','pal-ihg','pal-navy','mode-light','mode-dark');
   document.body.classList.add('pal-'+THEME.pal,'mode-'+THEME.mode);
@@ -3483,6 +3512,7 @@ async function publishData(){
 }
 Object.assign(window,{publishData,openCard,closeCard,shareCard,applyRole,money2,parseValue,setLayout,cycleLayout});
 applyTheme();applyRole();renderAll();setLayout(LAYOUT);
+window.addEventListener('resize',()=>{const d=window.innerWidth<=900?'bento':'exec';if(d!==LAYOUT)setLayout(d)});
 Object.assign(RENDERERS,{hotel:renderHotel,rooms:renderRooms,otb:renderOtb,wx:renderWx,pu:renderPu,fz:renderFz});
 if(HAS_HOT){document.body.classList.add('has-hot');let ar='hotel';try{ar=localStorage.getItem('fbAreaV47')||'hotel'}catch(e){}if(ar!=='fb'){setArea(ar,false)}}
 showView('dash',document.querySelector('.tab[data-view="'+(DATA.dashboardMode==='ytd'?'dash-ytd':'dash')+'"]'));

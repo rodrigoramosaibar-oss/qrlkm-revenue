@@ -2323,7 +2323,7 @@ function fzMape(metric,est,h){
   let n=0,w=0,sm=0;
   if(b){n+=b.n;w+=b.n;sm+=b.s}else if(h>1&&b1){n+=b1.n;w+=b1.n;sm+=b1.s*1.25} // sin dato a ese plazo, el de 1 mes con recargo
   if(l){n+=l[0];w+=2*l[0];sm+=2*l[1]} // los cierres reales pesan el doble: es lo que de verdad se predijo a ese plazo
-  return w?{mape:sm/w,n}:{mape:0.12,n:0};
+  return w?{mape:sm/w,n}:{mape:est==='p'?(h>=2?0.25:h===1?0.18:0.08):0.12,n:0};
 }
 function fzBlend(metric,vals,h,conf,floor){
   const pr=FZ_PRIOR[metric],ws={};let sw=0,s=0;floor=floor||0;

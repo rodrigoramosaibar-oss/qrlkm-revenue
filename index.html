@@ -631,7 +631,7 @@ body[data-layout="bento"] .hc{border:0}
 .wxs{font-size:.72rem;color:var(--muted)}.wxo{font-size:.68rem;margin-top:.15rem;padding-top:.3rem;border-top:1px dashed var(--line);color:var(--ink)}
 .wxl{display:inline-flex;align-items:center;gap:.25rem;margin-left:.7rem;font-size:.72rem}.wxl i{width:9px;height:9px;border-radius:2px;display:inline-block}
 .htab td.lo{opacity:.4}.htab th small.n{display:block;font-size:.58rem;letter-spacing:0;text-transform:none;font-weight:500}
-.fscroll.tall{max-height:520px;overflow:auto}.hwrap label{font-size:.72rem;color:var(--muted);display:inline-flex;gap:.4rem;align-items:center}.hwrap select{border:1px solid var(--line2);background:var(--panel);color:var(--ink);border-radius:var(--hr);padding:.35rem .5rem;font-size:.78rem}.hbul{margin:.8rem 0 0;padding-left:1.1rem;font-size:.82rem;line-height:1.5}.hbul li{margin-bottom:.35rem}.ftab small{color:var(--muted);font-weight:500}
+.fscroll.tall{max-height:520px;overflow:auto}.hwrap label{font-size:.72rem;color:var(--muted);display:inline-flex;gap:.4rem;align-items:center}.hwrap select{border:1px solid var(--line2);background:var(--panel);color:var(--ink);border-radius:var(--hr);padding:.35rem .5rem;font-size:.78rem}.hbul{margin:.8rem 0 0;padding-left:1.1rem;font-size:.82rem;line-height:1.5}.hbul li{margin-bottom:.35rem}.ftab small{color:var(--muted);font-weight:500}#pushBtn.on{border-color:var(--pos);color:var(--pos)}
 </style></head>
 <body class="pal-kimpton mode-light area-fb" data-view="dash">
 <div class="login" id="login">
@@ -2282,8 +2282,8 @@ Object.assign(window,{puOpen,puHandle,puCommit,puSet,puAsofSet,renderPu});
 // ======================= v50 · Forecast a 1, 2 y 3 meses (rooms y F&B) con aprendizaje =======================
 // Idea: varios estimadores independientes por mes; se mezclan con pesos que salen de lo bien que ha acertado cada uno
 // (backtest con 2025/2026 + cada cierre real que va llegando). Todo lo que calcula se enseña en «Racional».
-const FZ_PRIOR={rn:{p:.35,y:.25,f:.30,b:.10},rv:{p:.35,y:.25,f:.30,b:.10},fbh:{r:.45,f:.40,b:.15},ven:{r:.50,f:.35,b:.15}};
-const FZ_NAME={p:'Ritmo de reservas (pickup vs año anterior)',y:'Tendencia interanual',f:'Forecast subido',b:'Budget',r:'Ratio por habitación vendida'};
+const FZ_PRIOR={rn:{p:.30,y:.20,f:.15,u:.25,b:.10},rv:{p:.30,y:.20,f:.15,u:.25,b:.10},fbh:{r:.45,u:.40,b:.15},ven:{r:.50,f:.35,b:.15}};
+const FZ_NAME={p:'Ritmo de reservas (pickup vs año anterior)',y:'Tendencia interanual',f:'Forecast de Revenue (PickUp)',u:'Último forecast subido',b:'Budget',r:'Ratio por habitación vendida'};
 const FZ_MET={rn:'Habitaciones vendidas',rv:'Room revenue',fbh:'F&B hotel',ven:'F&B por venue'};
 const FZST={m:null,view:'week'};let FZ_BK=null;
 const fzYear=()=>+hlast().slice(0,4);
@@ -2314,7 +2314,7 @@ function fzBack(){
         add('rn|y',h,(rn-a.so)/a.so);add('rv|y',h,(rv-a.rr)/a.rr);if(a.fb>0)add('fbh|r',h,(fb-a.fb)/a.fb)}
       if(B&&B.sold&&B.sold[m-1]>0){add('rn|b',h,(B.sold[m-1]-a.so)/a.so);add('rv|b',h,(B.rooms[m-1]-a.rr)/a.rr);if(a.fb>0&&B.fb[m-1]>0)add('fbh|b',h,(B.fb[m-1]-a.fb)/a.fb)}
     }
-    const f=FA&&FA[m];if(f){[0,1].forEach(h=>{if(f.occ!=null&&a.av)add('rn|f',h,(f.occ*a.av-a.so)/a.so);if(f.rr)add('rv|f',h,(f.rr-a.rr)/a.rr);if(f.fb&&a.fb>0)add('fbh|f',h,(f.fb-a.fb)/a.fb)})}
+    const f=FA&&FA[m];if(f){[0,1].forEach(h=>{if(f.occ!=null&&a.av)add('rn|u',h,(f.occ*a.av-a.so)/a.so);if(f.rr)add('rv|u',h,(f.rr-a.rr)/a.rr);if(f.fb&&a.fb>0)add('fbh|u',h,(f.fb-a.fb)/a.fb)})}
   });
   return(FZ_BK=out);
 }
@@ -2346,27 +2346,35 @@ function fzMonth(Y,M,h,ctx){
   if(fcRn>0)rnv.f=fcRn;if(S&&S.fcRv>0)rvv.f=S.fcRv;
   if(S&&S.budRn>0)rnv.b=S.budRn;if(S&&S.budRv>0)rvv.b=S.budRv;
   if(ty&&P&&P.sold&&HOT.ref.budget26){const B=HOT.ref.budget26;if(!rnv.b&&B.sold[M-1]>0)rnv.b=B.sold[M-1];if(!rvv.b&&B.rooms[M-1]>0)rvv.b=B.rooms[M-1]}
-  if(ty&&HOT.ref.forecast26){const F=HOT.ref.forecast26;if(!rnv.f&&F.sold[M-1]>0)rnv.f=F.sold[M-1];if(!rvv.f&&F.rooms[M-1]>0)rvv.f=F.rooms[M-1]}
+  if(ty&&HOT.ref.forecast26){const F=HOT.ref.forecast26;if(F.sold[M-1]>0)rnv.u=F.sold[M-1];if(F.rooms[M-1]>0)rvv.u=F.rooms[M-1]}
   const rn=fzBlend('rn',rnv,h,conf,flRn),rv=fzBlend('rv',rvv,h,conf,flRv);if(!rn)return null;
   const RN=rn.val,RV=rv?rv.val:null;
   // F&B hotel
   const fpr={};Object.keys(A).forEach(m=>{if(A[m].full&&A[m].so>0)fpr[m]=A[m].fb/A[m].so});
   const lyr=LY&&LY.rn>0&&LY.fb>0?LY.fb/LY.rn:null,sea=ty?(lyr||fzSeason(fpr,M)):(fpr[M]||fzSeason(fpr,M));
   const fbv={};if(sea)fbv.r=(cur0?mt.fb+Math.max(0,RN-mt.so)*sea*(ty&&yoy?yoy.fbr:1):RN*sea*(ty&&yoy?yoy.fbr:1));
-  if(ty&&HOT.ref.forecast26&&HOT.ref.forecast26.fb[M-1]>0)fbv.f=HOT.ref.forecast26.fb[M-1];
+  if(ty&&HOT.ref.forecast26&&HOT.ref.forecast26.fb[M-1]>0)fbv.u=HOT.ref.forecast26.fb[M-1];
   if(ty&&HOT.ref.budget26&&HOT.ref.budget26.fb[M-1]>0)fbv.b=HOT.ref.budget26.fb[M-1];
   const fb=fzBlend('fbh',fbv,h,1,mt.fb);
   // F&B por venue
-  const ven={};
+  const ven={},hasPUm=!!(PU&&Object.keys(PU.d).some(k=>+k.slice(5,7)===M));
+  // grupos (habitaciones de grupo) que quedan en libros: los banquetes solo existen si hay segmento grupo
+  let gRem=0,gAll=0,nRem=0;if(PU)Object.keys(PU.d).forEach(k=>{if(+k.slice(5,7)!==M)return;const g=PU.d[k][PU_I.rnG]||0,r=PU.d[k][PU_I.rn]||0;gAll+=g;if(!cur0||+k.slice(8)>L.d){gRem+=g;nRem+=r}});
+  let banqCut=0;
   getVenues().forEach(v=>{
+    const isBq=/banquet/i.test(v);
     const pr={},closed={};Object.keys(A).forEach(m=>{const a=A[m],x=V[v][m];if(!a||!a.full||!(a.so>0))return;if(!x||x.n<hdim(fzYear(),+m)*0.4)closed[m]=1;else pr[m]=x.t/a.so});
     const sea=closed[M]?null:fzSeason(pr,M,true),vv={},done=cur0?((V[v][M]||{t:0}).t):0;if(sea)vv.r=done+Math.max(0,RN-mt.so)*sea;
-    const mo=M<=12&&DATA.config.year===Y?monthObjectives(M)[v]||{}:{},scs=Object.keys(mo).filter(k=>/^Forecast/i.test(k)).sort(),last=scs[scs.length-1];
+    const mo=M<=12&&DATA.config.year===Y?monthObjectives(M)[v]||{}:{},scs=Object.keys(mo).filter(k=>/^Forecast/i.test(k)).sort((a,b)=>(parseFloat(a.replace(/\D+/,''))||0)-(parseFloat(b.replace(/\D+/,''))||0)),last=scs[scs.length-1];
     if(last&&+mo[last]>0)vv.f=+mo[last];if(+mo.Original>0)vv.b=+mo.Original;
-    const b=fzBlend('ven',vv,h,1,done);if(b)ven[v]=b;
+    const b=fzBlend('ven',vv,h,1,done);
+    if(b&&isBq&&PU&&hasPUm){const before=b.val;if(gRem<=0)b.val=done;else{const sh=nRem>0?gRem/nRem:0,typ=gAllTyp(PU,ctx);if(typ>0&&sh<typ)b.val=done+(b.val-done)*(sh/typ)}b.cut=before-b.val;banqCut+=b.cut}
+    if(b)ven[v]=b;
   });
-  return{Y,M,h,rn,rv,fb,ven,RN,RV,ADR:RV&&RN?RV/RN:null,conf,LY,S,sea,fcRn};
+  if(fb&&banqCut>0)fb.val=Math.max(mt.fb,fb.val-banqCut);
+  return{Y,M,h,rn,rv,fb,ven,banqCut,gRem,RN,RV,ADR:RV&&RN?RV/RN:null,conf,LY,S,sea,fcRn};
 }
+function gAllTyp(PU,ctx){if(ctx._gt!=null)return ctx._gt;let g=0,r=0;Object.keys(PU.d).forEach(k=>{g+=PU.d[k][PU_I.rnG]||0;r+=PU.d[k][PU_I.rn]||0});return ctx._gt=r>0?g/r:0}
 function fzRun(){
   FZ_BK=null;
   const A=fzAct(),P=HOT.ref&&HOT.ref.py25,V=fzVen(),L=hLastInfo(),yoy=fzYoy(A,P,L.partial?L.m-1:L.m),ctx={A,P,V,yoy,L};
@@ -2475,6 +2483,7 @@ function fzPage(){
   const facts=[
     ys?`Tendencia interanual (últimos ${ys.n} meses cerrados, ${ys.ms.slice().reverse().map(m=>months[m-1].slice(0,3)).join('/')}): hab. vendidas <b>${ys.rn>=1?'+':'−'}${hn(Math.abs(ys.rn-1)*100,1)}%</b>, room revenue <b>${ys.rv>=1?'+':'−'}${hn(Math.abs(ys.rv-1)*100,1)}%</b>, F&amp;B por habitación <b>${ys.fbr>=1?'+':'−'}${hn(Math.abs(ys.fbr-1)*100,1)}%</b> frente a 2025.`:'Sin 2025 para calcular la tendencia interanual.',
     s0?`Ritmo de reservas: hoy hay en libros ${fzEur(s0.S.otbRn)} hab. para ${months[s0.M-1].toLowerCase()} frente a ${fzEur(s0.S.lyRn)} a esta misma fecha el año pasado; el año pasado cerró en ${fzEur(s0.LY.rn)}.`:'',
+    (()=>{const r=R.find(x=>x.banqCut>0||x.h===0);return r&&r.h===0?`Banquetes: son segmento grupo; en lo que queda de ${months[r.M-1].toLowerCase()} hay ${hn(r.gRem,0)} hab. de grupo en libros${r.gRem<=0?', así que no se prevé más banquete (recorte de '+fzEur(r.banqCut)+' € frente al ratio normal)':''}. Si hay un evento que no esté en libros, habrá que indicarlo (calendario de eventos, pendiente).`:''})(),
     `F&B: relación con la ocupación = <b>€ de F&amp;B por habitación vendida</b>, con su estacionalidad y la tendencia interanual; después se reparte por venue según su aportación histórica por habitación.`,
     (()=>{const f=fzWxFactor();return f?'Meteo: el efecto medido es significativo y ya se aplica a los próximos 7 días ('+Object.keys(f).map(g=>WXC[g].n+' '+(f[g]>=1?'+':'−')+hn(Math.abs(f[g]-1)*100,0)+'%').join(', ')+').':'Meteo: a más de 7 días no hay predicción fiable (se usa la estacionalidad), y dentro de 7 días el efecto medido todavía no es significativo (se necesitan ≥15 días por tipo de tiempo y ≥7%), así que <b>no se aplica</b>. Se activa sola cuando los datos lo justifiquen.'})()
   ].filter(Boolean).map(t=>`<li>${t}</li>`).join('');
@@ -2482,7 +2491,7 @@ function fzPage(){
   // 5. aprendizaje
   const bk=fzBack(),z=HOT.fzl||{err:{},done:{},snaps:{}};
   const mrow=(metric,est)=>{const c=[1,2,3].map(h=>{const m=fzMape(metric,est,h);return`<td>${m.n?hn(m.mape*100,1)+'%':'—'}<small> n=${m.n}</small></td>`}).join('');return`<tr><td class="vn">${FZ_MET[metric]}</td><td>${FZ_NAME[est]}</td>${c}</tr>`};
-  const ar=['rn|y','rn|b','rn|f','rv|y','rv|b','rv|f','fbh|r','fbh|b','fbh|f'].map(k=>{const [m,e]=k.split('|');return mrow(m,e)}).join('');
+  const ar=['rn|y','rn|u','rn|b','rv|y','rv|u','rv|b','fbh|r','fbh|u','fbh|b'].map(k=>{const [m,e]=k.split('|');return mrow(m,e)}).join('');
   const nClosed=Object.keys(z.done).length;
   const t5=`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Qué</th><th>Método</th><th>Error 1 mes</th><th>Error 2 meses</th><th>Error 3 meses</th></tr></thead><tbody>${ar}</tbody></table></div><p class="hnote">Error medio absoluto (menos es mejor) con los meses ya cerrados de 2026. El ritmo de reservas aún no tiene error medido: empieza a puntuarse cuando se cierre el primer mes pronosticado con PickUp. Foto guardada hoy: ${Object.keys(z.snaps).length} día(s) · cierres evaluados: ${nClosed}. Cada carga de PickUp y cada cierre mensual recalculan los pesos.</p>`;
   return`<div class="hwrap">${hHead('FORECAST','Forecast 1-2-3 meses',intro,'')}
@@ -2697,12 +2706,12 @@ Object.assign(window,{hSet,setArea,otbOpen,otbHandle,otbCommit,hotelCardSVG,hote
 // ======================= v47 · avisos de datos nuevos =======================
 const PUSH=window.__PUSH||{appId:''};
 const IS_IOS=/iPhone|iPad|iPod/.test(navigator.userAgent),IS_STANDALONE=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+function pushState(){const OS=window.__OS,perm=('Notification' in window)?Notification.permission:'unsupported',sub=OS&&OS.User&&OS.User.PushSubscription;return{OS,perm,on:!!(sub&&sub.optedIn&&perm==='granted'),id:sub&&sub.id}}
 function pushUi(){
   const b=$('pushBtn');if(!b)return;
   if(!PUSH.appId){b.hidden=true;return}
-  b.hidden=false;const OS=window.__OS;
-  const on=OS&&OS.User&&OS.User.PushSubscription&&OS.User.PushSubscription.optedIn;
-  b.textContent=on?'Avisos activados ✓ (tocar para quitar)':'Activar avisos de datos nuevos';
+  b.hidden=false;const s=pushState();b.classList.toggle('on',s.on);
+  b.textContent=s.on?'🔔 Avisos ACTIVADOS ✓ (tocar para quitar)':s.perm==='denied'?'🔕 Avisos bloqueados en el navegador (tocar para ver cómo)':'🔔 Avisos desactivados · tocar para activar';
 }
 function pushInit(){
   if(!PUSH.appId)return;
@@ -2711,19 +2720,27 @@ function pushInit(){
   window.OneSignalDeferred.push(async OS=>{
     try{await OS.init({appId:PUSH.appId,serviceWorkerPath:'qrlkm-revenue/sw.js',serviceWorkerParam:{scope:'/qrlkm-revenue/'},serviceWorkerOverrideForTypical:true,notifyButton:{enable:false},allowLocalhostAsSecureOrigin:true});
       window.__OS=OS;try{await OS.login(PUB.name)}catch(e){}
-      OS.User.PushSubscription.addEventListener('change',pushUi);pushUi();
+      OS.User.PushSubscription.addEventListener('change',pushUi);pushUi();setTimeout(pushUi,1500);setTimeout(pushUi,5000);try{navigator.permissions.query({name:'notifications'}).then(p=>{p.onchange=pushUi})}catch(e){}
     }catch(e){console.warn('push',e)}
   });
   pushUi();
 }
 async function pushToggle(){
-  const OS=window.__OS;
+  const s0=pushState(),OS=s0.OS;
   if(IS_IOS&&!IS_STANDALONE){toast('En iPhone: pulsa Compartir › «Añadir a pantalla de inicio», abre la app desde el icono y vuelve a pulsar aquí.',10000);return}
+  if(!('Notification' in window)){toast('Este navegador no admite avisos.',8000);return}
+  if(Notification.permission==='denied'){toast('Los avisos están bloqueados. En Android: mantén pulsado el icono de la app › Información › Notificaciones (o Chrome › ⋮ › Ajustes › Ajustes de sitios › Notificaciones) y permite este sitio; después vuelve a pulsar.',15000);return}
   if(!OS){toast('Cargando el servicio de avisos… inténtalo en unos segundos.');return}
   try{
-    if(OS.User.PushSubscription.optedIn){await OS.User.PushSubscription.optOut();toast('Avisos desactivados en este dispositivo.')}
-    else{await OS.Notifications.requestPermission();if(!OS.User.PushSubscription.optedIn)await OS.User.PushSubscription.optIn();toast('Avisos activados ✓ Te llegarán cuando se suban datos nuevos.')}
-  }catch(e){toast('No se pudieron activar los avisos: '+e.message,8000)}
+    if(s0.on){await OS.User.PushSubscription.optOut();toast('Avisos desactivados en este dispositivo.')}
+    else{
+      if(Notification.permission!=='granted'){const p=await Notification.requestPermission();if(p!=='granted'){toast('No se han permitido las notificaciones ('+p+').',8000);pushUi();return}}
+      await OS.User.PushSubscription.optIn();
+      for(let i=0;i<20&&!(OS.User.PushSubscription.optedIn&&OS.User.PushSubscription.id);i++)await new Promise(r=>setTimeout(r,500));
+      const s=pushState();
+      toast(s.on&&s.id?'Avisos activados ✓ Te llegarán cuando se suban datos nuevos.':'Permiso concedido pero el dispositivo no se ha registrado en el servicio de avisos (permiso: '+s.perm+', registro: '+(s.id?'sí':'no')+'). Cierra y abre la app y reinténtalo; si sigue igual, envíame este mensaje.',14000);
+    }
+  }catch(e){toast('No se pudieron activar los avisos: '+e.message,10000)}
   pushUi();
 }
 // aviso dentro de la app: si abres o vuelves a la app y hay datos más recientes que los que tienes cargados
@@ -2737,7 +2754,7 @@ async function checkNewData(){
     }
   }catch(e){}
 }
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkNewData()});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){checkNewData();pushUi()}});
 setInterval(()=>{if(document.visibilityState==='visible')checkNewData()},600000);
 setTimeout(pushInit,1500);
 Object.assign(window,{pushToggle});

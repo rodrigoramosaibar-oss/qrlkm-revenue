@@ -657,6 +657,7 @@ body[data-layout="bento"] .hc{border:0}
   <button data-area="hotel" class="tab" data-view="rooms" onclick="setArea('rooms')"><svg viewBox="0 0 24 24"><path d="M3 18v-7a3 3 0 013-3h12a3 3 0 013 3v7M3 15h18M3 21v-3M21 21v-3"/></svg>Rooms</button>
   <button data-area="hotel" class="tab" data-view="otb" onclick="showView('otb',this)"><svg viewBox="0 0 24 24"><path d="M4 20V10M9 20V4M14 20v-8M19 20V7"/></svg>Ocupación OTB</button>
   <button data-area="hotel" class="tab" data-view="wx" onclick="showView('wx',this)"><svg viewBox="0 0 24 24"><path d="M7 19a4 4 0 010-8 5.5 5.5 0 0110.6-1.2A4.5 4.5 0 0117 19H7z"/></svg>Meteo y revenue</button>
+  <button data-area="hotel" class="tab" data-view="pu" onclick="showView('pu',this)"><svg viewBox="0 0 24 24"><path d="M4 19h16M6 16l4-5 3 3 5-7"/></svg>PickUp</button>
   <div data-area="fb" class="sbGroup">Informes</div>
   <button data-area="fb" class="tab active" data-view="dash" onclick="setDashMode('month',this)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</button>
   <button data-area="fb" class="tab" data-view="dash-ytd" onclick="setDashMode('ytd',this)"><svg viewBox="0 0 24 24"><path d="M3 20h18M5 16l4-5 4 3 6-8"/></svg>Acumulado YTD</button>
@@ -677,6 +678,7 @@ body[data-layout="bento"] .hc{border:0}
     <button class="sbBtn" onclick="window.print()">PDF / Imprimir</button>
     <button class="sbBtn primary" data-edit onclick="flashOpen()">Cargar Revenue Flash</button>
     <button class="sbBtn" data-edit data-hot onclick="otbOpen()">Cargar ocupación Opera (OTB)</button>
+    <button class="sbBtn" data-edit data-hot onclick="puOpen()">Cargar PickUp (Excel)</button>
     <button class="sbBtn" data-edit onclick="publishData()">Publicar datos</button>
     <div class="sbRow" data-edit><button class="sbBtn" onclick="manualSave()">Grabar</button><button class="sbBtn" onclick="downloadState()">Exportar</button></div>
     <button class="sbBtn" data-edit onclick="resetApp()">Reset borrador</button>
@@ -724,6 +726,7 @@ body[data-layout="bento"] .hc{border:0}
 <div id="rooms" class="view"></div>
 <div id="otb" class="view"></div>
 <div id="wx" class="view"></div>
+<div id="pu" class="view"></div>
 <div id="entry" class="view" data-edit><div class="entry">
 <section class="formPanel"><h2>Entrada diaria</h2><p class="small" style="margin-bottom:.9rem">Carga el revenue por venue. Puedes sumar importes con +, por ejemplo 120+35,50+18.</p><div class="formGrid" id="dailyForm"></div><div class="totalLine"><span>Total día</span><b id="formTotal">0,00K€</b></div><button class="btn primary wide" onclick="saveDay()">Guardar día y recalcular</button>
 <details class="paste"><summary>Pegar varios días desde Excel</summary><p class="small" style="margin:.4rem 0 .6rem">Una fila por día: <code>Día, Venue1, Venue2, ...</code> separados por tabulador o punto y coma, en el orden de las columnas de la tabla.</p><textarea id="pasteArea" placeholder="1&#9;2649,55&#9;651,13&#9;949,98"></textarea><button class="btn primary wide" style="margin-top:.6rem" onclick="importPaste()">Importar filas pegadas</button><div class="small" id="pasteResult" style="margin-top:.5rem"></div></details>
@@ -1533,7 +1536,7 @@ function flashModalEl(){
   document.body.appendChild(m);
   m.addEventListener('click',e=>{if(e.target===m)flashClose()});
   m.addEventListener('dragover',e=>{e.preventDefault()});
-  m.addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer&&e.dataTransfer.files[0];if(f)pdfAutoHandle(f)});
+  m.addEventListener('drop',e=>{e.preventDefault();const fl=e.dataTransfer?Array.from(e.dataTransfer.files):[];if(fl.length&&fl.every(x=>/\.xlsx$/i.test(x.name))){if(!HOT_EDIT){toast('Tu usuario no puede cargar datos.');return}puHandle(fl)}else if(fl[0])pdfAutoHandle(fl[0])});
   return m;
 }
 function flashClose(){const m=$f('flashModal');if(m)m.classList.remove('show');FLASH_ST=null}
@@ -1565,6 +1568,7 @@ async function flashHandleFile(file){
 // Enruta el PDF al lector correcto según su contenido (Revenue Flash u ocupación Opera H&F), sea cual sea el cargador abierto y se suelte o se elija.
 async function pdfAutoHandle(file){
   if(!file)return;
+  if(/\.xlsx$/i.test(file.name)){if(!HOT_EDIT){toast('Tu usuario no puede cargar datos.');return}return puHandle([file])}
   let kind='';
   try{
     const head=flashRows(await flashReadPdf(file)).slice(0,12).map(r=>r.text).join(' ');
@@ -2101,7 +2105,179 @@ function renderWx(){
   host.innerHTML='<div class="hwrap"><p class="hnote">Cargando meteo…</p></div>';
   wxEnsure().then(()=>{if(document.body.dataset.view!=='wx')return;try{host.innerHTML=wxPage()}catch(e){console.error(e);host.innerHTML='<div class="hwrap"><p class="hnote">No se pudo mostrar la meteo: '+escapeHTML(e.message)+'</p></div>'}});
 }
-function hRender(){const v=document.body.dataset.view;if(v==='hotel')renderHotel();else if(v==='rooms')renderRooms();else if(v==='otb')renderOtb();else if(v==='wx')renderWx()}
+// ======================= v49 · PickUp diario (Excel «Daily Business Report» de Revenue) =======================
+const PU_INV=195;
+// hoja «Daily PU AAAA»: columna de Excel de cada dato (los dos ficheros, 2026 y 2027, tienen el mismo formato)
+const PU_MAP=[['rnT','G'],['rnG','H'],['rnC','I'],['rn','J'],['tt','K'],['co','L'],['rw','M'],['em','N'],['adrT','O'],['adrG','P'],['adr','Q'],['rvT','R'],['rvG','S'],['rv','T'],['puT','U'],['puG','X'],['pu','AA'],['puRv','AC'],['ivn','AD'],['ive','AE'],['fit','AI'],['vs','AK'],['lyO','AM'],['lyA','AN'],['fcT','AY'],['fcG','AZ'],['fc','BB']];
+const PU_I={};PU_MAP.forEach((m,i)=>{PU_I[m[0]]=i});
+const PU_HDR=[['F',3,'occ'],['G',3,'rns'],['K',3,'ttoo'],['O',3,'adr'],['R',3,'revenue'],['U',3,'pu transient'],['AA',3,'total pu'],['AI',3,'fit rate'],['AY',3,'fc diario']];
+const puCol=s=>s.split('').reduce((a,c)=>a*26+c.charCodeAt(0)-64,0);
+const puDate=n=>new Date(Math.round((n-25569)*864e5)).toISOString().slice(0,10);
+let PU_ST=null;const PUST={y:null,m:0};
+async function puInflate(u8){return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer())}
+async function puZip(buf){
+  const dv=new DataView(buf),u8=new Uint8Array(buf);let e=u8.length-22;
+  while(e>=0&&dv.getUint32(e,true)!==0x06054b50)e--;
+  if(e<0)throw new Error('Esto no es un archivo Excel (.xlsx).');
+  const n=dv.getUint16(e+10,true);let p=dv.getUint32(e+16,true);const ents={};
+  for(let i=0;i<n;i++){
+    if(dv.getUint32(p,true)!==0x02014b50)break;
+    const method=dv.getUint16(p+10,true),csz=dv.getUint32(p+20,true),nl=dv.getUint16(p+28,true),el=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),off=dv.getUint32(p+42,true);
+    ents[new TextDecoder().decode(u8.subarray(p+46,p+46+nl))]={method,csz,off};p+=46+nl+el+cl;
+  }
+  return{async get(name){
+    const x=ents[name];if(!x)return null;const o=x.off,s=o+30+dv.getUint16(o+26,true)+dv.getUint16(o+28,true),d=u8.subarray(s,s+x.csz);
+    return new TextDecoder().decode(x.method===0?d:await puInflate(d));
+  }};
+}
+const puUnesc=s=>s.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,'&');
+async function puReadSheets(file){ // devuelve {nombreHoja: {fila:{col:valor}}} solo de las hojas «Daily PU»
+  const z=await puZip(await file.arrayBuffer());
+  const wb=await z.get('xl/workbook.xml'),rels=await z.get('xl/_rels/workbook.xml.rels');
+  if(!wb||!rels)throw new Error('Este Excel no tiene el formato esperado.');
+  const rid={};for(const m of rels.matchAll(/<Relationship\b[^>]*>/g)){const a=m[0],i=/\bId="([^"]+)"/.exec(a),t=/\bTarget="([^"]+)"/.exec(a);if(i&&t)rid[i[1]]=t[1]}
+  const sheets=[];for(const m of wb.matchAll(/<sheet\b[^>]*>/g)){const a=m[0],n=/\bname="([^"]*)"/.exec(a),r=/\br:id="([^"]+)"/.exec(a);if(n&&r)sheets.push({name:puUnesc(n[1]),path:rid[r[1]]})}
+  const want=sheets.filter(s=>/^(Daily PU\b|Summary \d{4}$)/i.test(s.name)&&s.path);
+  if(!want.some(s=>/^Daily PU/i.test(s.name)))throw new Error('No encuentro la hoja «Daily PU» en este Excel.');
+  const ss=[],sst=await z.get('xl/sharedStrings.xml');
+  if(sst)for(const m of sst.matchAll(/<si>([\s\S]*?)<\/si>/g)){let t='';for(const x of m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g))t+=x[1];ss.push(puUnesc(t))}
+  const out={};
+  for(const s of want){
+    const xml=await z.get(s.path.startsWith('/')?s.path.slice(1):'xl/'+s.path);if(!xml)continue;
+    const g={};
+    for(const m of xml.matchAll(/<c r="([A-Z]+)(\d+)"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)){
+      const r=+m[2];if(r>400||m[4]==null)continue;const ci=puCol(m[1]);if(ci>90)continue;
+      const t=/\bt="(\w+)"/.exec(m[3]),v=/<v>([\s\S]*?)<\/v>/.exec(m[4]);let val=null;
+      if(t&&t[1]==='s'&&v)val=ss[+v[1]];else if(t&&t[1]==='inlineStr'){const x=/<t[^>]*>([\s\S]*?)<\/t>/.exec(m[4]);val=x?puUnesc(x[1]):null}
+      else if(t&&(t[1]==='e'||t[1]==='b'))val=null;else if(t&&t[1]==='str')val=v?puUnesc(v[1]):null;else if(v){const f=parseFloat(v[1]);val=isFinite(f)?f:null}
+      if(val!==null&&val!=='')(g[r]=g[r]||{})[ci]=val;
+    }
+    out[s.name]=g;
+  }
+  return out;
+}
+function puParseSheet(name,g){
+  const bad=PU_HDR.filter(([c,r,t])=>!String((g[r]||{})[puCol(c)]||'').toLowerCase().includes(t));
+  if(bad.length)throw new Error('La hoja «'+name+'» no tiene las columnas esperadas ('+bad.map(b=>b[0]+b[1]).join(', ')+'). ¿Ha cambiado el formato del informe?');
+  const days={},ev={},chk={rows:0,sum:0,occ:0};
+  Object.keys(g).map(Number).sort((a,b)=>a-b).forEach(r=>{
+    if(r<5)return;const row=g[r],a=row[1];if(typeof a!=='number'||a<40000||a>60000)return;
+    const k=puDate(a),rec=PU_MAP.map(([,c])=>{const v=row[puCol(c)];return typeof v==='number'?Math.round(v*100)/100:0});
+    days[k]=rec;chk.rows++;
+    if(Math.abs(rec[PU_I.rnT]+rec[PU_I.rnG]+rec[PU_I.rnC]-rec[PU_I.rn])>0.5)chk.sum++;
+    const o=row[puCol('F')];if(typeof o==='number'&&Math.abs(o*PU_INV-rec[PU_I.rn])>1&&Math.abs(o*PU_INV-rec[PU_I.rnT]-rec[PU_I.rnG])>1)chk.occ++;
+    const e=row[3];if(typeof e==='string'&&e.trim())ev[k]=e.trim();
+  });
+  const ks=Object.keys(days).sort();if(!ks.length)throw new Error('La hoja «'+name+'» no trae fechas.');
+  return{name,year:+ks[0].slice(0,4),days,ev,chk,from:ks[0],to:ks[ks.length-1]};
+}
+const PU_SK=['pu','otb','ly','fc','bud'];
+function puParseSummary(g){ // tabla mensual de la hoja «Summary AAAA»; los dos años tienen columnas distintas, así que se localiza por los rótulos de las filas 7 y 8
+  const r7=g[7]||{},r8=g[8]||{},sec=Object.keys(r7).map(Number).filter(c=>/^(occupancy|adr|revenue)$/i.test(String(r7[c]).trim())).sort((a,b)=>a-b).slice(0,3);
+  if(sec.length<3)return null;const lab=Object.keys(r8).map(Number).sort((a,b)=>a-b),blk={};
+  ['occ','adr','rev'].forEach((nm,i)=>{const lo=sec[i],hi=sec[i+1]||999,ls=lab.filter(c=>c>=lo&&c<hi).slice(0,5);if(ls.length<5)return;blk[nm]=ls.map((c,j)=>j<4?ls[j+1]-1:hi===999?c+2:hi-1)});
+  if(!blk.occ||!blk.adr||!blk.rev)return null;
+  const MN=['january','february','march','april','may','june','july','august','september','october','november','december'],out={};
+  for(let r=9;r<=24;r++){const row=g[r];if(!row)continue;const mi=MN.indexOf(String(row[1]||'').trim().toLowerCase());if(mi<0)continue;const v=(nm,j)=>{const x=row[blk[nm][j]];return typeof x==='number'?Math.round(x*100)/100:0};
+    out[mi+1]={otbRn:v('occ',1),lyRn:v('occ',2),fcRn:v('occ',3),budRn:v('occ',4),otbRv:v('rev',1),lyRv:v('rev',2),fcRv:v('rev',3),budRv:v('rev',4),fcAdr:v('adr',3)}}
+  return Object.keys(out).length>=12?out:null;
+}
+function puAsofFromName(n){
+  const M={january:1,february:2,march:3,april:4,may:5,june:6,july:7,august:8,september:9,october:10,november:11,december:12};
+  const m=/(january|february|march|april|may|june|july|august|september|october|november|december)[\s_-]*(\d{1,2})(?:st|nd|rd|th)?[\s_,-]*(\d{4})/i.exec(n);
+  return m?m[3]+'-'+wxP(M[m[1].toLowerCase()])+'-'+wxP(+m[2]):'';
+}
+function puOpen(){
+  if(!HOT_EDIT){toast('Tu usuario no puede cargar datos.');return}
+  document.body.classList.remove('navopen');const m=flashModalEl();m.classList.add('show');PU_ST=null;$f('flashTitle').textContent='Cargar PickUp (Excel de Revenue)';
+  $f('flashBody').innerHTML=`<p class="fp"><b>Daily Business Report de Revenue.</b> Elige el Excel (o los dos a la vez: 2026 y 2027). Cada carga actualiza la foto vigente y guarda cómo evoluciona la ocupación en libros para medir el ritmo de reservas. Súbelo cuando quieras; no hace falta cada día.</p>
+  <label class="fpick"><input type="file" multiple accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden onchange="puHandle(Array.from(this.files))"><span>Elegir Excel(es) de PickUp</span><small>o arrástralos aquí</small></label><div class="ferr" id="otbErr"></div>`;
+}
+async function puHandle(files){
+  files=(Array.isArray(files)?files:[files]).filter(Boolean);if(!files.length)return;
+  const body=$f('flashBody');body.innerHTML='<p class="fp">Leyendo '+files.map(f=>'«'+escapeHTML(f.name)+'»').join(' y ')+'…</p>';
+  try{
+    const parsed=[];let asof='';
+    for(const f of files){
+      asof=asof||puAsofFromName(f.name);
+      const sh=await puReadSheets(f);
+      for(const n of Object.keys(sh)){if(!/^Daily PU/i.test(n))continue;const p=Object.assign(puParseSheet(n,sh[n]),{file:f.name}),sn=Object.keys(sh).find(x=>x==='Summary '+p.year);p.sum=sn?puParseSummary(sh[sn]):null;parsed.push(p)}
+    }
+    const yrs={};parsed.forEach(p=>{yrs[p.year]=p});
+    PU_ST={asof:asof||wxToday(),yrs,fromName:!!asof};puPreview();
+  }catch(e){console.error(e);body.innerHTML=`<div class="ferr">${escapeHTML(e.message||String(e))}</div><div class="fbtns"><button class="fb" onclick="puOpen()">Reintentar</button></div>`}
+}
+function puTotals(p,asof){let rn=0,rv=0,pu=0,pr=0,fc=0,n=0;Object.keys(p.days).forEach(k=>{if(k<asof)return;const r=p.days[k];rn+=r[PU_I.rn];rv+=r[PU_I.rv];pu+=r[PU_I.pu];pr+=r[PU_I.puRv];fc+=r[PU_I.fc];n++});return{rn,rv,pu,pr,fc,n}}
+function puPreview(){
+  const S=PU_ST,body=$f('flashBody'),ys=Object.keys(S.yrs).sort();
+  const rows=ys.map(y=>{const p=S.yrs[y],t=puTotals(p,S.asof),ok=p.chk.sum===0&&p.chk.occ<=2&&p.chk.rows>=360,had=HOT.pu&&HOT.pu.years[y];
+    return`<li class="${ok?'ok':'ko'}">${ok?'✓':'✗'} <b>${y}</b> · ${p.chk.rows} días · ${fmtNum(t.rn)} hab-noche en libros desde el ${S.asof.slice(8)}/${S.asof.slice(5,7)} · ${fmtNum(t.rv)} € · PickUp ${t.pu>=0?'+':''}${fmtNum(t.pu)} hab · forecast ${fmtNum(t.fc)} hab${p.chk.sum?' · '+p.chk.sum+' días no cuadran (T+G+C≠Total)':''}${had?' <i>(sustituye a la carga anterior)</i>':''}</li>`}).join('');
+  const ok=ys.every(y=>S.yrs[y].chk.sum===0&&S.yrs[y].chk.rows>=360);
+  body.innerHTML=`<div class="fmeta"><b>PickUp a fecha</b><span><input type="date" id="puAsof" value="${S.asof}" onchange="puAsofSet(this.value)" style="font:inherit"></span></div>
+  <p class="fp">${S.fromName?'Fecha tomada del nombre del archivo; corrígela si no es la del informe.':'No he podido leer la fecha en el nombre del archivo: pon la fecha del informe.'} Se guardan los días desde esa fecha: lo anterior ya lo cubre el Revenue Flash.</p>
+  <ul class="fchk">${rows}</ul>
+  <div class="fbtns"><button class="fb" onclick="flashClose()">Cancelar</button><button class="fb" ${ok?'':'disabled'} onclick="puCommit(false)">Guardar</button><button class="fb primary" ${ok?'':'disabled'} onclick="puCommit(true)">${ghConfigured()?'Guardar y publicar para todos':'Guardar y descargar para publicar'}</button></div>`;
+}
+const PU_LEADS=[0,1,2,3,5,7,10,14,21,28,35,45,60,75,90,120,150,180,240,300,365,420];
+function puBucket(L){let b=-1,bd=1e9;PU_LEADS.forEach(x=>{const d=Math.abs(L-x);if(d<bd){bd=d;b=x}});const tol=b<14?0:b<60?2:7;return bd<=tol?{b,d:bd}:null}
+async function puCommit(publish){
+  if(!PU_ST)return;const S=PU_ST,pu=HOT.pu=HOT.pu||{years:{},pace:{},log:[]};
+  const t0=Date.parse(S.asof+'T12:00:00');
+  Object.keys(S.yrs).forEach(y=>{
+    const p=S.yrs[y],d={},ev={};
+    Object.keys(p.days).forEach(k=>{if(k<S.asof)return;d[k]=p.days[k];if(p.ev[k])ev[k]=p.ev[k];
+      const L=Math.round((Date.parse(k+'T12:00:00')-t0)/864e5),bk=puBucket(L);
+      if(bk){const r=p.days[k],c=(pu.pace[k]=pu.pace[k]||{}),old=c[bk.b];
+        if(!old||bk.d<=old[4])c[bk.b]=[r[PU_I.rn],r[PU_I.rv],r[PU_I.rnT],r[PU_I.rnG],bk.d]}});
+    pu.years[y]={asof:S.asof,upd:new Date().toISOString(),d,ev,sum:p.sum||null};
+    const t=puTotals(p,S.asof);pu.log=(pu.log||[]).filter(l=>!(l.asof===S.asof&&l.y===+y));
+    pu.log.push({asof:S.asof,y:+y,rn:Math.round(t.rn),rv:Math.round(t.rv),pu:Math.round(t.pu),fc:Math.round(t.fc),by:PUB.name});
+  });
+  pu.log.sort((a,b)=>a.asof<b.asof?-1:a.asof>b.asof?1:a.y-b.y);pu.log=pu.log.slice(-120);pu.asof=S.asof;
+  HOT.loads=(HOT.loads||[]).slice(-60);HOT.loads.push({at:new Date().toISOString(),what:'PickUp '+S.asof+' ('+Object.keys(S.yrs).join('+')+')',by:PUB.name});
+  HST.dirty=true;await hotDraftSave();flashClose();hRender();
+  if(publish){const ok=await hotelPublish();if(ok&&ghConfigured())toast('PickUp publicado ✓',6000)}else toast('PickUp guardado en este dispositivo.');
+}
+// ---- vista ----
+function puSet(k,v){PUST[k]=v;renderPu()}
+function puMonthRows(y,m){const P=HOT.pu.years[y];return P?Object.keys(P.d).sort().filter(k=>!m||+k.slice(5,7)===m).map(k=>({k,r:P.d[k]})):[]}
+function puAgg(rows){const a={rn:0,rv:0,pu:0,puRv:0,fc:0,ly:0,n:rows.length,tt:0,co:0,rw:0,em:0,ivn:0,ive:0,rnT:0,rnG:0};rows.forEach(({r})=>{a.rn+=r[PU_I.rn];a.rv+=r[PU_I.rv];a.pu+=r[PU_I.pu];a.puRv+=r[PU_I.puRv];a.fc+=r[PU_I.fc];a.ly+=r[PU_I.lyO]/100*PU_INV;['tt','co','rw','em','ivn','ive','rnT','rnG'].forEach(x=>{a[x]+=r[PU_I[x]]})});return a}
+function renderPu(){
+  const host=$('pu');
+  if(!HAS_HOT||!HOT.pu||!Object.keys(HOT.pu.years||{}).length){
+    host.innerHTML=`<div class="hwrap">${hHead('PICKUP','PickUp',"Ocupación por día de todo el año, ADR, segmentos y reservas que van entrando, a partir del informe diario de Revenue.",'')}
+    <p class="hnote">Todavía no se ha cargado ningún PickUp.</p>${HOT_EDIT?'<p><button class="fb primary" onclick="puOpen()">Cargar PickUp (Excel)</button></p>':''}</div>`;return;
+  }
+  const P=HOT.pu,ys=Object.keys(P.years).sort();if(!PUST.y||!P.years[PUST.y])PUST.y=ys.find(y=>+y===new Date().getFullYear())||ys[0];
+  const y=PUST.y,Y=P.years[y],m=PUST.m,dn=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const ctl=`<div class="hctl"><label>Año<select onchange="puSet('y',this.value)">${ys.map(v=>`<option ${v===y?'selected':''}>${v}</option>`).join('')}</select></label><label>Mes<select onchange="puSet('m',+this.value)"><option value="0">Todo el año</option>${months.map((n,i)=>`<option value="${i+1}" ${m===i+1?'selected':''}>${n}</option>`).join('')}</select></label>${HOT_EDIT?'<button class="fb primary" onclick="puOpen()">Cargar PickUp</button>':''}</div>`;
+  const all=puAgg(puMonthRows(y,0)),sel=puAgg(puMonthRows(y,m)),updTxt=Y.asof.slice(8)+'/'+Y.asof.slice(5,7)+'/'+Y.asof.slice(0,4);
+  const intro=`Informe de Revenue del <b>${updTxt}</b>. ${y}: <b>${fmtNum(all.rn)}</b> habitaciones-noche en libros desde esa fecha (${hn(all.rn/(all.n*PU_INV)*100,1)}% de ocupación), ${fmtNum(all.rv)} € de room revenue, ADR ${hn(all.rn?all.rv/all.rn:0,0)} €. Pickup del último informe: <b>${all.pu>=0?'+':''}${fmtNum(all.pu)}</b> hab y ${all.puRv>=0?'+':''}${fmtNum(all.puRv)} €.`;
+  // mensual
+  const SM=Y.sum||{},fcOk=Math.abs(all.fc-all.rn)>5;
+  const mrows=months.map((n,i)=>{const a=puAgg(puMonthRows(y,i+1));if(!a.n)return'';const oc=a.rn/(a.n*PU_INV),adr=a.rn?a.rv/a.rn:0,s=SM[i+1]||{};
+    return`<tr class="${m===i+1?'sel':''}" onclick="puSet('m',${i+1})" style="cursor:pointer"><td class="vn">${n}${a.n<new Date(+y,i+1,0).getDate()?' <small>(desde hoy)</small>':''}</td><td>${hp(oc,1)}</td><td>${fmtNum(a.rn)}</td><td>${hn(adr,0)}</td><td>${fmtNum(a.rv)}</td><td class="${dcls(a.pu)}">${a.pu>=0?'+':''}${fmtNum(a.pu)}</td><td class="hm">${s.fcRn?fmtNum(s.fcRn):'—'}</td><td class="hm">${s.fcRv?fmtNum(s.fcRv):'—'}</td><td class="hm">${s.budRv?fmtNum(s.budRv):'—'}</td><td class="hm">${s.lyRn?fmtNum(s.lyRn):'—'}</td></tr>`}).join('');
+  const mt=`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Mes</th><th>Ocup. libros</th><th>Hab-noche</th><th>ADR</th><th>Room revenue €</th><th>PickUp hab</th><th class="hm">Forecast mes hab</th><th class="hm">Forecast mes €</th><th class="hm">Budget mes €</th><th class="hm">Libros año ant. hab</th></tr></thead><tbody>${mrows}</tbody></table></div><p class="hnote">Pulsa un mes para ver su detalle. Las cuatro últimas columnas son del mes completo (Forecast y Budget de Revenue, y lo que había en libros a esta misma fecha el año pasado). Hab-noche, ADR y revenue son solo desde la fecha del informe.</p>`;
+  // gráfico de ocupación por día
+  const dr=puMonthRows(y,m).slice(0,m?31:120),chart=hBarsV(dr.map(({r})=>Math.round(r[PU_I.rn]/PU_INV*100)),dr.map(({k})=>+k.slice(8,10)));
+  // detalle diario
+  const trs=dr.map(({k,r})=>{const dt=new Date(k+'T12:00:00'),e=Y.ev[k]||'',oc=r[PU_I.rn]/PU_INV,gp=r[PU_I.fc]?r[PU_I.rn]/r[PU_I.fc]-1:null;
+    return`<tr><td class="vn">${dn[dt.getDay()]} ${+k.slice(8,10)}/${k.slice(5,7)}${e?` <small>${escapeHTML(e)}</small>`:''}</td><td>${hp(oc,0)}</td><td>${r[PU_I.rnT]}/${r[PU_I.rnG]}</td><td>${r[PU_I.adr]?hn(r[PU_I.adr],0):'—'}</td><td>${fmtNum(r[PU_I.rv])}</td><td class="${dcls(r[PU_I.pu])}">${r[PU_I.pu]?(r[PU_I.pu]>0?'+':'')+r[PU_I.pu]:'·'}</td>${fcOk?`<td class="hm">${r[PU_I.fc]}</td><td class="hm ${gp==null?'':dcls(gp)}">${gp==null?'—':(gp>=0?'+':'−')+hn(Math.abs(gp)*100,0)+'%'}</td>`:''}<td class="hm">${hp(r[PU_I.lyO]/100,0)}</td><td class="hm">${r[PU_I.fit]?hn(r[PU_I.fit],0):'—'}</td></tr>`}).join('');
+  const dt=`<div class="fscroll tall"><table class="ftab htab"><thead><tr><th>Día</th><th>Ocup.</th><th>Trans/Grupo</th><th>ADR</th><th>Revenue €</th><th>PickUp</th>${fcOk?'<th class="hm">FC hab</th><th class="hm">vs FC</th>':''}<th class="hm">Año ant.</th><th class="hm">Tarifa FIT</th></tr></thead><tbody>${trs}</tbody></table></div>`;
+  // segmentos
+  const seg=[['Transient',sel.rnT],['Grupos',sel.rnG],['TTOO',sel.tt],['Consorcios',sel.co],['Rewards (IHG)',sel.rw],['Empleados',sel.em]],tot=sel.rn||1;
+  const sg=`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Segmento</th><th>Hab-noche</th><th>% del total</th></tr></thead><tbody>${seg.map(s=>`<tr><td class="vn">${s[0]}</td><td>${fmtNum(s[1])}</td><td>${hp(s[1]/tot,0)}</td></tr>`).join('')}</tbody></table></div><p class="hnote">TTOO, consorcios, Rewards y empleados son parte de Transient. Periodo: ${m?months[m-1]:'todo el año'} ${y}.</p>`;
+  const lg=(P.log||[]).slice().reverse().slice(0,12).map(l=>`<tr><td class="vn">${l.asof.slice(8)}/${l.asof.slice(5,7)}/${l.asof.slice(0,4)}</td><td>${l.y}</td><td>${fmtNum(l.rn)}</td><td>${fmtNum(l.rv)}</td><td class="${dcls(l.pu)}">${l.pu>=0?'+':''}${fmtNum(l.pu)}</td><td>${l.by||''}</td></tr>`).join('');
+  const lt=`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Informe del</th><th>Año</th><th>Hab-noche</th><th>Revenue €</th><th>PickUp</th><th>Cargado por</th></tr></thead><tbody>${lg}</tbody></table></div><p class="hnote">Con cada carga se guarda la foto de cada día a distintas antelaciones (hoy, +7, +14, +30, +60, +90… días) para medir el ritmo de reservas y proyectar cierres. Cuantas más cargas, más fiable.</p>`;
+  host.innerHTML=`<div class="hwrap">${hHead('PICKUP','PickUp',intro,ctl)}
+  ${hCard('Resumen por mes · '+y,'OTB, forecast de Revenue y año anterior',mt)}
+  <div class="hgrid"><div class="hcol">${hCard('Ocupación en libros por día','% sobre '+PU_INV+' hab · '+(m?months[m-1]:'próximos 120 días'),chart)}${hCard('Segmentos de cliente','',sg)}${hCard('Historial de cargas','',lt)}</div>
+  <div class="hcol">${hCard('Detalle por día','PickUp = reservas netas desde el informe anterior',dt)}</div></div>
+  <p class="hnote">Fuente: «Daily Business Report» de Revenue (hoja Daily PU). Los ingresos de días ya pasados de ese informe no coinciden con el Revenue Flash, por eso aquí solo se guardan días desde la fecha del informe.</p></div>`;
+}
+function puAsofSet(v){if(PU_ST&&/^\d{4}-\d{2}-\d{2}$/.test(v)){PU_ST.asof=v;puPreview()}}
+Object.assign(window,{puOpen,puHandle,puCommit,puSet,puAsofSet,renderPu});
+function hRender(){const v=document.body.dataset.view;if(v==='hotel')renderHotel();else if(v==='rooms')renderRooms();else if(v==='otb')renderOtb();else if(v==='wx')renderWx();else if(v==='pu')renderPu()}
 // ---------------- áreas ----------------
 function setArea(a,go){
   if(!HAS_HOT)a='fb';
@@ -2720,7 +2896,7 @@ async function publishData(){
 }
 Object.assign(window,{publishData,openCard,closeCard,shareCard,applyRole,money2,parseValue,setLayout,cycleLayout});
 applyTheme();applyRole();renderAll();setLayout(LAYOUT);
-Object.assign(RENDERERS,{hotel:renderHotel,rooms:renderRooms,otb:renderOtb,wx:renderWx});
+Object.assign(RENDERERS,{hotel:renderHotel,rooms:renderRooms,otb:renderOtb,wx:renderWx,pu:renderPu});
 if(HAS_HOT){document.body.classList.add('has-hot');let ar='hotel';try{ar=localStorage.getItem('fbAreaV47')||'hotel'}catch(e){}if(ar!=='fb'){setArea(ar,false)}}
 showView('dash',document.querySelector('.tab[data-view="'+(DATA.dashboardMode==='ytd'?'dash-ytd':'dash')+'"]'));
 renderDashboard();

@@ -2325,16 +2325,18 @@ function fzMape(metric,est,h){
   if(l){n+=l[0];w+=2*l[0];sm+=2*l[1]} // los cierres reales pesan el doble: es lo que de verdad se predijo a ese plazo
   return w?{mape:sm/w,n}:{mape:0.12,n:0};
 }
-function fzBlend(metric,vals,h,conf){
-  const pr=FZ_PRIOR[metric],ws={};let sw=0,s=0;
-  Object.keys(pr).forEach(e=>{const v=vals[e];if(!(v>0))return;const m=fzMape(metric,e,h);let w=pr[e]/(m.mape+0.03);if(e==='p')w*=Math.max(0.05,conf);ws[e]=w;sw+=w;s+=w*v});
+function fzBlend(metric,vals,h,conf,floor){
+  const pr=FZ_PRIOR[metric],ws={};let sw=0,s=0;floor=floor||0;
+  Object.keys(pr).forEach(e=>{const v=vals[e];if(!(v>0)||v<floor*0.98)return;const m=fzMape(metric,e,h);let w=pr[e]/(m.mape+0.03);if(e==='p')w*=Math.max(0.05,conf);ws[e]=w;sw+=w;s+=w*v});
   if(!sw)return null;let mp=0;Object.keys(ws).forEach(e=>{ws[e]/=sw;mp+=ws[e]*fzMape(metric,e,h).mape});
-  return{val:s/sw,ws,mape:Math.max(0.04,mp*0.85),vals};
+  return{val:Math.max(floor,s/sw),ws,mape:Math.min(0.35,Math.max(0.04,mp*0.85)),vals};
 }
 // ---- un mes objetivo ----
 function fzMonth(Y,M,h,ctx){
-  const {A,P,V,yoy,cur}=ctx,PU=HOT.pu&&HOT.pu.years&&HOT.pu.years[Y],S=PU&&PU.sum&&PU.sum[M],LY=fzLY(Y,M,A,P),ty=Y===fzYear();
-  const rnv={},rvv={};
+  const {A,P,V,yoy,L}=ctx,PU=HOT.pu&&HOT.pu.years&&HOT.pu.years[Y],S=PU&&PU.sum&&PU.sum[M],LY=fzLY(Y,M,A,P),ty=Y===fzYear();
+  const rnv={},rvv={},cur0=h===0,mt=cur0?hAgg(M,L.d):{so:0,rr:0,fb:0};
+  let fRn=0,fRv=0;if(cur0&&PU)Object.keys(PU.d).forEach(k=>{if(+k.slice(5,7)===M&&+k.slice(8)>L.d){fRn+=PU.d[k][PU_I.rn];fRv+=PU.d[k][PU_I.rv]}});
+  const flRn=cur0?mt.so+fRn:0,flRv=cur0?mt.rr+fRv:0; // suelo: lo ya hecho + lo que ya hay en libros para los días que quedan
   let conf=0;
   if(S&&LY&&S.lyRn>0&&S.otbRn>0){const f=Math.min(8,LY.rn/S.lyRn);rnv.p=Math.min(S.otbRn*f,195*hdim(Y,M)*0.98);conf=Math.min(1,(S.lyRn/LY.rn)/0.3);if(S.lyRv>0&&S.otbRv>0)rvv.p=S.otbRv*Math.min(8,LY.rv/S.lyRv)}
   if(h===0)conf=1;
@@ -2345,29 +2347,29 @@ function fzMonth(Y,M,h,ctx){
   if(S&&S.budRn>0)rnv.b=S.budRn;if(S&&S.budRv>0)rvv.b=S.budRv;
   if(ty&&P&&P.sold&&HOT.ref.budget26){const B=HOT.ref.budget26;if(!rnv.b&&B.sold[M-1]>0)rnv.b=B.sold[M-1];if(!rvv.b&&B.rooms[M-1]>0)rvv.b=B.rooms[M-1]}
   if(ty&&HOT.ref.forecast26){const F=HOT.ref.forecast26;if(!rnv.f&&F.sold[M-1]>0)rnv.f=F.sold[M-1];if(!rvv.f&&F.rooms[M-1]>0)rvv.f=F.rooms[M-1]}
-  const rn=fzBlend('rn',rnv,h,conf),rv=fzBlend('rv',rvv,h,conf);if(!rn)return null;
+  const rn=fzBlend('rn',rnv,h,conf,flRn),rv=fzBlend('rv',rvv,h,conf,flRv);if(!rn)return null;
   const RN=rn.val,RV=rv?rv.val:null;
   // F&B hotel
   const fpr={};Object.keys(A).forEach(m=>{if(A[m].full&&A[m].so>0)fpr[m]=A[m].fb/A[m].so});
   const lyr=LY&&LY.rn>0&&LY.fb>0?LY.fb/LY.rn:null,sea=ty?(lyr||fzSeason(fpr,M)):(fpr[M]||fzSeason(fpr,M));
-  const fbv={};if(sea)fbv.r=RN*sea*(ty&&yoy?yoy.fbr:1);
+  const fbv={};if(sea)fbv.r=(cur0?mt.fb+Math.max(0,RN-mt.so)*sea*(ty&&yoy?yoy.fbr:1):RN*sea*(ty&&yoy?yoy.fbr:1));
   if(ty&&HOT.ref.forecast26&&HOT.ref.forecast26.fb[M-1]>0)fbv.f=HOT.ref.forecast26.fb[M-1];
   if(ty&&HOT.ref.budget26&&HOT.ref.budget26.fb[M-1]>0)fbv.b=HOT.ref.budget26.fb[M-1];
-  const fb=fzBlend('fbh',fbv,h,1);
+  const fb=fzBlend('fbh',fbv,h,1,mt.fb);
   // F&B por venue
   const ven={};
   getVenues().forEach(v=>{
     const pr={},closed={};Object.keys(A).forEach(m=>{const a=A[m],x=V[v][m];if(!a||!a.full||!(a.so>0))return;if(!x||x.n<hdim(fzYear(),+m)*0.4)closed[m]=1;else pr[m]=x.t/a.so});
-    const sea=closed[M]?null:fzSeason(pr,M,true),vv={};if(sea)vv.r=RN*sea;
+    const sea=closed[M]?null:fzSeason(pr,M,true),vv={},done=cur0?((V[v][M]||{t:0}).t):0;if(sea)vv.r=done+Math.max(0,RN-mt.so)*sea;
     const mo=M<=12&&DATA.config.year===Y?monthObjectives(M)[v]||{}:{},scs=Object.keys(mo).filter(k=>/^Forecast/i.test(k)).sort(),last=scs[scs.length-1];
     if(last&&+mo[last]>0)vv.f=+mo[last];if(+mo.Original>0)vv.b=+mo.Original;
-    const b=fzBlend('ven',vv,h,1);if(b)ven[v]=b;
+    const b=fzBlend('ven',vv,h,1,done);if(b)ven[v]=b;
   });
   return{Y,M,h,rn,rv,fb,ven,RN,RV,ADR:RV&&RN?RV/RN:null,conf,LY,S,sea,fcRn};
 }
 function fzRun(){
   FZ_BK=null;
-  const A=fzAct(),P=HOT.ref&&HOT.ref.py25,V=fzVen(),L=hLastInfo(),yoy=fzYoy(A,P,L.partial?L.m-1:L.m),ctx={A,P,V,yoy};
+  const A=fzAct(),P=HOT.ref&&HOT.ref.py25,V=fzVen(),L=hLastInfo(),yoy=fzYoy(A,P,L.partial?L.m-1:L.m),ctx={A,P,V,yoy,L};
   const out=[];
   for(let h=0;h<=3;h++){const t=new Date(L.y,L.m-1+h,1),Y=t.getFullYear(),M=t.getMonth()+1;const r=fzMonth(Y,M,h,ctx);if(r)out.push(r)}
   return{res:out,A,P,V,yoy,L};
@@ -2423,7 +2425,7 @@ function fzLearn(run){
 function fzSet(k,v){FZST[k]=v;renderFz()}
 const fzEur=v=>v==null?'—':hn(v,0);
 const fzTone=m=>m<=0.06?['Alta','pos']:m<=0.12?['Media','']:['Baja','neg'];
-function fzRange(v,mape){const r=Math.max(0.05,mape*1.25);return hn(v*(1-r),0)+' – '+hn(v*(1+r),0)}
+function fzRange(v,mape){const r=Math.min(0.4,Math.max(0.05,mape*1.25));return hn(v*(1-r),0)+' – '+hn(v*(1+r),0)}
 function renderFz(){
   const host=$('fz');
   try{
@@ -2467,7 +2469,7 @@ function fzPage(){
   else if(FZST.view==='week'){const wk=fzWeeks(days);tdet=`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Semana</th><th>Hab.</th><th>Ocup.</th><th>Room rev. €</th><th>F&amp;B hotel €</th>${vn.map(v=>`<th class="hm">${escapeHTML(v)}</th>`).join('')}</tr></thead><tbody>${wk.map(w=>`<tr><td class="vn">${w.from}–${w.to} ${months[sel.M-1].slice(0,3).toLowerCase()}</td><td>${fzEur(w.rn)}</td><td>${hp(w.rn/(195*w.n),0)}</td><td>${fzEur(w.rv)}</td><td>${fzEur(w.fb)}</td>${vn.map(v=>`<td class="hm">${fzEur(w.ven[v]||0)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`}
   else tdet=`<div class="fscroll tall"><table class="ftab htab"><thead><tr><th>Día</th><th>Ocup.</th><th>En libros</th><th>Room rev. €</th><th>F&amp;B hotel €</th>${vn.map(v=>`<th class="hm">${escapeHTML(v)}</th>`).join('')}</tr></thead><tbody>${days.map(x=>`<tr><td class="vn">${dn[x.dow]} ${x.d}${x.wx!==1?' <small>meteo '+(x.wx>1?'+':'−')+hn(Math.abs(x.wx-1)*100,0)+'%</small>':''}</td><td>${hp(x.rn/195,0)}</td><td>${hn(x.otb,0)}</td><td>${fzEur(x.rv)}</td><td>${fzEur(x.fb)}</td>${vn.map(v=>`<td class="hm">${fzEur(x.ven[v]||0)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
   // 4. racional
-  const wtxt=(metric,r)=>{const b=metric==='rn'?r.rn:metric==='rv'?r.rv:r.fb;return b?Object.keys(b.ws).map(e=>`${FZ_NAME[e]} <b>${hn(b.ws[e]*100,0)}%</b>`).join(' · '):'—'};
+  const wtxt=(metric,r)=>{const b=metric==='rn'?r.rn:metric==='rv'?r.rv:r.fb;return b?Object.keys(b.ws).map(e=>`${FZ_NAME[e]} ${fzEur(b.vals[e])} → <b>${hn(b.ws[e]*100,0)}%</b>`).join('<br>'):'—'};
   const rzRows=R.map(r=>`<tr><td class="vn">${r.h===0?'Cierre '+lab(r):'+'+r.h+' · '+lab(r)}</td><td>${wtxt('rn',r)}</td><td>${wtxt('fbh',r)}</td></tr>`).join('');
   const ys=run.yoy,s0=R.find(r=>r.S&&r.S.lyRn>0&&r.LY);
   const facts=[

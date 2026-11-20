@@ -623,6 +623,14 @@ body[data-layout="bento"] .hc{border:0}
 @media(max-width:900px){.htab td,.htab th{padding:.5rem .22rem;font-size:.74rem}.htab th{letter-spacing:.06em;font-size:.56rem}.hcard .cardBody{padding:.5rem .6rem}.fscroll{overflow-x:auto}}
 .newBar{position:fixed;left:50%;bottom:1.1rem;transform:translateX(-50%);z-index:60;background:var(--hdr,#141414);color:#fff;display:flex;align-items:center;gap:.9rem;padding:.65rem .9rem .65rem 1.1rem;border-left:4px solid var(--hi,#F4C20D);font-size:.86rem;box-shadow:0 8px 28px rgba(0,0,0,.35)}
 .newBar button{border:0;background:var(--hi,#F4C20D);color:#151515;font-weight:700;padding:.4rem .8rem;cursor:pointer}
+.wxrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(8.4rem,1fr));gap:.6rem}.wxrow.m{grid-template-columns:repeat(auto-fit,minmax(5.6rem,1fr));gap:.45rem}
+.wxd{background:var(--bg);border:1px solid var(--line);border-radius:var(--hr);padding:.7rem .8rem;display:flex;flex-direction:column;gap:.2rem;min-width:0}.wxrow.m .wxd{padding:.55rem .6rem}
+.wxd.now{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.wxk{font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.wxi{font-size:1.5rem;line-height:1}.wxd b{font-size:1.1rem}.wxd b small{font-size:.8rem;color:var(--muted);font-weight:600}
+.wxs{font-size:.72rem;color:var(--muted)}.wxo{font-size:.68rem;margin-top:.15rem;padding-top:.3rem;border-top:1px dashed var(--line);color:var(--ink)}
+.wxl{display:inline-flex;align-items:center;gap:.25rem;margin-left:.7rem;font-size:.72rem}.wxl i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.htab td.lo{opacity:.4}.htab th small.n{display:block;font-size:.58rem;letter-spacing:0;text-transform:none;font-weight:500}
 </style></head>
 <body class="pal-kimpton mode-light area-fb" data-view="dash">
 <div class="login" id="login">
@@ -648,6 +656,7 @@ body[data-layout="bento"] .hc{border:0}
   <button data-area="hotel" class="tab" data-view="hotel" onclick="setArea('hotel')"><svg viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13M9 21v-6h6v6"/></svg>Resumen hotel</button>
   <button data-area="hotel" class="tab" data-view="rooms" onclick="setArea('rooms')"><svg viewBox="0 0 24 24"><path d="M3 18v-7a3 3 0 013-3h12a3 3 0 013 3v7M3 15h18M3 21v-3M21 21v-3"/></svg>Rooms</button>
   <button data-area="hotel" class="tab" data-view="otb" onclick="showView('otb',this)"><svg viewBox="0 0 24 24"><path d="M4 20V10M9 20V4M14 20v-8M19 20V7"/></svg>Ocupación OTB</button>
+  <button data-area="hotel" class="tab" data-view="wx" onclick="showView('wx',this)"><svg viewBox="0 0 24 24"><path d="M7 19a4 4 0 010-8 5.5 5.5 0 0110.6-1.2A4.5 4.5 0 0117 19H7z"/></svg>Meteo y revenue</button>
   <div data-area="fb" class="sbGroup">Informes</div>
   <button data-area="fb" class="tab active" data-view="dash" onclick="setDashMode('month',this)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</button>
   <button data-area="fb" class="tab" data-view="dash-ytd" onclick="setDashMode('ytd',this)"><svg viewBox="0 0 24 24"><path d="M3 20h18M5 16l4-5 4 3 6-8"/></svg>Acumulado YTD</button>
@@ -714,6 +723,7 @@ body[data-layout="bento"] .hc{border:0}
 <div id="hotel" class="view"></div>
 <div id="rooms" class="view"></div>
 <div id="otb" class="view"></div>
+<div id="wx" class="view"></div>
 <div id="entry" class="view" data-edit><div class="entry">
 <section class="formPanel"><h2>Entrada diaria</h2><p class="small" style="margin-bottom:.9rem">Carga el revenue por venue. Puedes sumar importes con +, por ejemplo 120+35,50+18.</p><div class="formGrid" id="dailyForm"></div><div class="totalLine"><span>Total día</span><b id="formTotal">0,00K€</b></div><button class="btn primary wide" onclick="saveDay()">Guardar día y recalcular</button>
 <details class="paste"><summary>Pegar varios días desde Excel</summary><p class="small" style="margin:.4rem 0 .6rem">Una fila por día: <code>Día, Venue1, Venue2, ...</code> separados por tabulador o punto y coma, en el orden de las columnas de la tabla.</p><textarea id="pasteArea" placeholder="1&#9;2649,55&#9;651,13&#9;949,98"></textarea><button class="btn primary wide" style="margin-top:.6rem" onclick="importPaste()">Importar filas pegadas</button><div class="small" id="pasteResult" style="margin-top:.5rem"></div></details>
@@ -1917,7 +1927,7 @@ function renderHotel(){
     `Otros <b>${hn(a.ot)} €</b> · Ocupación <b>${hp(K.occ)}</b> (${hp(Kr.occ)})`,`ADR <b>${hn(K.adr,2)} €</b> · RevPAR <b>${hn(K.revpar,2)} €</b>`,pr?`Cierre estimado <b>${hn(pr.tot)} €</b> (<span class="${dcls(pr.tot-P.full.tot)}">${hsg(pr.tot-P.full.tot)}</span> vs mes)`:'']);
   const left=(P.ytd?hCard('Rooms · F&B · Otros','vs '+C,tbl):hDualCards(P,pr))+hCard('Evolución mensual','total hotel · vs Forecast y Budget',hMonthTable(P))+hFcstAcc(P);
   const right=(P.ytd?hCard('Ocupación por mes','%',hBars(Array.from({length:P.m},(_,i)=>kpis(hAgg(i+1)).occ*100),MS3.slice(0,P.m))):hCard('Revenue total por día','mes de '+months[P.m-1].toLowerCase(),hBars(vals,dayKeys.map(k=>+k.slice(8,10)))))
-    +hCard('Ocupación en libros · próximos 14 días','Opera',hOtbMini())+(P.ytd?'':hCard('Mejores días del mes','revenue total',hTopDays(P)));
+    +hCard('Ocupación en libros · próximos 14 días','Opera',hOtbMini())+hCard('Previsión meteorológica · 7 días','Open-Meteo',hWxMini())+(P.ytd?'':hCard('Mejores días del mes','revenue total',hTopDays(P)));
   host.innerHTML=`<div class="hwrap">${hHead('HOTEL',P.ytd?'Informe de ingresos · acumulado':'Informe de ingresos del hotel',intro,hCtl())}<div class="mOnly">${bul}</div>${strip}<div class="dOnly">${kp}</div>
   <div class="hgrid"><div class="hcol">${left}</div><div class="hcol">${right}</div></div>
   ${pr?`<p class="hnote dOnly">Cierre estimado = lo facturado + Opera en libros (${pr.days} días, ${hn(pr.rr)} € Rooms, foto del ${pr.asof.slice(0,10)}) + F&amp;B/Otros al ratio actual por habitación vendida. Es una estimación que se afinará con las semanas de OTB.</p>`:''}${hNote(P)}</div>`;
@@ -1958,7 +1968,140 @@ function renderOtb(){
   <div class="hgrid"><div class="hcol">${hCard('Resumen por mes','días futuros',`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Mes</th><th>Días</th><th>Hab. noche</th><th>Ocup.</th><th>Room rev.</th><th class="hm">Indiv. / Grupo</th></tr></thead><tbody>${sum}</tbody></table></div>`)}${hCard('Mix individual / grupo','por mes',share)}${hCard('Días de mayor ocupación','top 5','<ul class="hlist">'+top+'</ul>')}</div>
   <div class="hcol">${hCard('Detalle por día','pickup vs foto anterior',`<div class="fscroll tall"><table class="ftab htab"><thead><tr><th>Día</th><th>Ocup.</th><th>Indiv.</th><th>Grupo</th><th>Room rev.</th><th class="hm">ADR</th><th class="hm">Pickup</th></tr></thead><tbody>${tr}</tbody></table></div>`)}</div></div></div>`;
 }
-function hRender(){const v=document.body.dataset.view;if(v==='hotel')renderHotel();else if(v==='rooms')renderRooms();else if(v==='otb')renderOtb()}
+// ======================= v48 · Meteo (Open-Meteo): histórico, previsión 7 días y efecto en el revenue =======================
+const WX_LOC={lat:36.497,lon:-4.789};
+const WX_VARS='temperature_2m_max,temperature_2m_min,apparent_temperature_max,precipitation_sum,precipitation_hours,sunshine_duration,cloud_cover_mean,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,weather_code';
+const WX={days:{},fc:[],fcAt:null,p:null,err:null};
+const wxP=n=>String(n).padStart(2,'0');
+const wxFmt=t=>t.getFullYear()+'-'+wxP(t.getMonth()+1)+'-'+wxP(t.getDate());
+const wxToday=()=>wxFmt(new Date());
+const wxShift=(k,n)=>{const t=new Date(k+'T12:00:00');t.setDate(t.getDate()+n);return wxFmt(t)};
+function wxRow(d,i){
+  const g=k=>d[k]?d[k][i]:null,r=x=>x==null?null:Math.round(x*10)/10;
+  return{tx:r(g('temperature_2m_max')),tn:r(g('temperature_2m_min')),at:r(g('apparent_temperature_max')),pr:r(g('precipitation_sum')),ph:g('precipitation_hours'),
+    su:g('sunshine_duration')==null?null:Math.round(g('sunshine_duration')/360)/10,cc:g('cloud_cover_mean'),ws:r(g('wind_speed_10m_max')),wg:r(g('wind_gusts_10m_max')),
+    wd:g('wind_direction_10m_dominant'),wc:g('weather_code'),uv:r(g('uv_index_max'))};
+}
+async function wxGet(url){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error('Meteo '+r.status);const j=await r.json();if(j.error)throw new Error(j.reason||'Meteo');return j}
+const wxBase='latitude='+WX_LOC.lat+'&longitude='+WX_LOC.lon+'&timezone=Europe%2FMadrid';
+function wxEnsure(){
+  if(WX.p&&WX.fcAt&&Date.now()-Date.parse(WX.fcAt)>3*36e5)WX.p=null; // la previsión se refresca cada 3 h con la app abierta
+  if(WX.p)return WX.p;
+  const p=(async()=>{
+    const st=HAS_HOT&&HOT.wx;
+    if(st&&st.days)Object.keys(st.days).forEach(k=>{WX.days[k]=st.days[k]});
+    const today=wxToday(),yr=today.slice(0,4),archEnd=wxShift(today,-7),need=[];
+    for(let k=yr+'-01-01';k<=archEnd;k=wxShift(k,1))if(!WX.days[k]||WX.days[k].p)need.push(k);
+    if(need.length){ // histórico: reanálisis ERA5 (días ya consolidados)
+      const j=await wxGet('https://archive-api.open-meteo.com/v1/archive?'+wxBase+'&start_date='+need[0]+'&end_date='+need[need.length-1]+'&daily='+WX_VARS);
+      const set=new Set(need);
+      j.daily.time.forEach((t,i)=>{if(set.has(t))WX.days[t]=wxRow(j.daily,i)});
+    }
+    // últimos 7 días (provisionales) + hoy + 7 días de previsión
+    const j2=await wxGet('https://api.open-meteo.com/v1/forecast?'+wxBase+'&past_days=7&forecast_days=8&daily=uv_index_max,'+WX_VARS);
+    const fc=[];
+    j2.daily.time.forEach((t,i)=>{const row=wxRow(j2.daily,i);if(t<today){if(!WX.days[t]||WX.days[t].p){row.p=1;WX.days[t]=row}}else fc.push(Object.assign({k:t},row))});
+    WX.fc=fc;WX.fcAt=new Date().toISOString();WX.err=null;
+    wxPersist();
+  })().catch(e=>{console.warn(e);WX.err=e.message||String(e);WX.p=null});
+  WX.p=p;return p;
+}
+function wxPersist(){ // a día vencido: el editor va guardando en los datos cifrados del hotel lo ya ocurrido y la foto diaria de la previsión
+  if(!HOT_EDIT)return;
+  const w=HOT.wx=HOT.wx||{loc:{lat:WX_LOC.lat,lon:WX_LOC.lon},days:{},fc:[]};
+  let ch=0;
+  Object.keys(WX.days).forEach(k=>{ // solo lo realmente nuevo: un día provisional ya guardado no se reescribe hasta que el reanálisis lo consolide
+    const a=w.days[k],b=WX.days[k];
+    if(!a||(a.p&&!b.p)){w.days[k]=b;ch++}
+  });
+  const asof=wxToday();
+  if(WX.fc.length&&!(w.fc||[]).some(s=>s.asof===asof)){
+    w.fc=(w.fc||[]).concat([{asof,rows:WX.fc.map(r=>[r.k,r.tx,r.tn,r.pr,r.cc,r.ws,r.wd,r.wc,r.su])}]).slice(-70);ch++;
+  }
+  if(ch){w.upd=new Date().toISOString();HST.dirty=true;hotDraftSave()}
+}
+// ---- clasificación y etiquetas ----
+const WXC={sun:{n:'Soleado',c:'#F2A900'},part:{n:'Parcial',c:'#8FB3C9'},cloud:{n:'Nublado',c:'#6B7A86'},rain:{n:'Lluvia',c:'#2F6DB5'}};
+const wxCls=r=>!r?null:((r.pr||0)>=1?'rain':(r.cc==null?'part':r.cc<35?'sun':r.cc<70?'part':'cloud'));
+function wxIcon(c){c=+c;return c===0?'☀️':c===1?'🌤️':c===2?'⛅':c===3?'☁️':(c===45||c===48)?'🌫️':(c>=51&&c<=57)?'🌦️':(c>=61&&c<=67)?'🌧️':(c>=71&&c<=77)?'❄️':(c>=80&&c<=82)?'🌦️':c>=95?'⛈️':'⛅'}
+const wxDirN=d=>d==null?'':(d>=45&&d<135)?'Levante':(d>=225&&d<315)?'Poniente':(d>=135&&d<225)?'Sur':'Norte';
+const WXT=r=>!r||r.tx==null?null:r.tx<18?'t0':r.tx<24?'t1':r.tx<30?'t2':'t3';
+const WXW=r=>!r||r.ws==null?null:r.ws<20?'w0':r.ws<30?'w1':'w2';
+// ---- tarjetas de previsión ----
+function wxChips(n,mini){
+  const dn=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'],o=hOtbLatest(),om={};if(o)o.rows.forEach(r=>{om[r[0]]=r});
+  const h=WX.fc.slice(0,n).map((r,i)=>{
+    const dt=new Date(r.k+'T12:00:00'),oc=om[r.k]?hp(om[r.k][1]/195,0):'—';
+    const wind=(!mini||r.ws>=25)?`<span class="wxs">💨 ${Math.round(r.ws)} km/h ${wxDirN(r.wd)}</span>`:'';
+    const sun=mini?'':`<span class="wxs">☀ ${hn(r.su,1)} h de sol · UV ${r.uv==null?'—':hn(r.uv,0)}</span>`;
+    return `<div class="wxd${i===0?' now':''}"><span class="wxk">${i===0?'Hoy':dn[dt.getDay()]+' '+dt.getDate()}</span><span class="wxi">${wxIcon(r.wc)}</span><b>${Math.round(r.tx)}°<small> / ${Math.round(r.tn)}°</small></b><span class="wxs">${r.pr>=0.5?'💧 '+hn(r.pr,1)+' mm':'sin lluvia'}</span>${wind}${sun}<span class="wxo">Ocup. libros ${oc}</span></div>`;
+  }).join('');
+  return `<div class="wxrow${mini?' m':''}">${h}</div>`;
+}
+function hWxMini(){ // bloque del Resumen hotel: se rellena cuando llega la meteo
+  try{
+    setTimeout(()=>{wxEnsure().then(()=>{const e=$('wxMini');if(e)e.innerHTML=WX.fc.length?wxChips(7,true):'<p class="hnote">No se pudo cargar la meteo'+(WX.err?': '+escapeHTML(WX.err):'')+'.</p>'})},0);
+    return '<div id="wxMini">'+(WX.fc.length?wxChips(7,true):'<p class="hnote">Cargando meteo…</p>')+'</div>';
+  }catch(e){return''}
+}
+// ---- efecto del tiempo en el revenue (€ por habitación vendida frente a la media del propio mes) ----
+function wxVenueSeries(){
+  const V=getVenues(),out={},y=DATA.config.year;V.forEach(v=>{out[v]={}});
+  (DATA.annualDaily||[]).forEach(r=>{const m=Number(r.Mes),d=Number(r['Día']);if(!m||!d)return;const k=y+'-'+wxP(m)+'-'+wxP(d);V.forEach(v=>{const x=parseValue(r[v]);if(x>0)out[v][k]=x})});
+  return out;
+}
+function wxEffect(groupOf,groups){
+  const V=wxVenueSeries(),res={};
+  getVenues().concat(['__fb']).forEach(c=>{
+    const ser={};
+    Object.keys(WX.days).forEach(k=>{const x=HOT.days[k];if(!x||!x.so)return;const v=c==='__fb'?x.fb:V[c][k];if(v>0)ser[k]=v/x.so});
+    const mm={};Object.keys(ser).forEach(k=>{const m=k.slice(5,7);(mm[m]=mm[m]||[]).push(ser[k])});
+    const mean={};Object.keys(mm).forEach(m=>{mean[m]=mm[m].reduce((s,x)=>s+x,0)/mm[m].length});
+    const acc={};groups.forEach(g=>{acc[g]=[]});
+    Object.keys(ser).forEach(k=>{const g=groupOf(WX.days[k]);if(g&&acc[g]&&mean[k.slice(5,7)])acc[g].push(ser[k]/mean[k.slice(5,7)])});
+    res[c]={tot:Object.keys(ser).length};groups.forEach(g=>{res[c][g]={n:acc[g].length,d:acc[g].length?acc[g].reduce((s,x)=>s+x,0)/acc[g].length-1:null}});
+  });
+  return res;
+}
+function wxEffTable(groupOf,groups,names){
+  const res=wxEffect(groupOf,groups),pc=d=>(d>=0?'+':'−')+hn(Math.abs(d)*100,0)+'%';
+  const rows=Object.keys(res).filter(c=>res[c].tot>=30).sort((a,b)=>a==='__fb'?-1:b==='__fb'?1:0).map(c=>
+    `<tr${c==='__fb'?' class="tot"':''}><td class="vn">${c==='__fb'?'F&amp;B total':escapeHTML(c)}</td>${groups.map(g=>{const x=res[c][g];return x.d==null?'<td>—</td>':`<td class="${dcls(x.d)}${x.n<10?' lo':''}" title="${x.n} días">${pc(x.d)}</td>`}).join('')}</tr>`).join('');
+  const ref=res.__fb||{},hd=groups.map(g=>`<th>${names[g]}<small class="n">${ref[g]?ref[g].n:0} días</small></th>`).join('');
+  return `<div class="fscroll"><table class="ftab htab"><thead><tr><th>Venue</th>${hd}</tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function wxCtl(){
+  const L=hLastInfo(),opts=Array.from({length:L.m},(_,i)=>i+1).map(m=>`<option value="${m}" ${m===(HST.month||L.m)?'selected':''}>${months[m-1]}</option>`).join('');
+  return `<div class="hctl"><label>Periodo<select onchange="hSet('month',+this.value)">${opts}</select></label></div>`;
+}
+function wxPage(){
+  const L=hLastInfo(),m=HST.month||L.m,dn=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  if(!WX.fc.length)return `<div class="hwrap">${hHead('METEO','Meteo y revenue','',wxCtl())}<p class="hnote">No se pudo cargar la meteo${WX.err?': '+escapeHTML(WX.err):''}. Comprueba la conexión y vuelve a abrir esta pestaña.</p></div>`;
+  const t0=WX.fc[0],nd=Object.keys(WX.days).length,ks=Object.keys(WX.days).sort();
+  const dk=hkeys().filter(k=>+k.slice(5,7)===m&&WX.days[k]);
+  const intro=`Hoy en Los Monteros: ${wxIcon(t0.wc)} <b>${Math.round(t0.tx)}°/${Math.round(t0.tn)}°</b>${t0.pr>=0.5?', lluvia '+hn(t0.pr,1)+' mm':''}, viento ${Math.round(t0.ws)} km/h de ${wxDirN(t0.wd).toLowerCase()}. Meteo real de <b>${nd}</b> días guardada (${ks[0].slice(5).split('-').reverse().join('/')} → ${ks[ks.length-1].slice(5).split('-').reverse().join('/')}).`;
+  const leg=Object.keys(WXC).map(c=>`<span class="wxl"><i style="background:${WXC[c].c}"></i>${WXC[c].n}</span>`).join('');
+  const chart=dk.length?hBars(dk.map(k=>HOT.days[k].fb),dk.map(k=>+k.slice(8,10)),{col:dk.map(k=>WXC[wxCls(WX.days[k])].c)}):'<p class="hnote">Sin días con meteo y revenue en este mes.</p>';
+  const tr=dk.slice().reverse().map(k=>{
+    const x=HOT.days[k],w=WX.days[k],dt=new Date(k+'T12:00:00'),oc=x.av?x.so/x.av:0;
+    return`<tr><td class="vn">${dn[dt.getDay()]} ${+k.slice(8,10)}${w.p?' *':''}</td><td>${wxIcon(w.wc)}</td><td>${Math.round(w.tx)}° / ${Math.round(w.tn)}°</td><td class="hm">${w.pr>=0.5?hn(w.pr,1)+' mm':'—'}</td><td class="hm">${Math.round(w.ws)} ${wxDirN(w.wd)}</td><td class="hm">${hp(oc,0)}</td><td>${hn(x.rr)}</td><td>${hn(x.fb)}</td><td class="hm">${hn(x.rr+x.fb+x.ot)}</td></tr>`}).join('');
+  const tbl=dk.length?`<div class="fscroll tall"><table class="ftab htab"><thead><tr><th>Día</th><th>Cielo</th><th>Máx / mín</th><th class="hm">Lluvia</th><th class="hm">Viento</th><th class="hm">Ocup.</th><th>Rooms €</th><th>F&amp;B €</th><th class="hm">Total €</th></tr></thead><tbody>${tr}</tbody></table></div>`:'';
+  const sky=wxEffTable(wxCls,['sun','part','cloud','rain'],{sun:'Soleado',part:'Parcial',cloud:'Nublado',rain:'Lluvia'});
+  const tmp=wxEffTable(WXT,['t0','t1','t2','t3'],{t0:'< 18°',t1:'18–24°',t2:'24–30°',t3:'≥ 30°'});
+  const wnd=wxEffTable(WXW,['w0','w1','w2'],{w0:'< 20 km/h',w1:'20–30 km/h',w2:'≥ 30 km/h'});
+  const upd=WX.fcAt?new Date(WX.fcAt).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}):'';
+  return `<div class="hwrap">${hHead('METEO','Meteo y revenue',intro,wxCtl())}
+  ${hCard('Previsión 7 días','Open-Meteo · actualizada '+upd,wxChips(7,false))}
+  <div class="hgrid"><div class="hcol">${hCard('F&amp;B por día según el cielo','mes de '+months[m-1].toLowerCase()+leg,chart)}${hCard('Efecto del cielo en el F&amp;B','€ por hab. vendida vs media del mes',sky+'<p class="hnote">Δ frente a la media de ese mismo mes, por habitación vendida. En gris, menos de 10 días: no concluyente.</p>')}${hCard('Efecto de la temperatura máxima','mismo cálculo',tmp)}${hCard('Efecto del viento','racha diaria máxima del viento medio',wnd)}</div>
+  <div class="hcol">${hCard('Detalle por día','* meteo provisional (últimos 7 días)',tbl||'<p class="hnote">Sin datos.</p>')}</div></div>
+  <p class="hnote">Meteo: Open-Meteo (reanálisis ERA5 y modelos de previsión), punto Los Monteros. El efecto se mide por habitación vendida y respecto a la media del propio mes para no confundir el tiempo con la temporada; aun así es una correlación, no una causa. Los datos se guardan a día vencido junto con el revenue y la foto diaria de la previsión.</p></div>`;
+}
+function renderWx(){
+  const host=$('wx');if(!HAS_HOT){host.innerHTML='<div class="hwrap"><p>No tienes acceso a esta sección.</p></div>';return}
+  host.innerHTML='<div class="hwrap"><p class="hnote">Cargando meteo…</p></div>';
+  wxEnsure().then(()=>{if(document.body.dataset.view!=='wx')return;try{host.innerHTML=wxPage()}catch(e){console.error(e);host.innerHTML='<div class="hwrap"><p class="hnote">No se pudo mostrar la meteo: '+escapeHTML(e.message)+'</p></div>'}});
+}
+function hRender(){const v=document.body.dataset.view;if(v==='hotel')renderHotel();else if(v==='rooms')renderRooms();else if(v==='otb')renderOtb();else if(v==='wx')renderWx()}
 // ---------------- áreas ----------------
 function setArea(a,go){
   if(!HAS_HOT)a='fb';
@@ -2577,7 +2720,7 @@ async function publishData(){
 }
 Object.assign(window,{publishData,openCard,closeCard,shareCard,applyRole,money2,parseValue,setLayout,cycleLayout});
 applyTheme();applyRole();renderAll();setLayout(LAYOUT);
-Object.assign(RENDERERS,{hotel:renderHotel,rooms:renderRooms,otb:renderOtb});
+Object.assign(RENDERERS,{hotel:renderHotel,rooms:renderRooms,otb:renderOtb,wx:renderWx});
 if(HAS_HOT){document.body.classList.add('has-hot');let ar='hotel';try{ar=localStorage.getItem('fbAreaV47')||'hotel'}catch(e){}if(ar!=='fb'){setArea(ar,false)}}
 showView('dash',document.querySelector('.tab[data-view="'+(DATA.dashboardMode==='ytd'?'dash-ytd':'dash')+'"]'));
 renderDashboard();

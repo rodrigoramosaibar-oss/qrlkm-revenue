@@ -631,6 +631,7 @@ body[data-layout="bento"] .hc{border:0}
 .wxs{font-size:.72rem;color:var(--muted)}.wxo{font-size:.68rem;margin-top:.15rem;padding-top:.3rem;border-top:1px dashed var(--line);color:var(--ink)}
 .wxl{display:inline-flex;align-items:center;gap:.25rem;margin-left:.7rem;font-size:.72rem}.wxl i{width:9px;height:9px;border-radius:2px;display:inline-block}
 .htab td.lo{opacity:.4}.htab th small.n{display:block;font-size:.58rem;letter-spacing:0;text-transform:none;font-weight:500}
+.fscroll.tall{max-height:520px;overflow:auto}.hwrap label{font-size:.72rem;color:var(--muted);display:inline-flex;gap:.4rem;align-items:center}.hwrap select{border:1px solid var(--line2);background:var(--panel);color:var(--ink);border-radius:var(--hr);padding:.35rem .5rem;font-size:.78rem}.hbul{margin:.8rem 0 0;padding-left:1.1rem;font-size:.82rem;line-height:1.5}.hbul li{margin-bottom:.35rem}.ftab small{color:var(--muted);font-weight:500}
 </style></head>
 <body class="pal-kimpton mode-light area-fb" data-view="dash">
 <div class="login" id="login">
@@ -658,6 +659,7 @@ body[data-layout="bento"] .hc{border:0}
   <button data-area="hotel" class="tab" data-view="otb" onclick="showView('otb',this)"><svg viewBox="0 0 24 24"><path d="M4 20V10M9 20V4M14 20v-8M19 20V7"/></svg>Ocupación OTB</button>
   <button data-area="hotel" class="tab" data-view="wx" onclick="showView('wx',this)"><svg viewBox="0 0 24 24"><path d="M7 19a4 4 0 010-8 5.5 5.5 0 0110.6-1.2A4.5 4.5 0 0117 19H7z"/></svg>Meteo y revenue</button>
   <button data-area="hotel" class="tab" data-view="pu" onclick="showView('pu',this)"><svg viewBox="0 0 24 24"><path d="M4 19h16M6 16l4-5 3 3 5-7"/></svg>PickUp</button>
+  <button data-area="hotel" class="tab" data-view="fz" onclick="showView('fz',this)"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-9M15 6h6v6"/></svg>Forecast</button>
   <div data-area="fb" class="sbGroup">Informes</div>
   <button data-area="fb" class="tab active" data-view="dash" onclick="setDashMode('month',this)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</button>
   <button data-area="fb" class="tab" data-view="dash-ytd" onclick="setDashMode('ytd',this)"><svg viewBox="0 0 24 24"><path d="M3 20h18M5 16l4-5 4 3 6-8"/></svg>Acumulado YTD</button>
@@ -726,7 +728,7 @@ body[data-layout="bento"] .hc{border:0}
 <div id="rooms" class="view"></div>
 <div id="otb" class="view"></div>
 <div id="wx" class="view"></div>
-<div id="pu" class="view"></div>
+<div id="pu" class="view"></div><div id="fz" class="view"></div>
 <div id="entry" class="view" data-edit><div class="entry">
 <section class="formPanel"><h2>Entrada diaria</h2><p class="small" style="margin-bottom:.9rem">Carga el revenue por venue. Puedes sumar importes con +, por ejemplo 120+35,50+18.</p><div class="formGrid" id="dailyForm"></div><div class="totalLine"><span>Total día</span><b id="formTotal">0,00K€</b></div><button class="btn primary wide" onclick="saveDay()">Guardar día y recalcular</button>
 <details class="paste"><summary>Pegar varios días desde Excel</summary><p class="small" style="margin:.4rem 0 .6rem">Una fila por día: <code>Día, Venue1, Venue2, ...</code> separados por tabulador o punto y coma, en el orden de las columnas de la tabla.</p><textarea id="pasteArea" placeholder="1&#9;2649,55&#9;651,13&#9;949,98"></textarea><button class="btn primary wide" style="margin-top:.6rem" onclick="importPaste()">Importar filas pegadas</button><div class="small" id="pasteResult" style="margin-top:.5rem"></div></details>
@@ -2277,7 +2279,218 @@ function renderPu(){
 }
 function puAsofSet(v){if(PU_ST&&/^\d{4}-\d{2}-\d{2}$/.test(v)){PU_ST.asof=v;puPreview()}}
 Object.assign(window,{puOpen,puHandle,puCommit,puSet,puAsofSet,renderPu});
-function hRender(){const v=document.body.dataset.view;if(v==='hotel')renderHotel();else if(v==='rooms')renderRooms();else if(v==='otb')renderOtb();else if(v==='wx')renderWx();else if(v==='pu')renderPu()}
+// ======================= v50 · Forecast a 1, 2 y 3 meses (rooms y F&B) con aprendizaje =======================
+// Idea: varios estimadores independientes por mes; se mezclan con pesos que salen de lo bien que ha acertado cada uno
+// (backtest con 2025/2026 + cada cierre real que va llegando). Todo lo que calcula se enseña en «Racional».
+const FZ_PRIOR={rn:{p:.35,y:.25,f:.30,b:.10},rv:{p:.35,y:.25,f:.30,b:.10},fbh:{r:.45,f:.40,b:.15},ven:{r:.50,f:.35,b:.15}};
+const FZ_NAME={p:'Ritmo de reservas (pickup vs año anterior)',y:'Tendencia interanual',f:'Forecast subido',b:'Budget',r:'Ratio por habitación vendida'};
+const FZ_MET={rn:'Habitaciones vendidas',rv:'Room revenue',fbh:'F&B hotel',ven:'F&B por venue'};
+const FZST={m:null,view:'week'};let FZ_BK=null;
+const fzYear=()=>+hlast().slice(0,4);
+function fzAct(){const A={},y=fzYear();hkeys().forEach(k=>{const m=+k.slice(5,7),x=HOT.days[k],a=A[m]=A[m]||{so:0,av:0,rr:0,fb:0,ot:0,n:0};a.so+=x.so;a.av+=x.av;a.rr+=x.rr;a.fb+=x.fb;a.ot+=x.ot;a.n++});Object.keys(A).forEach(m=>{A[m].full=A[m].n>=hdim(y,+m)});return A}
+function fzVen(){ // F&B real por venue y mes (2026)
+  const V={},y=DATA.config.year;getVenues().forEach(v=>{V[v]={}});
+  (DATA.annualDaily||[]).forEach(r=>{const m=Number(r.Mes),d=Number(r['Día']);if(!m||!d)return;getVenues().forEach(v=>{const x=parseValue(r[v]);if(x>0){V[v][m]=V[v][m]||{t:0,n:0};V[v][m].t+=x;V[v][m].n++}})});return V}
+function fzLY(Y,M,A,P){
+  if(Y===fzYear()){if(P&&P.sold&&P.sold[M-1]>0)return{rn:P.sold[M-1],rv:P.rooms[M-1],fb:P.fb[M-1],av:P.avail?P.avail[M-1]:0};return null}
+  const a=A[M];return a&&a.full?{rn:a.so,rv:a.rr,fb:a.fb,av:a.av}:null}
+function fzYoy(A,P,cut){
+  if(!P||!P.sold)return null;const ms=[];for(let m=cut;m>=1&&ms.length<3;m--)if(A[m]&&A[m].full&&P.sold[m-1]>0)ms.push(m);
+  if(!ms.length)return null;const s=f=>ms.reduce((t,m)=>t+f(m),0);
+  return{rn:s(m=>A[m].so)/s(m=>P.sold[m-1]),rv:s(m=>A[m].rr)/s(m=>P.rooms[m-1]),fbr:(s(m=>A[m].fb)/s(m=>A[m].so))/(s(m=>P.fb[m-1])/s(m=>P.sold[m-1])),n:ms.length,ms}}
+// valor estacional de una serie por mes: el del propio mes si existe; si no, la media de los meses vecinos con dato
+function fzSeason(ser,M,strict){if(ser[M]>0)return ser[M];let a=null,b=null;for(let i=1;i<12&&a==null;i++){const m=((M-1-i+24)%12)+1;if(ser[m]>0)a=ser[m]}for(let i=1;i<12&&b==null;i++){const m=((M-1+i)%12)+1;if(ser[m]>0)b=ser[m]}return a!=null&&b!=null?(a+b)/2:(strict?null:(a!=null?a:b))}
+// ---- backtest: qué habría pasado con cada estimador en los meses ya cerrados ----
+function fzBack(){
+  if(FZ_BK)return FZ_BK;
+  const A=fzAct(),P=HOT.ref&&HOT.ref.py25,B=HOT.ref&&HOT.ref.budget26,FA=HOT.fa&&HOT.fa.m,out={};
+  const add=(k,h,e)=>{if(!isFinite(e))return;const o=out[k+'|'+h]=out[k+'|'+h]||{n:0,s:0,b:0};o.n++;o.s+=Math.abs(e);o.b+=e};
+  const full=Object.keys(A).map(Number).filter(m=>A[m].full);
+  full.forEach(m=>{
+    const a=A[m];
+    for(let h=1;h<=3;h++){
+      const yo=P&&P.sold&&P.sold[m-1]>0?fzYoy(A,P,m-h):null;
+      if(yo){const rn=P.sold[m-1]*yo.rn,rv=P.rooms[m-1]*yo.rv,fb=rn*(P.fb[m-1]/P.sold[m-1])*yo.fbr;
+        add('rn|y',h,(rn-a.so)/a.so);add('rv|y',h,(rv-a.rr)/a.rr);if(a.fb>0)add('fbh|r',h,(fb-a.fb)/a.fb)}
+      if(B&&B.sold&&B.sold[m-1]>0){add('rn|b',h,(B.sold[m-1]-a.so)/a.so);add('rv|b',h,(B.rooms[m-1]-a.rr)/a.rr);if(a.fb>0&&B.fb[m-1]>0)add('fbh|b',h,(B.fb[m-1]-a.fb)/a.fb)}
+    }
+    const f=FA&&FA[m];if(f){[0,1].forEach(h=>{if(f.occ!=null&&a.av)add('rn|f',h,(f.occ*a.av-a.so)/a.so);if(f.rr)add('rv|f',h,(f.rr-a.rr)/a.rr);if(f.fb&&a.fb>0)add('fbh|f',h,(f.fb-a.fb)/a.fb)})}
+  });
+  return(FZ_BK=out);
+}
+function fzMape(metric,est,h){
+  const bk=fzBack(),L=(HOT.fzl&&HOT.fzl.err)||{},key=metric+'|'+est+'|',b=bk[key+h],b1=bk[key+1],l=L[key+h];
+  let n=0,w=0,sm=0;
+  if(b){n+=b.n;w+=b.n;sm+=b.s}else if(h>1&&b1){n+=b1.n;w+=b1.n;sm+=b1.s*1.25} // sin dato a ese plazo, el de 1 mes con recargo
+  if(l){n+=l[0];w+=2*l[0];sm+=2*l[1]} // los cierres reales pesan el doble: es lo que de verdad se predijo a ese plazo
+  return w?{mape:sm/w,n}:{mape:0.12,n:0};
+}
+function fzBlend(metric,vals,h,conf){
+  const pr=FZ_PRIOR[metric],ws={};let sw=0,s=0;
+  Object.keys(pr).forEach(e=>{const v=vals[e];if(!(v>0))return;const m=fzMape(metric,e,h);let w=pr[e]/(m.mape+0.03);if(e==='p')w*=Math.max(0.05,conf);ws[e]=w;sw+=w;s+=w*v});
+  if(!sw)return null;let mp=0;Object.keys(ws).forEach(e=>{ws[e]/=sw;mp+=ws[e]*fzMape(metric,e,h).mape});
+  return{val:s/sw,ws,mape:Math.max(0.04,mp*0.85),vals};
+}
+// ---- un mes objetivo ----
+function fzMonth(Y,M,h,ctx){
+  const {A,P,V,yoy,cur}=ctx,PU=HOT.pu&&HOT.pu.years&&HOT.pu.years[Y],S=PU&&PU.sum&&PU.sum[M],LY=fzLY(Y,M,A,P),ty=Y===fzYear();
+  const rnv={},rvv={};
+  let conf=0;
+  if(S&&LY&&S.lyRn>0&&S.otbRn>0){const f=Math.min(8,LY.rn/S.lyRn);rnv.p=Math.min(S.otbRn*f,195*hdim(Y,M)*0.98);conf=Math.min(1,(S.lyRn/LY.rn)/0.3);if(S.lyRv>0&&S.otbRv>0)rvv.p=S.otbRv*Math.min(8,LY.rv/S.lyRv)}
+  if(h===0)conf=1;
+  if(LY){rnv.y=LY.rn*(ty&&yoy?yoy.rn:1);rvv.y=LY.rv*(ty&&yoy?yoy.rv:1)}
+  let fcRn=S&&S.fcRn>0?S.fcRn:0;
+  if(!fcRn&&PU){let t=0,n=0;Object.keys(PU.d).forEach(k=>{if(+k.slice(5,7)===M){t+=PU.d[k][PU_I.fc];n++}});const ot=Object.keys(PU.d).reduce((s,k)=>+k.slice(5,7)===M?s+PU.d[k][PU_I.rn]:s,0);if(n>=hdim(Y,M)-1&&Math.abs(t-ot)>5)fcRn=t}
+  if(fcRn>0)rnv.f=fcRn;if(S&&S.fcRv>0)rvv.f=S.fcRv;
+  if(S&&S.budRn>0)rnv.b=S.budRn;if(S&&S.budRv>0)rvv.b=S.budRv;
+  if(ty&&P&&P.sold&&HOT.ref.budget26){const B=HOT.ref.budget26;if(!rnv.b&&B.sold[M-1]>0)rnv.b=B.sold[M-1];if(!rvv.b&&B.rooms[M-1]>0)rvv.b=B.rooms[M-1]}
+  if(ty&&HOT.ref.forecast26){const F=HOT.ref.forecast26;if(!rnv.f&&F.sold[M-1]>0)rnv.f=F.sold[M-1];if(!rvv.f&&F.rooms[M-1]>0)rvv.f=F.rooms[M-1]}
+  const rn=fzBlend('rn',rnv,h,conf),rv=fzBlend('rv',rvv,h,conf);if(!rn)return null;
+  const RN=rn.val,RV=rv?rv.val:null;
+  // F&B hotel
+  const fpr={};Object.keys(A).forEach(m=>{if(A[m].full&&A[m].so>0)fpr[m]=A[m].fb/A[m].so});
+  const lyr=LY&&LY.rn>0&&LY.fb>0?LY.fb/LY.rn:null,sea=ty?(lyr||fzSeason(fpr,M)):(fpr[M]||fzSeason(fpr,M));
+  const fbv={};if(sea)fbv.r=RN*sea*(ty&&yoy?yoy.fbr:1);
+  if(ty&&HOT.ref.forecast26&&HOT.ref.forecast26.fb[M-1]>0)fbv.f=HOT.ref.forecast26.fb[M-1];
+  if(ty&&HOT.ref.budget26&&HOT.ref.budget26.fb[M-1]>0)fbv.b=HOT.ref.budget26.fb[M-1];
+  const fb=fzBlend('fbh',fbv,h,1);
+  // F&B por venue
+  const ven={};
+  getVenues().forEach(v=>{
+    const pr={},closed={};Object.keys(A).forEach(m=>{const a=A[m],x=V[v][m];if(!a||!a.full||!(a.so>0))return;if(!x||x.n<hdim(fzYear(),+m)*0.4)closed[m]=1;else pr[m]=x.t/a.so});
+    const sea=closed[M]?null:fzSeason(pr,M,true),vv={};if(sea)vv.r=RN*sea;
+    const mo=M<=12&&DATA.config.year===Y?monthObjectives(M)[v]||{}:{},scs=Object.keys(mo).filter(k=>/^Forecast/i.test(k)).sort(),last=scs[scs.length-1];
+    if(last&&+mo[last]>0)vv.f=+mo[last];if(+mo.Original>0)vv.b=+mo.Original;
+    const b=fzBlend('ven',vv,h,1);if(b)ven[v]=b;
+  });
+  return{Y,M,h,rn,rv,fb,ven,RN,RV,ADR:RV&&RN?RV/RN:null,conf,LY,S,sea,fcRn};
+}
+function fzRun(){
+  FZ_BK=null;
+  const A=fzAct(),P=HOT.ref&&HOT.ref.py25,V=fzVen(),L=hLastInfo(),yoy=fzYoy(A,P,L.partial?L.m-1:L.m),ctx={A,P,V,yoy};
+  const out=[];
+  for(let h=0;h<=3;h++){const t=new Date(L.y,L.m-1+h,1),Y=t.getFullYear(),M=t.getMonth()+1;const r=fzMonth(Y,M,h,ctx);if(r)out.push(r)}
+  return{res:out,A,P,V,yoy,L};
+}
+// ---- días: reparto del mes en días con el OTB de Revenue ----
+function fzDaily(mf,run){
+  const {A,L}=run,Y=mf.Y,M=mf.M,dim=hdim(Y,M),PU=HOT.pu&&HOT.pu.years&&HOT.pu.years[Y],cur=mf.h===0,first=cur?L.d+1:1;
+  if(first>dim)return[];
+  const a=cur?hAgg(M,L.d):{so:0,rr:0,fb:0},days=[];
+  for(let d=first;d<=dim;d++){const k=Y+'-'+wxP(M)+'-'+wxP(d),r=PU&&PU.d[k],dow=new Date(k+'T12:00:00').getDay();days.push({k,d,dow,otb:r?r[PU_I.rn]:0,otbRv:r?r[PU_I.rv]:0,out:0})}
+  // índice por día de semana (histórico real): habitaciones y F&B por habitación
+  const dw=Array.from({length:7},()=>({so:0,fb:0,n:0}));hkeys().forEach(k=>{const x=HOT.days[k],w=new Date(k+'T12:00:00').getDay();dw[w].so+=x.so;dw[w].fb+=x.fb;dw[w].n++});
+  const mso=dw.reduce((s,x)=>s+x.so,0)/Math.max(1,dw.reduce((s,x)=>s+x.n,0)),mfp=dw.reduce((s,x)=>s+x.fb,0)/Math.max(1,dw.reduce((s,x)=>s+x.so,0));
+  const ridx=dw.map(x=>x.n&&mso?(x.so/x.n)/mso:1),fidx=dw.map(x=>x.so&&mfp?(x.fb/x.so)/mfp:1);
+  const R=Math.max(0,mf.RN-a.so),otbSum=days.reduce((s,x)=>s+x.otb,0);let pick=Math.max(0,R-otbSum);
+  const scale=R<otbSum&&otbSum>0?R/otbSum:1;days.forEach(x=>{x.rn=x.otb*scale});
+  for(let pass=0;pass<4&&pick>0.5;pass++){
+    const gap=days.map(x=>Math.max(0,195-x.rn)*ridx[x.dow]),sg=gap.reduce((s,v)=>s+v,0);if(!sg)break;
+    let used=0;days.forEach((x,i)=>{const add=Math.min(195-x.rn,pick*gap[i]/sg);x.rn+=add;x.add=(x.add||0)+add;used+=add});pick-=used;
+  }
+  const pickTot=days.reduce((s,x)=>s+(x.add||0),0),RVrest=mf.RV!=null?Math.max(0,mf.RV-a.rr):null,otbRvSum=days.reduce((s,x)=>s+x.otbRv*scale,0);
+  const adrAll=mf.ADR||(otbSum?otbRvSum/otbSum:0);let adrP=pickTot>0&&RVrest!=null?(RVrest-otbRvSum)/pickTot:adrAll;if(!(adrP>adrAll*0.5&&adrP<adrAll*1.8))adrP=adrAll;
+  days.forEach(x=>{x.rv=x.otbRv*scale+(x.add||0)*adrP});
+  // F&B
+  const fbRest=mf.fb?Math.max(0,mf.fb.val-a.fb):0,wsum=days.reduce((s,x)=>s+x.rn*fidx[x.dow],0)||1;
+  days.forEach(x=>{x.fb=fbRest*x.rn*fidx[x.dow]/wsum;x.ven={};getVenues().forEach(v=>{const b=mf.ven[v];if(!b)return;const done=cur?((run.V[v][M]||{t:0}).t):0;x.ven[v]=Math.max(0,b.val-done)*x.rn*fidx[x.dow]/wsum})});
+  // meteo: solo si el efecto medido es significativo (≥15 días en el grupo y ≥7%); hoy es «medir primero»
+  const wf=fzWxFactor();days.forEach(x=>{const w=WX.fc.find(f=>f.k===x.k);x.wx=w&&wf?wf[wxCls(w)]||1:1;if(x.wx!==1){x.fb*=x.wx}});
+  return days;
+}
+function fzWxFactor(){
+  try{if(!WX.fc.length)return null;const e=wxEffect(wxCls,['sun','part','cloud','rain']).__fb;if(!e)return null;const f={};let any=false;
+    ['sun','part','cloud','rain'].forEach(g=>{if(e[g]&&e[g].n>=15&&Math.abs(e[g].d)>=0.07){f[g]=1+e[g].d;any=true}});return any?f:null}catch(x){return null}
+}
+function fzWeeks(days){
+  const wk=[];days.forEach(x=>{const mon=new Date(x.k+'T12:00:00');mon.setDate(mon.getDate()-((mon.getDay()+6)%7));const key=wxFmt(mon);let w=wk.find(q=>q.key===key);if(!w){w={key,from:x.d,to:x.d,rn:0,rv:0,fb:0,n:0,ven:{}};wk.push(w)}w.to=x.d;w.rn+=x.rn;w.rv+=x.rv;w.fb+=x.fb;w.n++;Object.keys(x.ven).forEach(v=>{w.ven[v]=(w.ven[v]||0)+x.ven[v]})});return wk}
+// ---- aprendizaje: foto de lo pronosticado y puntuación al cerrar cada mes ----
+function fzLearn(run){
+  if(!HOT_EDIT)return false;const z=HOT.fzl=HOT.fzl||{snaps:{},err:{},done:{}};let ch=false;const today=wxToday();
+  if(!z.snaps[today]){const q=ob=>{const x={};Object.keys(ob||{}).forEach(e=>{x[e]=Math.round(ob[e])});return x},t={};run.res.forEach(r=>{const key=r.Y+'-'+wxP(r.M),o={h:r.h,rn:q(r.rn.vals),rv:q(r.rv&&r.rv.vals),fb:q(r.fb&&r.fb.vals),ven:{},bl:{rn:Math.round(r.RN),rv:Math.round(r.RV||0),fb:Math.round(r.fb?r.fb.val:0)}};Object.keys(r.ven).forEach(v=>{o.ven[v]=q(r.ven[v].vals)});t[key]=o});
+    z.snaps[today]=t;const ks=Object.keys(z.snaps).sort();while(ks.length>40)delete z.snaps[ks.shift()];ch=true}
+  const L=run.L,A=run.A,V=run.V;
+  Object.keys(z.snaps).forEach(day=>{Object.keys(z.snaps[day]).forEach(key=>{
+    const Y=+key.slice(0,4),M=+key.slice(5),id=day+'|'+key;if(z.done[id]||Y!==L.y)return;const a=A[M];if(!a||!a.full)return;
+    const s=z.snaps[day][key],h=Math.max(0,Math.min(3,s.h)),bump=(k,e,pred,act)=>{if(!(pred>0)||!(act>0))return;const o=z.err[k+'|'+e+'|'+h]=z.err[k+'|'+e+'|'+h]||[0,0];o[0]++;o[1]+=Math.abs(pred-act)/act};
+    Object.keys(s.rn||{}).forEach(e=>bump('rn',e,s.rn[e],a.so));Object.keys(s.rv||{}).forEach(e=>bump('rv',e,s.rv[e],a.rr));Object.keys(s.fb||{}).forEach(e=>bump('fbh',e,s.fb[e],a.fb));
+    Object.keys(s.ven||{}).forEach(v=>{const act=V[v]&&V[v][M]&&V[v][M].t;Object.keys(s.ven[v]).forEach(e=>bump('ven',e,s.ven[v][e],act))});
+    z.done[id]=1;ch=true;
+  })});
+  if(ch){HST.dirty=true;hotDraftSave()}return ch;
+}
+// ---- vista ----
+function fzSet(k,v){FZST[k]=v;renderFz()}
+const fzEur=v=>v==null?'—':hn(v,0);
+const fzTone=m=>m<=0.06?['Alta','pos']:m<=0.12?['Media','']:['Baja','neg'];
+function fzRange(v,mape){const r=Math.max(0.05,mape*1.25);return hn(v*(1-r),0)+' – '+hn(v*(1+r),0)}
+function renderFz(){
+  const host=$('fz');
+  try{
+    if(!HAS_HOT){host.innerHTML='<div class="hwrap"><p>No tienes acceso a esta sección.</p></div>';return}
+    host.innerHTML='<div class="hwrap"><p class="hnote">Calculando forecast…</p></div>';
+    (WX.fc.length?Promise.resolve():wxEnsure()).then(()=>{try{host.innerHTML=fzPage()}catch(e){console.error(e);host.innerHTML='<div class="hwrap"><p class="hnote">No se pudo calcular el forecast: '+escapeHTML(e.message)+'</p></div>'}});
+  }catch(e){host.innerHTML='<div class="hwrap"><p class="hnote">'+escapeHTML(e.message)+'</p></div>'}
+}
+function fzPage(){
+  const run=fzRun(),R=run.res,L=run.L;if(!R.length)return`<div class="hwrap">${hHead('FORECAST','Forecast 1-2-3 meses','','')}<p class="hnote">Necesito cargar el PickUp de Revenue para poder proyectar. Usa «Cargar PickUp (Excel)».</p></div>`;
+  fzLearn(run);
+  const sel=R.find(r=>r.h===(FZST.m==null?1:FZST.m))||R[R.length-1],lab=r=>months[r.M-1]+(r.Y!==L.y?' '+r.Y:'');
+  const hasPU=!!(HOT.pu&&Object.keys(HOT.pu.years||{}).length);
+  const intro=`Datos hasta el <b>${L.d}/${wxP(L.m)}</b>${hasPU?' · PickUp de Revenue del <b>'+HOT.pu.asof.slice(8)+'/'+HOT.pu.asof.slice(5,7)+'</b>':' · <b>sin PickUp cargado</b>: el forecast pierde la parte de reservas en libros'}. Cada estimación mezcla varios métodos; el peso de cada uno sale de lo bien que ha acertado antes.`;
+  // 1. resumen
+  const dimM=r=>hdim(r.Y,r.M),head=R.map(r=>`<th>${r.h===0?'Cierre '+lab(r):'+'+r.h+' · '+lab(r)}</th>`).join('');
+  const cell=(f,cls)=>R.map(r=>`<td class="${cls||''}">${f(r)}</td>`).join('');
+  const rel=(a,b)=>b>0?`<small class="${dcls(a/b-1)}"> ${a>=b?'+':'−'}${hn(Math.abs(a/b-1)*100,0)}%</small>`:'';
+  const rows=[
+    ['Ocupación',r=>hp(r.RN/(195*dimM(r)),1)],
+    ['Hab. vendidas',r=>fzEur(r.RN)+(r.S&&r.S.budRn?rel(r.RN,r.S.budRn):'')],
+    ['ADR',r=>r.ADR?hn(r.ADR,0)+' €':'—'],
+    ['Room revenue €',r=>r.RV?`<b>${fzEur(r.RV)}</b>`+(r.S&&r.S.budRv?rel(r.RV,r.S.budRv):''):'—'],
+    ['&nbsp;&nbsp;rango',r=>r.RV&&r.rv?`<small>${fzRange(r.RV,r.rv.mape)}</small>`:'—'],
+    ['F&B hotel €',r=>r.fb?`<b>${fzEur(r.fb.val)}</b>`:'—'],
+    ['&nbsp;&nbsp;rango',r=>r.fb?`<small>${fzRange(r.fb.val,r.fb.mape)}</small>`:'—'],
+    ['Total rooms + F&B €',r=>r.RV&&r.fb?`<b>${fzEur(r.RV+r.fb.val)}</b>`:'—'],
+    ['Fiabilidad',r=>{const t=fzTone(r.rv?r.rv.mape:r.rn.mape);return`<span class="${t[1]}">${t[0]}</span> <small>(±${hn(Math.max(5,(r.rv?r.rv.mape:r.rn.mape)*125),0)}%)</small>`}]
+  ].map(([n,f])=>`<tr><td class="vn">${n}</td>${cell(f)}</tr>`).join('');
+  const t1=`<div class="fscroll"><table class="ftab htab"><thead><tr><th></th>${head}</tr></thead><tbody>${rows}</tbody></table></div><p class="hnote">El % pequeño compara con el budget de Revenue. Cierre del mes en curso = lo ya real + lo que queda por vender. El rango es el error medio histórico de la mezcla, no una garantía.</p>`;
+  // 2. venues
+  const vn=getVenues(),vr=vn.map(v=>`<tr><td class="vn">${escapeHTML(v)}</td>${R.map(r=>{const b=r.ven[v];return`<td>${b?`<b>${fzEur(b.val)}</b> <small>${fzRange(b.val,b.mape)}</small>`:'—'}</td>`}).join('')}</tr>`).join('');
+  const tvt=`<tr class="tot"><td class="vn">Total venues</td>${R.map(r=>`<td><b>${fzEur(Object.values(r.ven).reduce((s,b)=>s+b.val,0))}</b></td>`).join('')}</tr>`;
+  const t2=`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Venue</th>${head}</tr></thead><tbody>${vr}${tvt}</tbody></table></div><p class="hnote">F&amp;B de los outlets (mes completo). El «F&amp;B hotel» de arriba es el del Revenue Flash y puede incluir banquetes y otros conceptos.</p>`;
+  // 3. detalle semana / día
+  const days=fzDaily(sel,run),dn=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const tabs=`<div class="hseg"><button class="${FZST.view==='week'?'on':''}" onclick="fzSet('view','week')">Por semanas</button><button class="${FZST.view==='day'?'on':''}" onclick="fzSet('view','day')">Día a día</button></div>`;
+  const msel=`<label>Mes<select onchange="fzSet('m',+this.value)">${R.map(r=>`<option value="${r.h}" ${r===sel?'selected':''}>${r.h===0?'Cierre '+lab(r):'+'+r.h+' · '+lab(r)}</option>`).join('')}</select></label>`;
+  let tdet;
+  if(!days.length)tdet='<p class="hnote">No quedan días por pronosticar en este mes.</p>';
+  else if(FZST.view==='week'){const wk=fzWeeks(days);tdet=`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Semana</th><th>Hab.</th><th>Ocup.</th><th>Room rev. €</th><th>F&amp;B hotel €</th>${vn.map(v=>`<th class="hm">${escapeHTML(v)}</th>`).join('')}</tr></thead><tbody>${wk.map(w=>`<tr><td class="vn">${w.from}–${w.to} ${months[sel.M-1].slice(0,3).toLowerCase()}</td><td>${fzEur(w.rn)}</td><td>${hp(w.rn/(195*w.n),0)}</td><td>${fzEur(w.rv)}</td><td>${fzEur(w.fb)}</td>${vn.map(v=>`<td class="hm">${fzEur(w.ven[v]||0)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`}
+  else tdet=`<div class="fscroll tall"><table class="ftab htab"><thead><tr><th>Día</th><th>Ocup.</th><th>En libros</th><th>Room rev. €</th><th>F&amp;B hotel €</th>${vn.map(v=>`<th class="hm">${escapeHTML(v)}</th>`).join('')}</tr></thead><tbody>${days.map(x=>`<tr><td class="vn">${dn[x.dow]} ${x.d}${x.wx!==1?' <small>meteo '+(x.wx>1?'+':'−')+hn(Math.abs(x.wx-1)*100,0)+'%</small>':''}</td><td>${hp(x.rn/195,0)}</td><td>${hn(x.otb,0)}</td><td>${fzEur(x.rv)}</td><td>${fzEur(x.fb)}</td>${vn.map(v=>`<td class="hm">${fzEur(x.ven[v]||0)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  // 4. racional
+  const wtxt=(metric,r)=>{const b=metric==='rn'?r.rn:metric==='rv'?r.rv:r.fb;return b?Object.keys(b.ws).map(e=>`${FZ_NAME[e]} <b>${hn(b.ws[e]*100,0)}%</b>`).join(' · '):'—'};
+  const rzRows=R.map(r=>`<tr><td class="vn">${r.h===0?'Cierre '+lab(r):'+'+r.h+' · '+lab(r)}</td><td>${wtxt('rn',r)}</td><td>${wtxt('fbh',r)}</td></tr>`).join('');
+  const ys=run.yoy,s0=R.find(r=>r.S&&r.S.lyRn>0&&r.LY);
+  const facts=[
+    ys?`Tendencia interanual (últimos ${ys.n} meses cerrados, ${ys.ms.slice().reverse().map(m=>months[m-1].slice(0,3)).join('/')}): hab. vendidas <b>${ys.rn>=1?'+':'−'}${hn(Math.abs(ys.rn-1)*100,1)}%</b>, room revenue <b>${ys.rv>=1?'+':'−'}${hn(Math.abs(ys.rv-1)*100,1)}%</b>, F&amp;B por habitación <b>${ys.fbr>=1?'+':'−'}${hn(Math.abs(ys.fbr-1)*100,1)}%</b> frente a 2025.`:'Sin 2025 para calcular la tendencia interanual.',
+    s0?`Ritmo de reservas: hoy hay en libros ${fzEur(s0.S.otbRn)} hab. para ${months[s0.M-1].toLowerCase()} frente a ${fzEur(s0.S.lyRn)} a esta misma fecha el año pasado; el año pasado cerró en ${fzEur(s0.LY.rn)}.`:'',
+    `F&B: relación con la ocupación = <b>€ de F&amp;B por habitación vendida</b>, con su estacionalidad y la tendencia interanual; después se reparte por venue según su aportación histórica por habitación.`,
+    (()=>{const f=fzWxFactor();return f?'Meteo: el efecto medido es significativo y ya se aplica a los próximos 7 días ('+Object.keys(f).map(g=>WXC[g].n+' '+(f[g]>=1?'+':'−')+hn(Math.abs(f[g]-1)*100,0)+'%').join(', ')+').':'Meteo: a más de 7 días no hay predicción fiable (se usa la estacionalidad), y dentro de 7 días el efecto medido todavía no es significativo (se necesitan ≥15 días por tipo de tiempo y ≥7%), así que <b>no se aplica</b>. Se activa sola cuando los datos lo justifiquen.'})()
+  ].filter(Boolean).map(t=>`<li>${t}</li>`).join('');
+  const t4=`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Mes</th><th>Peso de cada método · hab. y room revenue</th><th>Peso de cada método · F&amp;B</th></tr></thead><tbody>${rzRows}</tbody></table></div><ul class="hbul">${facts}</ul>`;
+  // 5. aprendizaje
+  const bk=fzBack(),z=HOT.fzl||{err:{},done:{},snaps:{}};
+  const mrow=(metric,est)=>{const c=[1,2,3].map(h=>{const m=fzMape(metric,est,h);return`<td>${m.n?hn(m.mape*100,1)+'%':'—'}<small> n=${m.n}</small></td>`}).join('');return`<tr><td class="vn">${FZ_MET[metric]}</td><td>${FZ_NAME[est]}</td>${c}</tr>`};
+  const ar=['rn|y','rn|b','rn|f','rv|y','rv|b','rv|f','fbh|r','fbh|b','fbh|f'].map(k=>{const [m,e]=k.split('|');return mrow(m,e)}).join('');
+  const nClosed=Object.keys(z.done).length;
+  const t5=`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Qué</th><th>Método</th><th>Error 1 mes</th><th>Error 2 meses</th><th>Error 3 meses</th></tr></thead><tbody>${ar}</tbody></table></div><p class="hnote">Error medio absoluto (menos es mejor) con los meses ya cerrados de 2026. El ritmo de reservas aún no tiene error medido: empieza a puntuarse cuando se cierre el primer mes pronosticado con PickUp. Foto guardada hoy: ${Object.keys(z.snaps).length} día(s) · cierres evaluados: ${nClosed}. Cada carga de PickUp y cada cierre mensual recalculan los pesos.</p>`;
+  return`<div class="hwrap">${hHead('FORECAST','Forecast 1-2-3 meses',intro,'')}
+  ${hCard('Resumen · rooms y F&B','mezcla de métodos con su rango',t1)}
+  ${hCard('F&B por venue','mes completo',t2)}
+  <div class="hgrid"><div class="hcol">${hCard('Detalle del mes','<span style="display:inline-flex;gap:.6rem;align-items:center">'+msel+tabs+'</span>',tdet)}</div>
+  <div class="hcol">${hCard('Racional','por qué sale esta cifra',t4)}${hCard('Aprendizaje','cuánto ha acertado cada método',t5)}</div></div></div>`;
+}
+Object.assign(window,{fzSet,renderFz});
+function hRender(){const v=document.body.dataset.view;if(v==='hotel')renderHotel();else if(v==='rooms')renderRooms();else if(v==='otb')renderOtb();else if(v==='wx')renderWx();else if(v==='pu')renderPu();else if(v==='fz')renderFz()}
 // ---------------- áreas ----------------
 function setArea(a,go){
   if(!HAS_HOT)a='fb';
@@ -2896,7 +3109,7 @@ async function publishData(){
 }
 Object.assign(window,{publishData,openCard,closeCard,shareCard,applyRole,money2,parseValue,setLayout,cycleLayout});
 applyTheme();applyRole();renderAll();setLayout(LAYOUT);
-Object.assign(RENDERERS,{hotel:renderHotel,rooms:renderRooms,otb:renderOtb,wx:renderWx,pu:renderPu});
+Object.assign(RENDERERS,{hotel:renderHotel,rooms:renderRooms,otb:renderOtb,wx:renderWx,pu:renderPu,fz:renderFz});
 if(HAS_HOT){document.body.classList.add('has-hot');let ar='hotel';try{ar=localStorage.getItem('fbAreaV47')||'hotel'}catch(e){}if(ar!=='fb'){setArea(ar,false)}}
 showView('dash',document.querySelector('.tab[data-view="'+(DATA.dashboardMode==='ytd'?'dash-ytd':'dash')+'"]'));
 renderDashboard();

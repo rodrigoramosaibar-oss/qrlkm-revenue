@@ -526,7 +526,7 @@ body.role-view #flashBtn,body.role-view .sbBtn[onclick^="flashOpen"]{display:non
 .areaSw{display:none;margin:.2rem .9rem .6rem;border:1px solid var(--line2);border-radius:10px;overflow:hidden}
 body.has-hot .areaSw{display:flex}.areaSw button{flex:1;padding:.5rem;border:0;background:transparent;color:#F3F3EF;font-weight:700;font-size:.82rem;cursor:pointer}
 .areaSw button.on{background:var(--accent);color:var(--accentInk)}
-body.area-fb [data-area="hotel"].tab,body.area-fb .sbGroup[data-area="hotel"],body:not(.area-fb) .tab[data-area="fb"],body:not(.area-fb) .sbGroup[data-area="fb"]{display:none}
+.sbMore{border-top:1px solid rgba(255,255,255,.12);padding-top:.35rem}.sbMore summary{cursor:pointer;font-size:.72rem;color:rgba(255,255,255,.6);letter-spacing:.04em;padding:.35rem 0;list-style:none}.sbMore summary::-webkit-details-marker{display:none}.sbMore[open] summary{margin-bottom:.1rem}.sbMore>*:not(summary){margin-top:.45rem}
 body:not(.has-hot) [data-hot]{display:none}
 body.area-hotel .dashOnly{display:none!important}
 /* selector Hotel / F&B en la cabecera (siempre visible, también en móvil) */
@@ -653,39 +653,38 @@ body[data-layout="bento"] .hc{border:0}
   <div class="sbLogo"><img data-logo="lock" alt="Kimpton Los Monteros Marbella"></div>
   <div class="sbApp">QRLKM <b>Revenue Control</b></div>
   <div class="sbUser" id="sbUser"></div>
-  <div data-area="hotel" class="sbGroup">Hotel</div>
-  <button data-area="hotel" class="tab" data-view="hotel" onclick="setArea('hotel')"><svg viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13M9 21v-6h6v6"/></svg>Resumen hotel</button>
-  <button data-area="hotel" class="tab" data-view="rooms" onclick="setArea('rooms')"><svg viewBox="0 0 24 24"><path d="M3 18v-7a3 3 0 013-3h12a3 3 0 013 3v7M3 15h18M3 21v-3M21 21v-3"/></svg>Rooms</button>
-  <button data-area="hotel" class="tab" data-view="otb" onclick="showView('otb',this)"><svg viewBox="0 0 24 24"><path d="M4 20V10M9 20V4M14 20v-8M19 20V7"/></svg>Ocupación OTB</button>
-  <button data-area="hotel" class="tab" data-view="wx" onclick="showView('wx',this)"><svg viewBox="0 0 24 24"><path d="M7 19a4 4 0 010-8 5.5 5.5 0 0110.6-1.2A4.5 4.5 0 0117 19H7z"/></svg>Meteo y revenue</button>
-  <button data-area="hotel" class="tab" data-view="pu" onclick="showView('pu',this)"><svg viewBox="0 0 24 24"><path d="M4 19h16M6 16l4-5 3 3 5-7"/></svg>PickUp</button>
-  <button data-area="hotel" class="tab" data-view="fz" onclick="showView('fz',this)"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-9M15 6h6v6"/></svg>Forecast</button>
-  <div data-area="fb" class="sbGroup">Informes</div>
-  <button data-area="fb" class="tab active" data-view="dash" onclick="setDashMode('month',this)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</button>
-  <button data-area="fb" class="tab" data-view="dash-ytd" onclick="setDashMode('ytd',this)"><svg viewBox="0 0 24 24"><path d="M3 20h18M5 16l4-5 4 3 6-8"/></svg>Acumulado YTD</button>
-  <button data-area="fb" class="tab" data-view="director" onclick="showView('director',this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Director View</button>
-  <button data-area="fb" class="tab" data-view="briefing" onclick="showView('briefing',this)"><svg viewBox="0 0 24 24"><path d="M5 3h14v18H5z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>Briefing F&amp;B</button>
-  <button data-area="fb" class="tab" data-view="forecast" onclick="showView('forecast',this)"><svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 3 4-7 5 5"/><path d="M3 21h18" stroke-dasharray="2 3"/></svg>Forecast</button>
-  <button data-area="fb" class="tab" data-view="summary" onclick="showView('summary',this)"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>Resumen</button>
-  <div data-area="fb" class="sbGroup" data-edit>Gestión</div>
-  <button data-area="fb" class="tab" data-edit data-view="entry" onclick="showView('entry',this)"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Entrada diaria</button>
-  <button data-area="fb" class="tab" data-edit data-view="objectives" onclick="showView('objectives',this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>Objetivos</button>
-  <button data-area="fb" class="tab" data-edit data-view="config" onclick="showView('config',this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>Configurar</button>
+  <div class="sbGroup" data-hot>Hotel</div>
+  <button class="tab" data-hot data-view="hotel" onclick="setArea('hotel')"><svg viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13M9 21v-6h6v6"/></svg>Resumen hotel</button>
+  <button class="tab" data-hot data-view="rooms" onclick="setArea('rooms')"><svg viewBox="0 0 24 24"><path d="M3 18v-7a3 3 0 013-3h12a3 3 0 013 3v7M3 15h18M3 21v-3M21 21v-3"/></svg>Rooms</button>
+  <div class="sbGroup">Food &amp; Beverage</div>
+  <button class="tab active" data-view="dash" onclick="setDashMode('month',this)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</button>
+  <button class="tab" data-view="dash-ytd" onclick="setDashMode('ytd',this)"><svg viewBox="0 0 24 24"><path d="M3 20h18M5 16l4-5 4 3 6-8"/></svg>Acumulado YTD</button>
+  <button class="tab" data-view="director" onclick="showView('director',this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Director View</button>
+  <button class="tab" data-view="briefing" onclick="showView('briefing',this)"><svg viewBox="0 0 24 24"><path d="M5 3h14v18H5z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>Briefing F&amp;B</button>
+  <button class="tab" data-view="forecast" onclick="showView('forecast',this)"><svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 3 4-7 5 5"/><path d="M3 21h18" stroke-dasharray="2 3"/></svg>Forecast F&amp;B</button>
+  <button class="tab" data-view="summary" onclick="showView('summary',this)"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>Resumen F&amp;B</button>
+  <div class="sbGroup" data-hot>Previsión y análisis</div>
+  <button class="tab" data-hot data-view="otb" onclick="showView('otb',this)"><svg viewBox="0 0 24 24"><path d="M4 20V10M9 20V4M14 20v-8M19 20V7"/></svg>Ocupación OTB</button>
+  <button class="tab" data-hot data-view="wx" onclick="showView('wx',this)"><svg viewBox="0 0 24 24"><path d="M7 19a4 4 0 010-8 5.5 5.5 0 0110.6-1.2A4.5 4.5 0 0117 19H7z"/></svg>Meteo y revenue</button>
+  <button class="tab" data-hot data-view="pu" onclick="showView('pu',this)"><svg viewBox="0 0 24 24"><path d="M4 19h16M6 16l4-5 3 3 5-7"/></svg>PickUp</button>
+  <button class="tab" data-hot data-view="fz" onclick="showView('fz',this)"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-9M15 6h6v6"/></svg>Forecast hotel</button>
+  <div class="sbGroup" data-edit>Gestión</div>
+  <button class="tab" data-edit data-view="entry" onclick="showView('entry',this)"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Entrada diaria</button>
+  <button class="tab" data-edit data-view="objectives" onclick="showView('objectives',this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>Objetivos</button>
+  <button class="tab" data-edit data-view="config" onclick="showView('config',this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>Configurar</button>
   <div class="sbTools">
+    <button class="sbBtn primary" data-edit onclick="dataOpen()">Cargar datos</button>
+    <button class="sbBtn" data-edit onclick="publishData()">Publicar datos</button>
+    <button class="sbBtn" onclick="openCard()">Tarjeta WhatsApp</button>
+    <button class="sbBtn" id="pushBtn" hidden onclick="pushToggle()">Activar avisos de datos nuevos</button>
+    <details class="sbMore"><summary>Más opciones</summary>
     <select class="theme sbSel" id="layoutSel" title="Estilo del dashboard" onchange="setLayout(this.value)"><option value="exec">Informe (escritorio)</option><option value="graphite">Graphite · oscuro</option><option value="navy">Navy · app</option><option value="bento">Bento · tarjetas</option><option value="tabla">Tabla · analítico</option></select>
     <select class="theme sbSel" title="Paleta corporativa" onchange="setPalette(this.value)"><option value="kimpton">Kimpton · Amarillo</option><option value="ihg">IHG · Verde</option><option value="navy">Corporativo · Azul</option></select>
     <div class="sbRow"><button class="sbBtn" id="modeBtn" onclick="toggleMode()">Oscuro</button><button class="sbBtn" onclick="toggleScreenshot()">Pantallazo</button></div>
-    <button class="sbBtn" id="pushBtn" hidden onclick="pushToggle()">Activar avisos de datos nuevos</button>
-    <button class="sbBtn primary" onclick="openCard()">Tarjeta WhatsApp</button>
     <button class="sbBtn" onclick="window.print()">PDF / Imprimir</button>
-    <button class="sbBtn primary" data-edit onclick="flashOpen()">Cargar Revenue Flash</button>
-    <button class="sbBtn" data-edit data-hot onclick="otbOpen()">Cargar ocupación Opera (OTB)</button>
-    <button class="sbBtn" data-edit data-hot onclick="puOpen()">Cargar PickUp (Excel)</button>
-    <button class="sbBtn" data-edit data-hot onclick="b27Open()">Cargar Budget (Excel)</button>
-    <button class="sbBtn" data-edit data-hot onclick="gpOpen()">Cargar Group Pace / Eventos</button>
-    <button class="sbBtn" data-edit onclick="publishData()">Publicar datos</button>
     <div class="sbRow" data-edit><button class="sbBtn" onclick="manualSave()">Grabar</button><button class="sbBtn" onclick="downloadState()">Exportar</button></div>
     <button class="sbBtn" data-edit onclick="resetApp()">Reset borrador</button>
+    </details>
     <button class="sbBtn quiet" onclick="logout()">Cerrar sesión</button>
   </div>
 </aside>
@@ -695,7 +694,7 @@ body[data-layout="bento"] .hc{border:0}
   <div class="backupBanner" id="backupBanner"><span id="backupMsg"></span><button class="btn" data-edit onclick="publishData()">Publicar ahora</button></div>
   <div class="ctx">
     <button class="hamb" aria-label="Menú" onclick="document.body.classList.toggle('navopen')"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-    <div class="areaSw" id="areaSw"><button data-area="hotel" onclick="setArea('hotel')">Hotel</button><button data-area="fb" class="on" onclick="setArea('fb')">F&amp;B</button></div>
+    
     <div class="ctxTitle" id="ctxTitle">Dashboard</div>
     <div class="spacer"></div>
     <div class="ctl dashOnly"><span>Mes</span><select id="quickMonth" onchange="setDashboardMonth(this.value)"></select></div>
@@ -1540,7 +1539,7 @@ function flashModalEl(){
   document.body.appendChild(m);
   m.addEventListener('click',e=>{if(e.target===m)flashClose()});
   m.addEventListener('dragover',e=>{e.preventDefault()});
-  m.addEventListener('drop',e=>{e.preventDefault();const fl=e.dataTransfer?Array.from(e.dataTransfer.files):[];if(fl.length&&fl.every(x=>/\.xlsx$/i.test(x.name))){if(!HOT_EDIT){toast('Tu usuario no puede cargar datos.');return}puHandle(fl)}else if(fl[0])pdfAutoHandle(fl[0])});
+  m.addEventListener('drop',e=>{e.preventDefault();const fl=e.dataTransfer?Array.from(e.dataTransfer.files):[];if(fl.length){if(!IS_EDITOR){toast('Tu usuario no puede cargar datos.');return}dataHandle(fl)}});
   return m;
 }
 function flashClose(){const m=$f('flashModal');if(m)m.classList.remove('show');FLASH_ST=null}
@@ -2804,6 +2803,38 @@ function gpCards(run){
   return hCard('Grupos y eventos',src,`${t1}<ul class="hbul">${notes.map(x=>`<li>${x}</li>`).join('')}</ul>${man}${t2}<p class="hnote">Los eventos de una cuenta que ya está en Group Pace no se suman otra vez. Las comidas de grupo en Jara, Azul o Escondido se cuentan aquí como banquete; si en la app van a su outlet, dímelo y lo separo.</p>`);
 }
 Object.assign(window,{gpOpen,gpHandle,gpCommit,evUnitSet});
+// ======================= v58 · carga única de datos =======================
+async function gxSheetNames(file){const z=await puZip(await file.arrayBuffer()),wb=await z.get('xl/workbook.xml'),o=[];if(wb)for(const m of wb.matchAll(/<sheet\b[^>]*>/g)){const n=/\bname="([^"]*)"/.exec(m[0]);if(n)o.push(puUnesc(n[1]))}return o}
+async function dataKind(f){
+  if(/\.pdf$/i.test(f.name))return'pdf';if(!/\.xlsx$/i.test(f.name))return'';
+  try{const n=await gxSheetNames(f);if(n.some(x=>/^Daily PU/i.test(x)))return'pu';if(n.some(x=>/^Rooms Totals/i.test(x)))return'budget';if(n.includes('Executive View')||n.includes('Revenue Detail'))return'gp';return'ev'}catch(e){return''}
+}
+const DATA_KN={pdf:'PDF (Revenue Flash u ocupación Opera)',pu:'PickUp de Revenue',budget:'Budget P&L',gp:'Group Pace',ev:'Calendario de eventos'};
+function dataOpen(){
+  if(!IS_EDITOR){toast('Tu usuario no puede cargar datos.');return}
+  document.body.classList.remove('navopen');const m=flashModalEl();m.classList.add('show');FLASH_ST=null;$f('flashTitle').textContent='Cargar datos';
+  $f('flashBody').innerHTML=`<p class="fp">Elige el archivo y la app lo reconoce sola: <b>Revenue Flash</b> y <b>ocupación Opera</b> (PDF), <b>PickUp</b>, <b>Budget</b>, <b>Group Pace</b> y <b>calendario de eventos</b> (Excel). Se leen en este dispositivo; no se envían a ningún servidor.</p>
+  <label class="fpick"><input type="file" multiple accept=".pdf,.xlsx,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden onchange="dataHandle(Array.from(this.files))"><span>Elegir archivo(s)</span><small>o arrástralos aquí</small></label>
+  <div class="fgh"><a href="#" onclick="flashSettings();return false">${ghConfigured()?'Publicación automática activada · ajustes':'Configurar publicación automática'}</a></div>`;
+}
+async function dataHandle(files){
+  files=(Array.isArray(files)?files:[files]).filter(Boolean);if(!files.length)return;
+  const m=flashModalEl();m.classList.add('show');const body=$f('flashBody');body.innerHTML='<p class="fp">Reconociendo '+files.map(f=>'«'+escapeHTML(f.name)+'»').join(' y ')+'…</p>';
+  const ks=await Promise.all(files.map(dataKind)),G={},bad=[];files.forEach((f,i)=>{if(ks[i])(G[ks[i]]=G[ks[i]]||[]).push(f);else bad.push(f.name)});
+  const kinds=['pdf','pu','budget','gp','ev'].filter(k=>G[k]);
+  if(!kinds.length){body.innerHTML=`<div class="ferr">No reconozco ${bad.length>1?'estos archivos':'este archivo'}: ${bad.map(escapeHTML).join(', ')}. Acepto PDF del Revenue Flash o de Opera, y Excel de PickUp, Budget, Group Pace o calendario de eventos.</div><div class="fbtns"><button class="fb" onclick="dataOpen()">Reintentar</button></div>`;return}
+  if(G.pu&&!HOT_EDIT||G.budget&&!HOT_EDIT||G.gp&&!HOT_EDIT||G.ev&&!HOT_EDIT){if(!kinds.includes('pdf')||kinds.length>1){toast('Tu usuario no puede cargar este tipo de datos.');return}}
+  const first=kinds[0],gpFiles=[].concat(G.gp||[],G.ev||[]),rest=[];
+  kinds.slice(1).forEach(k=>{if(!(first==='gp'&&k==='ev')&&!(first==='ev'&&k==='gp'))rest.push(...(G[k]||[]))});
+  if(first==='pdf'&&G.pdf.length>1)rest.push(...G.pdf.slice(1));
+  if(first==='pdf')await pdfAutoHandle(G.pdf[0]);
+  else if(first==='pu')await puHandle(G.pu);
+  else if(first==='budget')await b27Handle(G.budget[0]);
+  else await gpHandle(gpFiles);
+  const note=(rest.length?`<p class="fp">Me has dado más de un tipo de archivo. Termina esta carga y vuelve a subir: ${rest.map(f=>'«'+escapeHTML(f.name)+'» ('+DATA_KN[ks[files.indexOf(f)]]+')').join(', ')}.</p>`:'')+(bad.length?`<p class="fp">No he reconocido: ${bad.map(escapeHTML).join(', ')}.</p>`:'');
+  if(note){const b=$f('flashBody');if(b)b.insertAdjacentHTML('beforeend',note)}
+}
+Object.assign(window,{dataOpen,dataHandle});
 function hRender(){const v=document.body.dataset.view;if(v==='hotel')renderHotel();else if(v==='rooms')renderRooms();else if(v==='otb')renderOtb();else if(v==='wx')renderWx();else if(v==='pu')renderPu();else if(v==='fz')renderFz()}
 // ---------------- áreas ----------------
 function setArea(a,go){
@@ -3400,6 +3431,7 @@ function showView(id,btn){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   $(id).classList.add('active');
   document.body.dataset.view=id;
+  {const hv=['hotel','rooms','otb','wx','pu','fz'].includes(id);document.body.classList.toggle('area-hotel',hv);document.body.classList.toggle('area-fb',!hv);try{localStorage.setItem('fbViewV58',btn&&btn.dataset&&btn.dataset.view?btn.dataset.view:id)}catch(e){}}
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   if(btn)btn.classList.add('active');
   const tb=btn||document.querySelector('.tab[data-view="'+id+'"]');
@@ -3455,7 +3487,7 @@ Object.assign(RENDERERS,{hotel:renderHotel,rooms:renderRooms,otb:renderOtb,wx:re
 if(HAS_HOT){document.body.classList.add('has-hot');let ar='hotel';try{ar=localStorage.getItem('fbAreaV47')||'hotel'}catch(e){}if(ar!=='fb'){setArea(ar,false)}}
 showView('dash',document.querySelector('.tab[data-view="'+(DATA.dashboardMode==='ytd'?'dash-ytd':'dash')+'"]'));
 renderDashboard();
-if(HAS_HOT&&document.body.classList.contains('area-hotel')){const ar=localStorage.getItem('fbAreaV47')||'hotel';setArea(ar==='rooms'?'rooms':'hotel')}
+if(HAS_HOT){let sv='hotel';try{sv=localStorage.getItem('fbViewV58')||'hotel'}catch(e){}const tb=document.querySelector('.tab[data-view="'+sv+'"]');(tb||document.querySelector('.tab[data-view="hotel"]')).click()}
 (function(){let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{if(document.body.dataset.view==='dash'&&LAYOUT==='exec')renderTrendChart()},120)})})();
 };
 

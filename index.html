@@ -682,6 +682,7 @@ body[data-layout="bento"] .hc{border:0}
     <button class="sbBtn" data-edit data-hot onclick="otbOpen()">Cargar ocupación Opera (OTB)</button>
     <button class="sbBtn" data-edit data-hot onclick="puOpen()">Cargar PickUp (Excel)</button>
     <button class="sbBtn" data-edit data-hot onclick="b27Open()">Cargar Budget (Excel)</button>
+    <button class="sbBtn" data-edit data-hot onclick="gpOpen()">Cargar Group Pace / Eventos</button>
     <button class="sbBtn" data-edit onclick="publishData()">Publicar datos</button>
     <div class="sbRow" data-edit><button class="sbBtn" onclick="manualSave()">Grabar</button><button class="sbBtn" onclick="downloadState()">Exportar</button></div>
     <button class="sbBtn" data-edit onclick="resetApp()">Reset borrador</button>
@@ -2198,6 +2199,7 @@ function puOpen(){
 }
 async function puHandle(files){
   files=(Array.isArray(files)?files:[files]).filter(Boolean);if(!files.length)return;
+  if(files.some(f=>/group.?pace|event/i.test(f.name)))return gpHandle(files.filter(f=>/group.?pace|event/i.test(f.name)));
   if(files.some(f=>/budget|pnl/i.test(f.name)))return b27Handle(files.find(f=>/budget|pnl/i.test(f.name)));
   const body=$f('flashBody');body.innerHTML='<p class="fp">Leyendo '+files.map(f=>'«'+escapeHTML(f.name)+'»').join(' y ')+'…</p>';
   try{
@@ -2284,8 +2286,8 @@ Object.assign(window,{puOpen,puHandle,puCommit,puSet,puAsofSet,renderPu});
 // ======================= v50 · Forecast a 1, 2 y 3 meses (rooms y F&B) con aprendizaje =======================
 // Idea: varios estimadores independientes por mes; se mezclan con pesos que salen de lo bien que ha acertado cada uno
 // (backtest con 2025/2026 + cada cierre real que va llegando). Todo lo que calcula se enseña en «Racional».
-const FZ_PRIOR={rn:{p:.30,y:.20,f:.15,u:.25,b:.10},rv:{p:.30,y:.20,f:.15,u:.25,b:.10},fbh:{r:.45,u:.40,b:.15},ven:{r:.50,f:.35,b:.15}};
-const FZ_NAME={p:'Ritmo de reservas (pickup vs año anterior)',y:'Tendencia interanual',f:'Forecast de Revenue (PickUp)',u:'Último forecast subido',b:'Budget',r:'Ratio por habitación vendida'};
+const FZ_PRIOR={rn:{p:.30,y:.20,f:.15,u:.25,b:.10},rv:{p:.30,y:.20,f:.15,u:.25,b:.10},fbh:{r:.45,u:.40,b:.15},ven:{r:.50,f:.35,b:.15,g:.40}};
+const FZ_NAME={p:'Ritmo de reservas (pickup vs año anterior)',y:'Tendencia interanual',f:'Forecast de Revenue (PickUp)',u:'Último forecast subido',b:'Budget',r:'Ratio por habitación vendida',g:'Group Pace y calendario de eventos'};
 const FZ_MET={rn:'Habitaciones vendidas',rv:'Room revenue',fbh:'F&B hotel',ven:'F&B por venue'};
 const FZST={m:null,view:'week'};let FZ_BK=null;
 const fzYear=()=>+hlast().slice(0,4);
@@ -2363,18 +2365,20 @@ function fzMonth(Y,M,h,ctx){
   const ven={},hasPUm=!!(PU&&Object.keys(PU.d).some(k=>+k.slice(5,7)===M));
   // grupos (habitaciones de grupo) que quedan en libros: los banquetes solo existen si hay segmento grupo
   let gRem=0,gAll=0,nRem=0;if(PU)Object.keys(PU.d).forEach(k=>{if(+k.slice(5,7)!==M)return;const g=PU.d[k][PU_I.rnG]||0,r=PU.d[k][PU_I.rn]||0;gAll+=g;if(!cur0||+k.slice(8)>L.d){gRem+=g;nRem+=r}});
-  let banqCut=0;
+  let banqCut=0,evUp=0;
   getVenues().forEach(v=>{
     const isBq=/banquet/i.test(v);
     const pr={},closed={};Object.keys(A).forEach(m=>{const a=A[m],x=V[v][m];if(!a||!a.full||!(a.so>0))return;if(!x||x.n<hdim(fzYear(),+m)*0.4)closed[m]=1;else pr[m]=x.t/a.so});
     const sea=closed[M]?null:fzSeason(pr,M,true),vv={},done=cur0?((V[v][M]||{t:0}).t):0;if(sea)vv.r=done+Math.max(0,RN-mt.so)*sea;
     const mo=M<=12&&DATA.config.year===Y?monthObjectives(M)[v]||{}:{},scs=Object.keys(mo).filter(k=>/^Forecast/i.test(k)).sort((a,b)=>(parseFloat(a.replace(/\D+/,''))||0)-(parseFloat(b.replace(/\D+/,''))||0)),last=scs[scs.length-1];
     if(last&&+mo[last]>0)vv.f=+mo[last];if(+mo.Original>0)vv.b=+mo.Original;
-    b27VenV(Y,M,v,vv);const b=fzBlend('ven',vv,h,1,done);
+    b27VenV(Y,M,v,vv);const EV=isBq&&ty?evBq(Y,M,cur0?L.d:0,ctx):null;if(EV&&EV.exp>0)vv.g=done+EV.exp;const b=fzBlend('ven',vv,h,1,done);
     if(b&&isBq&&PU&&hasPUm){const before=b.val;if(gRem<=0)b.val=done;else{const sh=nRem>0?gRem/nRem:0,typ=gAllTyp(PU,ctx);if(typ>0&&sh<typ)b.val=done+(b.val-done)*(sh/typ)}b.cut=before-b.val;banqCut+=b.cut}
+    if(b&&EV){b.ev=EV;const lo=done+EV.firm;if(b.val<lo){b.evUp=lo-b.val;evUp+=b.evUp;b.val=lo}}
     if(b)ven[v]=b;
   });
   if(fb&&banqCut>0)fb.val=Math.max(mt.fb,fb.val-banqCut);
+  if(fb&&evUp>0)fb.val+=evUp;
   return{Y,M,h,rn,rv,fb,ven,banqCut,gRem,RN,RV,ADR:RV&&RN?RV/RN:null,conf,LY,S,sea,fcRn};
 }
 function gAllTyp(PU,ctx){if(ctx._gt!=null)return ctx._gt;let g=0,r=0;Object.keys(PU.d).forEach(k=>{g+=PU.d[k][PU_I.rnG]||0;r+=PU.d[k][PU_I.rn]||0});return ctx._gt=r>0?g/r:0}
@@ -2501,7 +2505,7 @@ function fzPage(){
   ${hCard('Resumen · rooms y F&B','mezcla de métodos con su rango',t1)}
   ${hCard('F&B por venue','mes completo',t2)}
   <div class="hgrid"><div class="hcol">${hCard('Detalle del mes','<span style="display:inline-flex;gap:.6rem;align-items:center">'+msel+tabs+'</span>',tdet)}</div>
-  <div class="hcol">${hCard('Racional','por qué sale esta cifra',t4)}${hCard('Aprendizaje','cuánto ha acertado cada método',t5)}</div></div>${fzCardsExtra(run)}</div>`;
+  <div class="hcol">${hCard('Racional','por qué sale esta cifra',t4)}${hCard('Aprendizaje','cuánto ha acertado cada método',t5)}</div></div>${fzCardsExtra(run)}${gpCards(run)}</div>`;
 }
 Object.assign(window,{fzSet,renderFz});
 // ======================= v55 · Memoria de predicciones, ajustes manuales y análisis =======================
@@ -2663,6 +2667,143 @@ function b27Fb(Y,M,fbv){const B=HOT.ref&&HOT.ref.b27;if(!B)return;const i=M-1;
 function b27VenV(Y,M,v,vv){const B=HOT.ref&&HOT.ref.b27,k=b27Ven(v);if(!B||!k)return;const i=M-1;
   if(Y===B.year&&B.b[k]&&B.b[k][i]>0)vv.b=B.b[k][i];else if(Y===B.year-1&&B.f[k]&&B.f[k][i]>0&&!vv.f)vv.f=B.f[k][i]}
 Object.assign(window,{b27Open,b27Handle,b27Commit});
+// ======================= v56 · Group Pace y calendario de eventos =======================
+// Group Pace: grupos del año por mes (RN, rooms, banqueting, meeting rental, neto de IVA). Events Calendar: eventos con estado y pax, sin importes.
+// El forecast de banquetes usa: lo firmado en Group Pace (calibrado contra lo realmente facturado) + eventos fuera de Group Pace valorados por €/pax y estado.
+const GX_M=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+const EV_ST={Definite:'D',Tentative:'T',Prospect:'P'},EV_STN={D:'Definite',T:'Tentative',P:'Prospect'};
+const EV_PRIOR={D:1,T:.5,P:.2};
+const EV_STOP=new Set(['group','grupo','navidad','cena','dinner','christmas','birthday','celebration','gala','event','eventos','pax','meeting','lunch','almuerzo','hotel','hotels','resort','empresa','business','executive','leadership','viajes','spain','espana','years','eve','open','bar','with','coctel','cocktail','breakfast']);
+const gxWords=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w=>w.length>=4&&!/^\d/.test(w)&&!EV_STOP.has(w));
+function evMatch(acc,line){const a=gxWords(acc);if(!a.length)return false;const b=gxWords(line);return a.some(w=>b.includes(w))}
+function evW(cls){const c=String(cls||'').toLowerCase();
+  if(/breakfast|desayuno/.test(c))return .5;if(/break|coffee/.test(c))return .25;if(/dinner|cena/.test(c)&&!/cocktail/.test(c))return 1.4;if(/lunch|almuerzo/.test(c))return 1;
+  if(/cocktail|cóctel|open bar|welcome/.test(c))return .7;return 0}
+async function gxRead(file){
+  const z=await puZip(await file.arrayBuffer());
+  const wb=await z.get('xl/workbook.xml'),rels=await z.get('xl/_rels/workbook.xml.rels');
+  if(!wb||!rels)throw new Error('Este Excel no tiene el formato esperado.');
+  const rid={};for(const m of rels.matchAll(/<Relationship\b[^>]*>/g)){const a=m[0],i=/\bId="([^"]+)"/.exec(a),t=/\bTarget="([^"]+)"/.exec(a);if(i&&t)rid[i[1]]=t[1]}
+  const sheets=[];for(const m of wb.matchAll(/<sheet\b[^>]*>/g)){const a=m[0],n=/\bname="([^"]*)"/.exec(a),r=/\br:id="([^"]+)"/.exec(a);if(n&&r)sheets.push({name:puUnesc(n[1]),path:rid[r[1]]})}
+  const ss=[],sst=await z.get('xl/sharedStrings.xml');
+  if(sst)for(const m of sst.matchAll(/<si>([\s\S]*?)<\/si>/g)){let t='';for(const x of m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g))t+=x[1];ss.push(puUnesc(t))}
+  const out={};
+  for(const s of sheets){if(!s.path)continue;const xml=await z.get(s.path.startsWith('/')?s.path.slice(1):'xl/'+s.path);if(!xml)continue;const g={};
+    for(const m of xml.matchAll(/<c r="([A-Z]+)(\d+)"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)){
+      const r=+m[2];if(r>600||m[4]==null)continue;const c=puCol(m[1]);if(c>24)continue;
+      const t=/\bt="(\w+)"/.exec(m[3]),v=/<v>([\s\S]*?)<\/v>/.exec(m[4]);let val=null;
+      if(t&&t[1]==='s'&&v)val=ss[+v[1]];else if(t&&t[1]==='inlineStr'){const x=/<t[^>]*>([\s\S]*?)<\/t>/.exec(m[4]);val=x?puUnesc(x[1]):null}
+      else if(t&&(t[1]==='e'||t[1]==='b'))val=null;else if(t&&t[1]==='str')val=v?puUnesc(v[1]):null;else if(v){const f=parseFloat(v[1]);val=isFinite(f)?f:null}
+      if(val!==null&&val!=='')(g[r]=g[r]||{})[c]=val}
+    out[s.name]=g}
+  return out;
+}
+const gxIso=v=>typeof v==='number'?new Date(Math.round((v-25569)*864e5)).toISOString().slice(0,10):null;
+function gpParse(sh){
+  const ex=sh['Executive View'],rd=sh['Revenue Detail'];if(!ex||!rd)throw new Error('No encuentro las hojas «Executive View» y «Revenue Detail».');
+  const ym=/(20\d\d)/.exec(Object.values(ex[2]||{}).join(' '));const G={year:ym?+ym[1]:0,asof:gxIso((ex[21]||{})[15])||'',m:{},det:{}};
+  GX_M.forEach((mn,i)=>{const s=sh[mn];if(!s)return;const rows=[];
+    for(let r=8;r<=60;r++){const row=s[r];if(!row)continue;if(String(row[1]||'').startsWith('TOTAL'))break;const nm=String(row[1]||'').trim();if(!nm)continue;const n=c=>typeof row[c]==='number'?Math.round(row[c]*100)/100:0;
+      const x=[nm,n(2),n(4),n(6),n(8),n(10)];if(x[1]||x[2]||x[3]||x[4]||x[5])rows.push(x)}
+    G.m[i+1]={rows}});
+  const cat={'Room Revenue':'room','Banqueting':'bq','Meeting Rental & AV':'mt','Other Revenues':'ot'};
+  for(let r=4;r<=60;r++){const row=rd[r];if(!row)continue;const mi=GX_M.indexOf(String(row[1]||'').trim().toUpperCase()),c=cat[String(row[2]||'').trim()];if(mi<0||!c)continue;
+    const n=k=>typeof row[k]==='number'?Math.round(row[k]):0;((G.det[mi+1]=G.det[mi+1]||{})[c])=[n(3),n(4),n(5),n(6)]}
+  if(!G.year||!Object.keys(G.m).length)throw new Error('No reconozco el Group Pace (faltan los meses).');
+  const t=k=>Object.values(G.m).reduce((s,m)=>s+m.rows.reduce((a,l)=>a+l[k],0),0);G.chk={rn:Math.round(t(1)),bq:Math.round(t(3)),mt:Math.round(t(4)),lines:Object.values(G.m).reduce((s,m)=>s+m.rows.length,0)};
+  return G;
+}
+function evParse(sh){
+  const nm=Object.keys(sh)[0],s=sh[nm];if(!s||!/Booking: Local Account/i.test(String((s[1]||{})[1]||'')))throw new Error('No reconozco el calendario de eventos (cabecera «Booking: Local Account Name»).');
+  const rows=[],bad={};
+  Object.keys(s).map(Number).sort((a,b)=>a-b).forEach(r=>{if(r<2)return;const x=s[r],d=gxIso(x[3]);if(!d||!x[1])return;const st=EV_ST[String(x[11]||'').trim()];if(!st){bad[x[11]]=(bad[x[11]]||0)+1;return}
+    const p=typeof x[8]==='number'?x[8]:0;rows.push([String(x[1]).trim(),String(x[2]||'').trim(),d,String(x[6]||'').trim(),p,st,String(x[9]||'').trim()])});
+  if(!rows.length)throw new Error('El calendario no tiene eventos con fecha y estado.');
+  const ds=rows.map(r=>r[2]).sort();return{from:ds[0],to:ds[ds.length-1],rows,bad,chk:{n:rows.length,D:rows.filter(r=>r[5]==='D').length,T:rows.filter(r=>r[5]==='T').length,P:rows.filter(r=>r[5]==='P').length}};
+}
+// ---- parámetros aprendidos ----
+function evKeyOf(r){return r[0].slice(0,14)+'|'+r[2]+'|'+r[1].slice(0,6)+'|'+r[3].slice(0,8)}
+function evProb(){ // probabilidad de que Tentative/Prospect acabe en Definite: a priori y corregida con lo observado entre cargas
+  const H=(HOT.ref&&HOT.ref.evh)||[],o={T:[0,0],P:[0,0]};
+  if(H.length>=2){const last=H[H.length-1];for(let i=0;i<H.length-1;i++)Object.keys(H[i].k).forEach(k=>{const c=H[i].k[k];if(c==='D')return;const dt=k.split('|')[1];if(dt<last.asof)return;const out=last.k[k];if(out==='D')o[c][0]++,o[c][1]++;else if(out===undefined)o[c][1]++})}
+  const f=c=>{const [w,n]=o[c];return{p:(w+EV_PRIOR[c]*5)/(n+5),n}},t=f('T'),p=f('P');return{D:{p:1,n:0},T:t,P:p};
+}
+let EV_CAL=null;
+function evUnit(){ // €/pax-ponderado calibrado cruzando los eventos con las líneas de banqueting de Group Pace
+  const E=HOT.ref&&HOT.ref.ev,G=HOT.ref&&HOT.ref.gp;if(E&&E.unitMan>0)return{unit:E.unitMan,n:0,man:true};
+  if(!E||!G)return{unit:40,n:0,def:true};const key=E.upd+'|'+G.upd;if(EV_CAL&&EV_CAL.key===key)return EV_CAL.v;
+  const rs=[];Object.keys(G.m).forEach(m=>{const mk=G.year+'-'+wxP(m);G.m[m].rows.forEach(l=>{if(!(l[3]>0))return;const ev=E.rows.filter(r=>r[2].slice(0,7)===mk&&evMatch(r[0],l[0]));const u=ev.reduce((s,r)=>s+r[4]*evW(r[1]),0);if(u>0)rs.push(l[3]/u)})});
+  rs.sort((a,b)=>a-b);const v=rs.length>=2?{unit:rs[Math.floor(rs.length/2)],n:rs.length}:{unit:40,n:rs.length,def:true};EV_CAL={key,v};return v;
+}
+function gpK(ctx){ // lo realmente facturado en banquetes / lo que decía Group Pace, en meses cerrados
+  if(ctx._k)return ctx._k;const G=HOT.ref&&HOT.ref.gp,V=ctx.V,L=ctx.L,bv=Object.keys(V).find(v=>/banquet/i.test(v));let k={k:1,n:0,rows:[]};
+  if(G&&bv&&L.y===G.year){const rs=[];for(let m=1;m<L.m;m++){const g=G.m[m],x=V[bv][m];if(!g||!x||x.n<hdim(L.y,m)*0.4)continue;const gb=g.rows.reduce((s,l)=>s+l[3],0);if(gb<5000)continue;rs.push(x.t/gb);k.rows.push({m,gp:gb,real:x.t})}
+    if(rs.length){const s=rs.slice().sort((a,b)=>a-b),med=s[Math.floor(s.length/2)];k.n=rs.length;k.med=med;k.k=Math.max(.2,Math.min(1.6,1+(med-1)*rs.length/(rs.length+2)))}}
+  return ctx._k=k;
+}
+// banquetes esperables de Group Pace + eventos para un mes. fromDay>0: solo lo que queda tras ese día del mes en curso
+function evBq(Y,M,fromDay,ctx){
+  const R=HOT.ref||{},G=R.gp&&R.gp.year===Y?R.gp:null,E=R.ev;if(!G&&!E)return null;
+  const key=Y+'-'+wxP(M),gm=G&&G.m[M],K=gpK(ctx),k=K.k,U=evUnit(),P=evProb();
+  const evs=E?E.rows.filter(r=>r[2].slice(0,7)===key):[],lines=gm?gm.rows:[],mt=lines.map(l=>evs.filter(r=>evMatch(r[0],l[0]))),used=new Set();mt.forEach(a=>a.forEach(r=>used.add(r)));
+  let gpv=0,n=0;lines.forEach((l,i)=>{const bq=l[3]*k;if(!(bq>0))return;if(!fromDay||(mt[i].length&&mt[i].every(r=>+r[2].slice(8)>fromDay))){gpv+=bq;n++}});
+  const val={D:0,T:0,P:0},cnt={D:0,T:0,P:0};let nv=0;
+  evs.filter(r=>!used.has(r)&&(!fromDay||+r[2].slice(8)>fromDay)).forEach(r=>{const w=evW(r[1]);if(!w)return;if(!(r[4]>0)){nv++;return}val[r[5]]+=r[4]*w*U.unit*k;cnt[r[5]]++});
+  const firm=gpv+val.D,exp=gpv+val.D+val.T*P.T.p+val.P*P.P.p;
+  if(!(gpv>0)&&!(val.D+val.T+val.P>0))return null;
+  return{gpv,n,val,cnt,nv,firm,exp,k,U,P,key};
+}
+// ---- carga ----
+let GP_ST=null;
+function gpOpen(){
+  if(!HOT_EDIT){toast('Tu usuario no puede cargar datos.');return}
+  document.body.classList.remove('navopen');const m=flashModalEl();m.classList.add('show');GP_ST=null;$f('flashTitle').textContent='Cargar Group Pace y calendario de eventos';
+  $f('flashBody').innerHTML=`<p class="fp"><b>Group Pace</b> (grupos por mes: RN, rooms, banqueting, meeting rental) y/o <b>calendario de eventos</b> (estado, pax y sala). Puedes elegir los dos a la vez. Cada carga guarda una foto para medir cuántos Tentative y Prospect acaban en Definite.</p>
+  <label class="fpick"><input type="file" multiple accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden onchange="gpHandle(Array.from(this.files))"><span>Elegir Excel(s)</span><small>o arrástralos aquí</small></label>`;
+}
+async function gpHandle(files){
+  files=(Array.isArray(files)?files:[files]).filter(Boolean);if(!files.length)return;const body=$f('flashBody');body.innerHTML='<p class="fp">Leyendo '+files.map(f=>'«'+escapeHTML(f.name)+'»').join(' y ')+'…</p>';
+  try{
+    const S={gp:null,ev:null,errs:[]};
+    for(const f of files){const sh=await gxRead(f);let done=false;
+      if(sh['Executive View']){try{S.gp=Object.assign(gpParse(sh),{src:f.name});done=true}catch(e){S.errs.push(f.name+': '+e.message)}}
+      if(!done){try{S.ev=Object.assign(evParse(sh),{src:f.name});done=true}catch(e){S.errs.push(f.name+': '+e.message)}}}
+    GP_ST=S;const li=[];
+    if(S.gp){const c=S.gp.chk,HG=HOT.ref&&HOT.ref.gp;li.push(`<li class="ok">✓ <b>Group Pace ${S.gp.year}</b> · ${c.lines} líneas de grupo en ${Object.keys(S.gp.m).length} meses · ${fmtNum(c.rn)} hab-noche · banqueting ${fmtNum(c.bq)} € · fecha de control ${S.gp.asof?S.gp.asof.slice(8)+'/'+S.gp.asof.slice(5,7):'—'}${HG?' <i>(sustituye al guardado)</i>':''}</li>`)}
+    if(S.ev){const c=S.ev.chk,bad=Object.keys(S.ev.bad).length;li.push(`<li class="ok">✓ <b>Calendario de eventos</b> ${S.ev.from.slice(8)}/${S.ev.from.slice(5,7)} → ${S.ev.to.slice(8)}/${S.ev.to.slice(5,7)} · ${c.n} eventos: ${c.D} Definite, ${c.T} Tentative, ${c.P} Prospect${bad?' · ignorados con otro estado: '+Object.keys(S.ev.bad).join(', '):''}${HOT.ref&&HOT.ref.ev?' <i>(sustituye al guardado y deja foto para comparar)</i>':''}</li>`)}
+    S.errs.forEach(e=>li.push(`<li class="ko">✗ ${escapeHTML(e)}</li>`));
+    const ok=!!(S.gp||S.ev);
+    body.innerHTML=`<ul class="fchk">${li.join('')}</ul><div class="fbtns"><button class="fb" onclick="flashClose()">Cancelar</button><button class="fb" ${ok?'':'disabled'} onclick="gpCommit(false)">Guardar</button><button class="fb primary" ${ok?'':'disabled'} onclick="gpCommit(true)">${ghConfigured()?'Guardar y publicar para todos':'Guardar y descargar para publicar'}</button></div>`;
+  }catch(e){console.error(e);body.innerHTML=`<div class="ferr">${escapeHTML(e.message||String(e))}</div><div class="fbtns"><button class="fb" onclick="gpOpen()">Reintentar</button></div>`}
+}
+async function gpCommit(publish){
+  const S=GP_ST;if(!S)return;HOT.ref=HOT.ref||{};const upd=new Date().toISOString(),what=[];
+  if(S.gp){S.gp.upd=upd;HOT.ref.gp=S.gp;what.push('Group Pace '+S.gp.year)}
+  if(S.ev){const old=HOT.ref.ev;S.ev.upd=upd;if(old&&old.unitMan)S.ev.unitMan=old.unitMan;HOT.ref.ev=S.ev;HOT.ref.evh=(HOT.ref.evh||[]).slice(-7);const k={};S.ev.rows.forEach(r=>{k[evKeyOf(r)]=r[5]});HOT.ref.evh.push({at:upd,asof:wxToday(),k});what.push('Eventos '+S.ev.chk.n)}
+  EV_CAL=null;FZ_BK=null;GP_ST=null;HOT.loads=(HOT.loads||[]).slice(-60);HOT.loads.push({at:upd,what:what.join(' + '),by:PUB.name});
+  HST.dirty=true;await hotDraftSave();flashClose();hRender();
+  if(publish){const ok=await hotelPublish();if(ok&&ghConfigured())toast('Group Pace y eventos publicados ✓',6000)}else toast('Guardado en este dispositivo.');
+}
+function evUnitSet(){if(!HOT_EDIT)return;const v=parseFloat(String($('evUnit').value).replace(',','.'));const E=HOT.ref&&HOT.ref.ev;if(!E)return;E.unitMan=isFinite(v)&&v>0?v:0;EV_CAL=null;HST.dirty=true;hotDraftSave();renderFz()}
+// ---- tarjetas en Forecast ----
+function gpCards(run){
+  const R=HOT.ref||{},G=R.gp,E=R.ev;if(!G&&!E)return hCard('Grupos y eventos','Group Pace y calendario de eventos',`<p class="hnote">Aún no hay Group Pace ni calendario cargados. Súbelos desde el menú lateral («Cargar Group Pace / Eventos»). Con ellos, el forecast de banquetes parte de lo firmado y valora los eventos del calendario.</p>`);
+  const bq=r=>{const k=Object.keys(r.ven).find(v=>/banquet/i.test(v));return k?r.ven[k]:null},ctx={V:run.V,L:run.L},K=gpK(ctx),U=evUnit(),P=evProb();
+  const rows=run.res.map(r=>{const e=evBq(r.Y,r.M,r.h===0?run.L.d:0,ctx),b=bq(r);if(!e)return`<tr><td class="vn">${months[r.M-1]} ${r.Y}</td><td colspan="6">Sin datos de grupos ni eventos</td></tr>`;
+    return`<tr><td class="vn">${months[r.M-1]} ${r.Y}${r.h===0?' <small>(lo que queda)</small>':''}</td><td>${fzEur(e.gpv)}</td><td>${e.cnt.D}·${fzEur(e.val.D)}</td><td>${e.cnt.T}·${fzEur(e.val.T)}</td><td>${e.cnt.P}·${fzEur(e.val.P)}</td><td><b>${fzEur(e.exp)}</b></td><td>${b?fzEur(b.val)+(b.evUp>0?' <small>(+'+fzEur(b.evUp)+' por lo firmado)</small>':''):'—'}</td></tr>`}).join('');
+  const t1=`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Mes</th><th>Group Pace € (banqueting)</th><th>Eventos Definite nº·€</th><th>Tentative nº·€</th><th>Prospect nº·€</th><th>Esperado € (ponderado)</th><th>Forecast banquetes €</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  const cr=K.rows.map(x=>`<tr><td class="vn">${months[x.m-1]}</td><td>${fzEur(x.gp)}</td><td>${fzEur(x.real)}</td><td>${hn(x.real/x.gp,2)}</td></tr>`).join('');
+  const t2=K.rows.length?`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Mes cerrado</th><th>Group Pace banqueting € (neto)</th><th>Banquetes facturados en la app €</th><th>Real / Group Pace</th></tr></thead><tbody>${cr}</tbody></table></div>`:'';
+  const notes=[];
+  if(K.n)notes.push(`Factor real/Group Pace en ${K.n} meses cerrados: mediana ${hn(K.med,2)} → se aplica <b>${hn(K.k,2)}</b> a lo firmado y a los eventos.`);else notes.push('Aún no hay meses cerrados comparables entre Group Pace y banquetes facturados; se usa factor 1,00.');
+  if(E)notes.push(`Valor de un evento fuera de Group Pace: <b>${hn(U.unit,0)} € por pax ponderado</b> (almuerzo=1, cena=1,4, desayuno=0,5, cóctel/open bar=0,7, coffee=0,25)${U.man?' — fijado por ti':U.def?' — valor por defecto, sin suficientes cruces para calibrar':' — calibrado con '+U.n+' grupos que están en ambos archivos'}.`);
+  if(E)notes.push(`Probabilidad de cierre: Definite 100 %, Tentative <b>${hn(P.T.p*100,0)}%</b>, Prospect <b>${hn(P.P.p*100,0)}%</b>${P.T.n+P.P.n?' (aprendida de '+(P.T.n+P.P.n)+' eventos seguidos entre cargas)':' (valores iniciales; se afinan con cada carga semanal)'}.`);
+  if(E){const f=run.res.filter(r=>{const e=evBq(r.Y,r.M,r.h===0?run.L.d:0,ctx);return e&&e.nv>0});f.forEach(r=>{const e=evBq(r.Y,r.M,r.h===0?run.L.d:0,ctx);notes.push(`${months[r.M-1]}: ${e.nv} evento(s) de comida o bebida sin pax en el calendario, sin valorar.`)})}
+  const man=E&&HOT_EDIT?`<div style="display:flex;gap:.5rem;align-items:end;margin:.6rem 0"><label>Fijar € por pax ponderado<input id="evUnit" type="text" inputmode="decimal" placeholder="${hn(U.unit,0)}" style="width:6rem"></label><button class="fb" onclick="evUnitSet()">Aplicar</button><small>0 o vacío = volver a la calibración automática</small></div>`:'';
+  const src=`${G?'Group Pace '+G.year+' (control '+(G.asof?G.asof.slice(8)+'/'+G.asof.slice(5,7):'—')+')':''}${G&&E?' · ':''}${E?'Eventos '+E.from.slice(8)+'/'+E.from.slice(5,7)+' → '+E.to.slice(8)+'/'+E.to.slice(5,7)+' ('+E.chk.n+')':''}`;
+  return hCard('Grupos y eventos',src,`${t1}<ul class="hbul">${notes.map(x=>`<li>${x}</li>`).join('')}</ul>${man}${t2}<p class="hnote">Los eventos de una cuenta que ya está en Group Pace no se suman otra vez. Las comidas de grupo en Jara, Azul o Escondido se cuentan aquí como banquete; si en la app van a su outlet, dímelo y lo separo.</p>`);
+}
+Object.assign(window,{gpOpen,gpHandle,gpCommit,evUnitSet});
 function hRender(){const v=document.body.dataset.view;if(v==='hotel')renderHotel();else if(v==='rooms')renderRooms();else if(v==='otb')renderOtb();else if(v==='wx')renderWx();else if(v==='pu')renderPu();else if(v==='fz')renderFz()}
 // ---------------- áreas ----------------
 function setArea(a,go){

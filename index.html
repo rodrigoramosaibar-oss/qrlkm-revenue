@@ -635,6 +635,29 @@ body[data-layout="bento"] .hc{border:0}
 .fscroll.tall{max-height:520px;overflow:auto}.hwrap label{font-size:.72rem;color:var(--muted);display:inline-flex;gap:.4rem;align-items:center}.hwrap select{border:1px solid var(--line2);background:var(--panel);color:var(--ink);border-radius:var(--hr);padding:.35rem .5rem;font-size:.78rem}.hbul{margin:.8rem 0 0;padding-left:1.1rem;font-size:.82rem;line-height:1.5}.hbul li{margin-bottom:.35rem}.ftab small{color:var(--muted);font-weight:500}#pushBtn.on{border-color:var(--pos);color:var(--pos)}
 
 #mob,#mNav,#mSheet{display:none}
+@media(min-width:901px){
+body.mobHome .main{display:none}
+body.mobHome #mob{display:block;grid-column:2;min-height:0;height:100vh;overflow:auto;background:var(--bg)}
+.mTop{padding:26px 34px 10px;position:sticky;top:0;background:var(--bg);z-index:2}.mTop b{font-size:1.6rem;font-weight:700}.mTop span{font-size:.95rem;color:var(--muted)}
+.mBody{display:grid;grid-template-columns:minmax(340px,420px) minmax(0,1fr);gap:24px;padding:6px 34px 48px;max-width:1320px;align-items:start}
+.mHeroCol{position:sticky;top:76px}
+.mHero{background:var(--hdr);color:#fff;border-radius:18px;padding:22px}
+.mHero small{color:#bdbcb4;font-size:.85rem}.mHB{font-size:2.8rem;font-weight:800;line-height:1.1;margin:4px 0 14px}
+.mHL{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:11px 0;border-top:1px solid rgba(255,255,255,.14);font-size:.9rem}.mHL span{color:#d6d5ce}.mHL b{font-size:1.05rem;white-space:nowrap}
+.mHero .mp{color:#59d68d}.mHero .mn{color:#ff8a8a}
+.mBar{height:8px;border-radius:5px;background:#e8e6de;position:relative;margin:8px 0 12px}.mBar u{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--accent)}.mBar i{position:absolute;top:-4px;bottom:-4px;width:3px;background:var(--ink);border-radius:2px}
+.mBar.big{background:rgba(255,255,255,.2);height:10px}.mBar.big i{background:#fff}
+.mSec{font-size:.76rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--muted);margin:2px 2px 10px}
+.mCards{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+.mCard{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}
+.mCH{display:flex;justify-content:space-between;gap:8px;font-size:.88rem}.mCH b{font-size:1.05rem}.mCH span{font-weight:700}
+.mBig{font-size:1.8rem;font-weight:800;margin-top:2px}
+.mGrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.mGrid>div{background:var(--soft);border-radius:10px;padding:9px}
+.mGrid small{display:block;font-size:.7rem;color:var(--muted);line-height:1.2;min-height:2.4em}.mGrid b{font-size:.95rem}
+.mp{color:var(--pos)}.mn{color:var(--neg)}
+.mFoot{font-size:.76rem;color:var(--muted);margin:12px 2px}
+.mAct button{min-height:48px;padding:0 22px;border:0;border-radius:12px;background:var(--hdr);color:#fff;font:700 .95rem inherit;cursor:pointer}
+}
 @media(max-width:900px){
 body.mobHome .main{display:none}
 body:not(.mobHome) .main{padding-bottom:84px}
@@ -694,10 +717,14 @@ body.mobInit #mNav{display:flex;position:fixed;left:0;right:0;bottom:0;height:68
   <div class="sbLogo"><img data-logo="lock" alt="Kimpton Los Monteros Marbella"></div>
   <div class="sbApp">QRLKM <b>Revenue Control</b></div>
   <div class="sbUser" id="sbUser"></div>
-  <div class="sbGroup" data-hot>Hotel</div>
+  <div class="sbGroup">Inicio</div>
+  <button class="tab" data-m="hotel" data-hot onclick="mobGo('hotel')"><svg viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13M9 21v-6h6v6"/></svg>Hotel</button>
+  <button class="tab" data-m="rooms" data-hot onclick="mobGo('rooms')"><svg viewBox="0 0 24 24"><path d="M3 18v-7a3 3 0 013-3h12a3 3 0 013 3v7M3 15h18M3 21v-3M21 21v-3"/></svg>Rooms</button>
+  <button class="tab" data-m="fb" onclick="mobGo('fb')"><svg viewBox="0 0 24 24"><path d="M5 3h14l-1.5 8a5.5 5.5 0 01-11 0zM12 16v5M8 21h8"/></svg>Food &amp; Beverage</button>
+  <div class="sbGroup" data-hot>Detalle hotel</div>
   <button class="tab" data-hot data-view="hotel" onclick="setArea('hotel')"><svg viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13M9 21v-6h6v6"/></svg>Resumen hotel</button>
   <button class="tab" data-hot data-view="rooms" onclick="setArea('rooms')"><svg viewBox="0 0 24 24"><path d="M3 18v-7a3 3 0 013-3h12a3 3 0 013 3v7M3 15h18M3 21v-3M21 21v-3"/></svg>Rooms</button>
-  <div class="sbGroup">Food &amp; Beverage</div>
+  <div class="sbGroup">Detalle F&amp;B</div>
   <button class="tab active" data-view="dash" onclick="setDashMode('month',this)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Food &amp; Beverage</button>
   <button class="tab" data-own data-view="dash-ytd" onclick="setDashMode('ytd',this)"><svg viewBox="0 0 24 24"><path d="M3 20h18M5 16l4-5 4 3 6-8"/></svg>Acumulado YTD</button>
   <button class="tab" data-own data-view="director" onclick="showView('director',this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Director View</button>
@@ -3506,6 +3533,7 @@ document.addEventListener('fullscreenchange',()=>{
 });
 const RENDERERS={entry:renderEntry,objectives:renderObjectives,config:renderConfig,director:renderDirector,briefing:renderBriefing,forecast:renderForecast,summary:renderSummary};
 function showView(id,btn){
+  document.body.classList.remove('mobHome');
   if((!IS_EDITOR&&['entry','objectives','config'].includes(id))||(!IS_OWNER&&OWN_VIEWS.includes(id)))id='dash';
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   $(id).classList.add('active');
@@ -3569,7 +3597,7 @@ showView('dash',document.querySelector('.tab[data-view="'+(DATA.dashboardMode===
 renderDashboard();
 // ======================= v60 · inicio móvil (A) =======================
 const MOB={area:'fb'};
-function mobIsMobile(){return window.innerWidth<=900}
+function mobIsMobile(){return true}
 const mEu=v=>(v==null||!isFinite(v))?'—':hn(Math.round(v),0)+' €';
 const mSg=v=>(v==null||!isFinite(v))?'—':(v>0.5?'+':v<-0.5?'−':'')+hn(Math.abs(Math.round(v)),0)+' €';
 const mCls=v=>v==null||!isFinite(v)?'':v>=0?'mp':'mn';
@@ -3614,15 +3642,15 @@ function mobRender(){
   const t=D.tot,dev=Math.abs(t.sh||0)>0.5?t.real/t.sh-1:null,fcp=t.fcPct!=null?t.fcPct:t.fc;
   $('mTitle').textContent=a==='fb'?'Food & Beverage':a==='rooms'?'Rooms':'Hotel';
   $('mSub').textContent=D.lab;
-  body.innerHTML=`<div class="mHero"><small>${xe(t.n)}</small><div class="mHB">${mEu(t.real)}</div>
+  body.innerHTML=`<div class="mHeroCol"><div class="mHero"><small>${xe(t.n)}</small><div class="mHB">${mEu(t.real)}</div>
   <div class="mBar big"><u style="width:${t.full>0?Math.min(100,t.real/t.full*100):0}%"></u>${t.full>0&&t.sh>0?`<i style="left:${Math.min(100,t.sh/t.full*100)}%"></i>`:''}</div>
   <div class="mHL"><span>Deberíamos llevar a hoy (${xe(D.budName)})</span><b>${mEu(t.sh)}</b></div>
   <div class="mHL"><span>Desviación vs lo esperado</span><b class="${mCls(dev)}">${dev==null?'—':cvs(dev)+' · '+mSg(t.real-t.sh)}</b></div>
   <div class="mHL"><span>Desviación vs ${xe(D.fcName)}</span><b class="${mCls(fcp)}">${fcp==null?'—':cvs(fcp)+(t.fcE!=null?' · '+mSg(t.fcE):'')}</b></div>
   <div class="mHL"><span>Para cumplir el objetivo, al día (${D.rem} días)</span><b>${t.need==null?'—':mEu(t.need)}</b></div></div>
-  <div class="mSec">Por partida</div>${D.rows.join('')}
+  </div><div class="mListCol"><div class="mSec">Por partida</div><div class="mCards">${D.rows.join('')}</div>
   <div class="mFoot">La barra muestra lo hecho sobre el objetivo del mes; la marca, dónde deberíamos estar hoy.</div>
-  <div class="mAct"><button onclick="mobShare()">Compartir tarjeta WhatsApp</button></div>`;
+  <div class="mAct"><button onclick="mobShare()">Compartir tarjeta WhatsApp</button></div></div>`;
   if(a==='fb'&&$('mMonth')===null){}
   body.scrollTop=0;
 }
@@ -3631,7 +3659,7 @@ function mobGo(a){
   if(a!=='fb'&&!HAS_HOT)a='fb';
   MOB.area=a;document.body.classList.add('mobHome');mobSheet(false);mobNav(a);mobRender();
 }
-function mobNav(a){document.querySelectorAll('#mNav button').forEach(b=>b.classList.toggle('on',b.dataset.m===a))}
+function mobNav(a){document.querySelectorAll('#mNav button').forEach(b=>b.classList.toggle('on',b.dataset.m===a));document.querySelectorAll('.sidebar .tab').forEach(b=>b.classList.toggle('active',b.dataset.m===a))}
 function mobShare(){const v=MOB.area==='fb'?'dash':MOB.area;document.body.dataset.view=v;try{if(MOB.area==='fb')document.body.classList.add('area-fb');openCard()}catch(e){toast('No se pudo crear la tarjeta')}}
 function mobView(id){mobSheet(false);document.body.classList.remove('mobHome');mobNav('more');const b=document.querySelector('.tab[data-view="'+id+'"]');if(id==='dash-ytd')setDashMode('ytd',b);else showView(id,b)}
 function mobSheet(on){const s=$('mSheet');if(!s)return;if(on===false){s.classList.remove('show');return}

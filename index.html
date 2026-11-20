@@ -238,6 +238,7 @@ details.paste[open] summary{margin-bottom:.6rem}
 
 /* ---------- extras v44: vistas secundarias, login, móvil ---------- */
 .role-view [data-edit]{display:none!important}
+body.not-owner [data-own]{display:none!important}
 .hamb{display:none;background:none;border:1px solid var(--line2);width:2.3rem;height:2.3rem;border-radius:2px;cursor:pointer}
 .hamb svg{width:1.2rem;height:1.2rem;stroke:var(--ink);fill:none;stroke-width:1.8;stroke-linecap:round}
 .scrim{display:none}
@@ -632,6 +633,46 @@ body[data-layout="bento"] .hc{border:0}
 .wxl{display:inline-flex;align-items:center;gap:.25rem;margin-left:.7rem;font-size:.72rem}.wxl i{width:9px;height:9px;border-radius:2px;display:inline-block}
 .htab td.lo{opacity:.4}.htab th small.n{display:block;font-size:.58rem;letter-spacing:0;text-transform:none;font-weight:500}
 .fscroll.tall{max-height:520px;overflow:auto}.hwrap label{font-size:.72rem;color:var(--muted);display:inline-flex;gap:.4rem;align-items:center}.hwrap select{border:1px solid var(--line2);background:var(--panel);color:var(--ink);border-radius:var(--hr);padding:.35rem .5rem;font-size:.78rem}.hbul{margin:.8rem 0 0;padding-left:1.1rem;font-size:.82rem;line-height:1.5}.hbul li{margin-bottom:.35rem}.ftab small{color:var(--muted);font-weight:500}#pushBtn.on{border-color:var(--pos);color:var(--pos)}
+
+#mob,#mNav,#mSheet{display:none}
+@media(max-width:900px){
+body.mobHome .main{display:none}
+body:not(.mobHome) .main{padding-bottom:84px}
+body.mobHome #mob{display:block;position:fixed;inset:0 0 68px 0;overflow:auto;background:var(--bg);z-index:40;-webkit-overflow-scrolling:touch}
+body.mobInit #mNav{display:flex;position:fixed;left:0;right:0;bottom:0;height:68px;background:var(--panel);border-top:1px solid var(--line);z-index:60}
+#mNav button{flex:1;border:0;background:none;color:var(--muted);font:600 .72rem/1.1 inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:56px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#mNav button svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+#mNav button.on{color:var(--ink)}#mNav button.on svg{stroke:var(--ink);stroke-width:2.2}
+#mNav button.on::after{content:"";width:22px;height:3px;border-radius:2px;background:var(--accent);margin-top:2px}
+.mTop{display:flex;justify-content:space-between;align-items:baseline;padding:18px 18px 8px;position:sticky;top:0;background:var(--bg);z-index:2}
+.mTop b{font-size:1.25rem;font-weight:700}.mTop span{font-size:.8rem;color:var(--muted)}
+.mBody{padding:0 14px 32px}
+.mHero{background:var(--hdr);color:#fff;border-radius:18px;padding:18px}
+.mHero small{color:#bdbcb4;font-size:.8rem}
+.mHB{font-size:2.4rem;font-weight:800;line-height:1.1;margin:2px 0 12px}
+.mHL{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:10px 0;border-top:1px solid rgba(255,255,255,.14);font-size:.86rem}
+.mHL span{color:#d6d5ce}.mHL b{font-size:1rem;white-space:nowrap}
+.mHero .mp{color:#59d68d}.mHero .mn{color:#ff8a8a}
+.mBar{height:8px;border-radius:5px;background:#e8e6de;position:relative;margin:8px 0 12px}
+.mBar u{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--accent)}
+.mBar i{position:absolute;top:-4px;bottom:-4px;width:3px;background:var(--ink);border-radius:2px}
+.mBar.big{background:rgba(255,255,255,.2);height:10px}.mBar.big i{background:#fff}
+.mSec{font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--muted);margin:20px 4px 8px}
+.mCard{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px}
+.mCH{display:flex;justify-content:space-between;gap:8px;font-size:.84rem}.mCH b{font-size:1rem}.mCH span{font-weight:700}
+.mBig{font-size:1.7rem;font-weight:800;margin-top:2px}
+.mGrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.mGrid>div{background:var(--soft);border-radius:10px;padding:8px}
+.mGrid small{display:block;font-size:.66rem;color:var(--muted);line-height:1.2;min-height:2.4em}
+.mGrid b{font-size:.9rem}
+.mp{color:var(--pos)}.mn{color:var(--neg)}
+.mFoot{font-size:.72rem;color:var(--muted);margin:10px 4px}
+.mAct button{width:100%;min-height:54px;border:0;border-radius:14px;background:var(--hdr);color:#fff;font:700 1rem inherit;cursor:pointer}
+#mSheet.show{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:80}
+#mSheet .mSheetBox{position:absolute;left:0;right:0;bottom:0;max-height:82%;overflow:auto;background:var(--panel);border-radius:20px 20px 0 0;padding:8px 14px 90px}
+.mSG{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--muted);margin:16px 4px 4px}
+.mSI{display:block;width:100%;text-align:left;border:0;background:none;border-bottom:1px solid var(--line);padding:0 6px;min-height:56px;font:600 1rem inherit;color:var(--ink);cursor:pointer}
+}
 </style></head>
 <body class="pal-kimpton mode-light area-fb" data-view="dash">
 <div class="login" id="login">
@@ -657,21 +698,21 @@ body[data-layout="bento"] .hc{border:0}
   <button class="tab" data-hot data-view="hotel" onclick="setArea('hotel')"><svg viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13M9 21v-6h6v6"/></svg>Resumen hotel</button>
   <button class="tab" data-hot data-view="rooms" onclick="setArea('rooms')"><svg viewBox="0 0 24 24"><path d="M3 18v-7a3 3 0 013-3h12a3 3 0 013 3v7M3 15h18M3 21v-3M21 21v-3"/></svg>Rooms</button>
   <div class="sbGroup">Food &amp; Beverage</div>
-  <button class="tab active" data-view="dash" onclick="setDashMode('month',this)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</button>
-  <button class="tab" data-view="dash-ytd" onclick="setDashMode('ytd',this)"><svg viewBox="0 0 24 24"><path d="M3 20h18M5 16l4-5 4 3 6-8"/></svg>Acumulado YTD</button>
-  <button class="tab" data-view="director" onclick="showView('director',this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Director View</button>
-  <button class="tab" data-view="briefing" onclick="showView('briefing',this)"><svg viewBox="0 0 24 24"><path d="M5 3h14v18H5z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>Briefing F&amp;B</button>
-  <button class="tab" data-view="forecast" onclick="showView('forecast',this)"><svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 3 4-7 5 5"/><path d="M3 21h18" stroke-dasharray="2 3"/></svg>Forecast F&amp;B</button>
-  <button class="tab" data-view="summary" onclick="showView('summary',this)"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>Resumen F&amp;B</button>
+  <button class="tab active" data-view="dash" onclick="setDashMode('month',this)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Food &amp; Beverage</button>
+  <button class="tab" data-own data-view="dash-ytd" onclick="setDashMode('ytd',this)"><svg viewBox="0 0 24 24"><path d="M3 20h18M5 16l4-5 4 3 6-8"/></svg>Acumulado YTD</button>
+  <button class="tab" data-own data-view="director" onclick="showView('director',this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Director View</button>
+  <button class="tab" data-own data-view="briefing" onclick="showView('briefing',this)"><svg viewBox="0 0 24 24"><path d="M5 3h14v18H5z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>Briefing F&amp;B</button>
+  <button class="tab" data-own data-view="forecast" onclick="showView('forecast',this)"><svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 3 4-7 5 5"/><path d="M3 21h18" stroke-dasharray="2 3"/></svg>Forecast F&amp;B</button>
+  <button class="tab" data-own data-view="summary" onclick="showView('summary',this)"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>Resumen F&amp;B</button>
   <div class="sbGroup" data-hot>Previsión y análisis</div>
   <button class="tab" data-hot data-view="otb" onclick="showView('otb',this)"><svg viewBox="0 0 24 24"><path d="M4 20V10M9 20V4M14 20v-8M19 20V7"/></svg>Ocupación OTB</button>
   <button class="tab" data-hot data-view="wx" onclick="showView('wx',this)"><svg viewBox="0 0 24 24"><path d="M7 19a4 4 0 010-8 5.5 5.5 0 0110.6-1.2A4.5 4.5 0 0117 19H7z"/></svg>Meteo y revenue</button>
   <button class="tab" data-hot data-view="pu" onclick="showView('pu',this)"><svg viewBox="0 0 24 24"><path d="M4 19h16M6 16l4-5 3 3 5-7"/></svg>PickUp</button>
   <button class="tab" data-hot data-view="fz" onclick="showView('fz',this)"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-9M15 6h6v6"/></svg>Forecast hotel</button>
   <div class="sbGroup" data-edit>Gestión</div>
-  <button class="tab" data-edit data-view="entry" onclick="showView('entry',this)"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Entrada diaria</button>
-  <button class="tab" data-edit data-view="objectives" onclick="showView('objectives',this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>Objetivos</button>
-  <button class="tab" data-edit data-view="config" onclick="showView('config',this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>Configurar</button>
+  <button class="tab" data-edit data-own data-view="entry" onclick="showView('entry',this)"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Entrada diaria</button>
+  <button class="tab" data-edit data-own data-view="objectives" onclick="showView('objectives',this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>Objetivos</button>
+  <button class="tab" data-edit data-own data-view="config" onclick="showView('config',this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>Configurar</button>
   <div class="sbTools">
     <button class="sbBtn primary" data-edit onclick="dataOpen()">Cargar datos</button>
     <button class="sbBtn" data-edit onclick="publishData()">Publicar datos</button>
@@ -687,13 +728,21 @@ body[data-layout="bento"] .hc{border:0}
   </div>
 </aside>
 
+<div id="mob"><div class="mTop"><b id="mTitle"></b><span id="mSub"></span></div><div class="mBody" id="mBody"></div></div>
+<nav id="mNav" aria-label="Navegación principal">
+<button data-m="hotel" onclick="mobGo('hotel')"><svg viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13M9 21v-6h6v6"/></svg>Hotel</button>
+<button data-m="rooms" onclick="mobGo('rooms')"><svg viewBox="0 0 24 24"><path d="M3 18v-7a3 3 0 013-3h12a3 3 0 013 3v7M3 15h18M3 21v-3M21 21v-3"/></svg>Rooms</button>
+<button data-m="fb" onclick="mobGo('fb')"><svg viewBox="0 0 24 24"><path d="M5 3h14l-1.5 8a5.5 5.5 0 01-11 0zM12 16v5M8 21h8"/></svg>Food &amp; Beverage</button>
+<button data-m="more" onclick="mobSheet()"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>Más</button>
+</nav>
+<div id="mSheet" onclick="mobSheet(false)"><div class="mSheetBox" id="mSheetBox" onclick="event.stopPropagation()"></div></div>
 <div class="main">
   <div class="brandBar"><img class="bbLock" data-logo="lock" alt="Kimpton Los Monteros Marbella"><img class="bbSym" data-logo="sym" alt="Kimpton"></div>
   <div class="backupBanner" id="backupBanner"><span id="backupMsg"></span><button class="btn" data-edit onclick="publishData()">Publicar ahora</button></div>
   <div class="ctx">
     <button class="hamb" aria-label="Menú" onclick="document.body.classList.toggle('navopen')"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     
-    <div class="ctxTitle" id="ctxTitle">Dashboard</div>
+    <div class="ctxTitle" id="ctxTitle">Food &amp; Beverage</div>
     <div class="spacer"></div>
     <div class="ctl dashOnly"><span>Mes</span><select id="quickMonth" onchange="setDashboardMonth(this.value)"></select></div>
     <div class="ctl dashOnly opt"><span>Objetivo</span><select id="scenarioSel" onchange="setActiveScenarioFromDash(this.value)"></select></div>
@@ -787,6 +836,7 @@ try{const t=JSON.parse(localStorage.getItem('fbThemeV44')||'null');if(t&&['kimpt
 window.bootApp=function(INIT,ROLE,PUB){'use strict';
 const STORAGE_KEY='fbDraftV44';
 const IS_EDITOR=ROLE==='edit';
+const IS_OWNER=!!PUB&&['Rodrigo Ramos','Admin'].includes(PUB.name);const OWN_VIEWS=['dash-ytd','ytd','director','briefing','forecast','summary','entry','objectives','config'];
 const months=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const weekdaysShort=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 let DATA=JSON.parse(JSON.stringify(INIT));
@@ -994,7 +1044,7 @@ function renderDashboard(){
   const s=calcState(),isYTD=(DATA.dashboardMode||'month')==='ytd';
   DATA.__lastDayCache=s.lastDay;
   const monthD=s.monthDays,ld=s.lastDay;
-  $('ctxTitle').textContent=isYTD?'Acumulado YTD':'Dashboard mensual';
+  $('ctxTitle').textContent=isYTD?'Acumulado YTD':'Food & Beverage';
   $('dashEyebrow').textContent=`${DATA.config.hotelName} · ${isYTD?'Enero – '+monthName():monthName()+' '+DATA.config.year}`;
   $('dashTitle').textContent=isYTD?'Informe acumulado de ingresos F&B':'Informe de ingresos F&B';
   $('verdict').innerHTML=buildVerdict(s,isYTD);
@@ -3456,7 +3506,7 @@ document.addEventListener('fullscreenchange',()=>{
 });
 const RENDERERS={entry:renderEntry,objectives:renderObjectives,config:renderConfig,director:renderDirector,briefing:renderBriefing,forecast:renderForecast,summary:renderSummary};
 function showView(id,btn){
-  if(!IS_EDITOR&&['entry','objectives','config'].includes(id))id='dash';
+  if((!IS_EDITOR&&['entry','objectives','config'].includes(id))||(!IS_OWNER&&OWN_VIEWS.includes(id)))id='dash';
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   $(id).classList.add('active');
   document.body.dataset.view=id;
@@ -3468,7 +3518,7 @@ function showView(id,btn){
   document.body.classList.remove('navopen');
   (RENDERERS[id]||(()=>{}))();
 }
-function setDashMode(mode,btn){DATA.dashboardMode=mode||'month';showView('dash',btn);renderDashboard();saveState()}
+function setDashMode(mode,btn){if(!IS_OWNER&&mode==='ytd'){mode='month';btn=document.querySelector('.tab[data-view="dash"]')}DATA.dashboardMode=mode||'month';showView('dash',btn);renderDashboard();saveState()}
 function manualSave(){saveState(false)}
 function setDashboardMonth(v){DATA.config.month=Number(v)||1;DATA.config.monthDays=daysInMonth(DATA.config.month,DATA.config.year);saveState();renderAll()}
 function syncMonthSelectors(){
@@ -3482,7 +3532,7 @@ function renderAll(){
   updateSaveStatus(true);updateBackupBanner();
 }
 Object.assign(window,{
-  setTheme,setPalette,toggleMode,toggleScreenshot,enterPresentationMode,showView,setDashMode,manualSave,
+  setTheme,setPalette,toggleMode,toggleScreenshot,enterPresentationMode,showView,setDashMode,manualSave,mobGo,mobSheet,mobView,mobShare,
   saveDay,loadDay,updateFormTotal,importPaste,saveDayComment,
   setActiveScenario,setActiveScenarioFromDash,setCompareScenario,setObjectiveMonth,addScenario,deleteActiveScenario,updateObjective,updateOpenDays,
   autoDaysFromMonth,saveConfig,addVenue,updateVenueName,deleteVenue,updateLY,
@@ -3490,7 +3540,7 @@ Object.assign(window,{
   resetApp,downloadState,setDashboardMonth,renderEntry,renderTrendChart
 });
 function applyRole(){
-  document.body.classList.toggle('role-view',!IS_EDITOR);
+  document.body.classList.toggle('role-view',!IS_EDITOR);document.body.classList.toggle('not-owner',!IS_OWNER);
   const u=$('sbUser');if(u)u.innerHTML='<b>'+escapeHTML(PUB.name)+'</b><i>'+(IS_EDITOR?'Editor':'Consulta')+'</i>';
 }
 async function publishData(){
@@ -3517,7 +3567,91 @@ Object.assign(RENDERERS,{hotel:renderHotel,rooms:renderRooms,otb:renderOtb,wx:re
 if(HAS_HOT){document.body.classList.add('has-hot');let ar='hotel';try{ar=localStorage.getItem('fbAreaV47')||'hotel'}catch(e){}if(ar!=='fb'){setArea(ar,false)}}
 showView('dash',document.querySelector('.tab[data-view="'+(DATA.dashboardMode==='ytd'?'dash-ytd':'dash')+'"]'));
 renderDashboard();
+// ======================= v60 · inicio móvil (A) =======================
+const MOB={area:'fb'};
+function mobIsMobile(){return window.innerWidth<=900}
+const mEu=v=>(v==null||!isFinite(v))?'—':hn(Math.round(v),0)+' €';
+const mSg=v=>(v==null||!isFinite(v))?'—':(v>0.5?'+':v<-0.5?'−':'')+hn(Math.abs(Math.round(v)),0)+' €';
+const mCls=v=>v==null||!isFinite(v)?'':v>=0?'mp':'mn';
+function mPtd(key,L,m){const x=HOT.ptdRef;if(x&&x.key===L.key&&x[key]){const c=x[key];return{av:c.av,so:c.so,rr:c.rr,fb:c.fb,tot:c.tot,ot:c.tot-c.rr-c.fb}}return hRef(key,m,m,L.d/L.dim)}
+function mRow(n,real,sh,fcv,need,unit,o){
+  o=o||{};const f=o.f||mEu,dev=sh!=null&&Math.abs(sh)>0.5?real/sh-1:null,dv=o.fd||mSg;
+  const pct=o.full>0?Math.min(100,Math.max(0,real/o.full*100)):0,mk=o.full>0&&sh>0?Math.min(100,sh/o.full*100):0;
+  return `<div class="mCard"><div class="mCH"><b>${xe(n)}</b><span class="${mCls(dev)}">${dev==null?'':cvs(dev)+' vs lo esperado'}</span></div>
+  <div class="mBig">${f(real)}</div>
+  <div class="mBar"><u style="width:${pct}%"></u>${mk?`<i style="left:${mk}%"></i>`:''}</div>
+  <div class="mGrid"><div><small>Deberíamos llevar</small><b>${f(sh)}</b></div><div><small>${xe(o.fcl||'vs Forecast')}</small><b class="${mCls(fcv)}">${fcv==null?'—':dv(fcv)}</b></div><div><small>Hay que hacer al día</small><b>${need==null?'—':f(need)+(unit||'')}</b></div></div></div>`;
+}
+function mobDataHotel(rooms){
+  const L=hLastInfo(),m=L.m,rem=Math.max(0,L.dim-L.d),a=hAgg(m,L.d),B=mPtd('budget26',L,m),Fc=mPtd('forecast26',L,m),Bf=hRef('budget26',m,m,1),Ff=hRef('forecast26',m,m,1);
+  const nd=(k)=>rem?Math.max(0,Bf[k]-a[k])/rem:null;
+  const lab='hasta el '+L.d+' de '+months[m-1].toLowerCase();let rows,tot;
+  if(!rooms){
+    const P=[['Habitaciones','rr'],['F&B','fb'],['Otros','ot']];
+    rows=P.map(([n,k])=>mRow(n,a[k],B[k],a[k]-Fc[k],nd(k),' / día',{full:Bf[k],fcl:'vs Forecast (a la fecha)'}));
+    tot={n:'Ingresos totales hotel',real:a.tot,sh:B.tot,fc:cv(a.tot,Fc.tot),fcE:a.tot-Fc.tot,need:rem?Math.max(0,Bf.tot-a.tot)/rem:null,full:Bf.tot};
+  }else{
+    const ok=kp=>kp,ka=kpis(a),kb=kpis(B),kf=kpis(Fc);
+    const needRn=nd('so'),needAdr=(Bf.so-a.so)>0?Math.max(0,Bf.rr-a.rr)/(Bf.so-a.so):null,needOcc=rem&&(Bf.av-a.av)>0?Math.max(0,Bf.so-a.so)/(Bf.av-a.av):null;
+    rows=[mRow('Ingresos habitaciones',a.rr,B.rr,a.rr-Fc.rr,nd('rr'),' / día',{full:Bf.rr,fcl:'vs Forecast (a la fecha)'}),
+      mRow('Habitaciones vendidas',a.so,B.so,a.so-Fc.so,needRn,' hab. / día',{f:v=>hn(Math.round(v),0),fd:v=>(v>0.5?'+':v<-0.5?'−':'')+hn(Math.abs(Math.round(v)),0),full:Bf.so,fcl:'vs Forecast (a la fecha)'}),
+      mRow('Ocupación',ka.occ,kb.occ,ka.occ-kf.occ,needOcc,'',{f:v=>hn(v*100,1)+'%',fd:v=>(v>0?'+':'−')+hn(Math.abs(v)*100,1)+' pp',full:1,fcl:'vs Forecast (pp)'}),
+      mRow('ADR',ka.adr,kb.adr,ka.adr-kf.adr,needAdr,' (ADR necesario)',{full:kb.adr*1.5,fcl:'vs Forecast (a la fecha)'})];
+    tot={n:'Ingresos habitaciones',real:a.rr,sh:B.rr,fc:cv(a.rr,Fc.rr),fcE:a.rr-Fc.rr,need:nd('rr'),full:Bf.rr};
+  }
+  return{lab,rem,tot,rows,fcName:'Forecast 2026 (13 nov)',budName:'Budget 2026'};
+}
+function mobDataFB(){
+  const s=calcState(),rem=s.remaining;
+  const rows=s.outlets.filter(x=>x.Objetivo>0||x.Real>0).map(x=>mRow(x.Outlet,x.Real,x.Deberiamos,x.ObjetivoComparado>0?x['Gap vs comparado']:null,x.DiasRestantesVenue?x.PaceDiario:null,' / día',{full:x.Objetivo,fcl:'vs '+s.compare}));
+  const cmpPtd=s.totalCompare*(s.lastDay/s.monthDays);
+  return{lab:'hasta el '+s.lastDay+' de '+monthName().toLowerCase(),rem,tot:{n:'Ingresos totales F&B',real:s.revenue,sh:s.expectedRevenue,fc:s.totalCompare>0?s.revenue-cmpPtd:null,fcE:s.totalCompare>0?s.revenue-cmpPtd:null,fcPct:s.totalCompare>0?s.revenue/cmpPtd-1:null,need:remainingNeed(s),full:s.totalObjective},rows,fcName:s.compare,budName:s.scenario};
+}
+function remainingNeed(s){return s.remaining?s.pending/s.remaining:null}
+function mobRender(){
+  const a=MOB.area,body=$('mBody');if(!body)return;
+  let D;try{D=a==='fb'?mobDataFB():mobDataHotel(a==='rooms')}catch(e){body.innerHTML='<div class="mCard">Aún no hay datos para esta vista.</div>';console.warn(e);return}
+  const t=D.tot,dev=Math.abs(t.sh||0)>0.5?t.real/t.sh-1:null,fcp=t.fcPct!=null?t.fcPct:t.fc;
+  $('mTitle').textContent=a==='fb'?'Food & Beverage':a==='rooms'?'Rooms':'Hotel';
+  $('mSub').textContent=D.lab;
+  body.innerHTML=`<div class="mHero"><small>${xe(t.n)}</small><div class="mHB">${mEu(t.real)}</div>
+  <div class="mBar big"><u style="width:${t.full>0?Math.min(100,t.real/t.full*100):0}%"></u>${t.full>0&&t.sh>0?`<i style="left:${Math.min(100,t.sh/t.full*100)}%"></i>`:''}</div>
+  <div class="mHL"><span>Deberíamos llevar a hoy (${xe(D.budName)})</span><b>${mEu(t.sh)}</b></div>
+  <div class="mHL"><span>Desviación vs lo esperado</span><b class="${mCls(dev)}">${dev==null?'—':cvs(dev)+' · '+mSg(t.real-t.sh)}</b></div>
+  <div class="mHL"><span>Desviación vs ${xe(D.fcName)}</span><b class="${mCls(fcp)}">${fcp==null?'—':cvs(fcp)+(t.fcE!=null?' · '+mSg(t.fcE):'')}</b></div>
+  <div class="mHL"><span>Para cumplir el objetivo, al día (${D.rem} días)</span><b>${t.need==null?'—':mEu(t.need)}</b></div></div>
+  <div class="mSec">Por partida</div>${D.rows.join('')}
+  <div class="mFoot">La barra muestra lo hecho sobre el objetivo del mes; la marca, dónde deberíamos estar hoy.</div>
+  <div class="mAct"><button onclick="mobShare()">Compartir tarjeta WhatsApp</button></div>`;
+  if(a==='fb'&&$('mMonth')===null){}
+  body.scrollTop=0;
+}
+function mobGo(a){
+  if(!mobIsMobile())return;
+  if(a!=='fb'&&!HAS_HOT)a='fb';
+  MOB.area=a;document.body.classList.add('mobHome');mobSheet(false);mobNav(a);mobRender();
+}
+function mobNav(a){document.querySelectorAll('#mNav button').forEach(b=>b.classList.toggle('on',b.dataset.m===a))}
+function mobShare(){const v=MOB.area==='fb'?'dash':MOB.area;document.body.dataset.view=v;try{if(MOB.area==='fb')document.body.classList.add('area-fb');openCard()}catch(e){toast('No se pudo crear la tarjeta')}}
+function mobView(id){mobSheet(false);document.body.classList.remove('mobHome');mobNav('more');const b=document.querySelector('.tab[data-view="'+id+'"]');if(id==='dash-ytd')setDashMode('ytd',b);else showView(id,b)}
+function mobSheet(on){const s=$('mSheet');if(!s)return;if(on===false){s.classList.remove('show');return}
+  const it=(l,f)=>`<button class="mSI" onclick="${f}">${l}</button>`;let h='';
+  if(HAS_HOT)h+='<div class="mSG">Previsión y análisis</div>'+it('Ocupación OTB',"mobView('otb')")+it('Meteo y revenue',"mobView('wx')")+it('PickUp',"mobView('pu')")+it('Forecast hotel',"mobView('fz')");
+  if(IS_OWNER)h+='<div class="mSG">Food & Beverage (solo tú)</div>'+it('Acumulado YTD',"mobView('dash-ytd')")+it('Director View',"mobView('director')")+it('Briefing F&B',"mobView('briefing')")+it('Forecast F&B',"mobView('forecast')")+it('Resumen F&B',"mobView('summary')")+it('Entrada diaria',"mobView('entry')")+it('Objetivos',"mobView('objectives')")+it('Configurar',"mobView('config')");
+  h+='<div class="mSG">Datos</div>';
+  if(IS_EDITOR)h+=it('Cargar datos',"mobSheet(false);dataOpen()")+it('Publicar datos',"mobSheet(false);publishData()");
+  h+=it('Tarjeta WhatsApp',"mobSheet(false);mobShare()")+it('Cerrar sesión','logout()');
+  $('mSheetBox').innerHTML=h;s.classList.add('show');mobNav('more');
+}
+function mobInit(){
+  const nav=$('mNav');if(!nav)return;
+  if(!HAS_HOT){nav.querySelectorAll('[data-m="hotel"],[data-m="rooms"]').forEach(b=>b.style.display='none')}
+  const apply=()=>{if(mobIsMobile()){if(!document.body.classList.contains('mobInit')){document.body.classList.add('mobInit');mobGo(HAS_HOT?'hotel':'fb')}}else{document.body.classList.remove('mobHome','mobInit')}};
+  apply();window.addEventListener('resize',apply);
+}
+
 if(HAS_HOT){let sv='hotel';try{sv=localStorage.getItem('fbViewV58')||'hotel'}catch(e){}const tb=document.querySelector('.tab[data-view="'+sv+'"]');(tb||document.querySelector('.tab[data-view="hotel"]')).click()}
+try{mobInit()}catch(e){console.warn(e)}
 (function(){let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{if(document.body.dataset.view==='dash'&&LAYOUT==='exec')renderTrendChart()},120)})})();
 };
 

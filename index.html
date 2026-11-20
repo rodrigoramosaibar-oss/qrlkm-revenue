@@ -3028,22 +3028,42 @@ function pushInit(){
   });
   pushUi();
 }
-async function pushToggle(){
+async function pushDiag(extra){
+  const m=flashModalEl();m.classList.add('show');$f('flashTitle').textContent='Avisos de datos nuevos';
+  const s=pushState(),ua=navigator.userAgent,wv=/; wv\)|FBAN|FBAV|Instagram|Line\//.test(ua)||(/Android/.test(ua)&&!/Chrome\//.test(ua)),reg=[];
+  try{(await navigator.serviceWorker.getRegistrations()).forEach(r=>reg.push((r.scope||'')+' → '+((r.active&&r.active.state)||(r.installing&&'installing')||(r.waiting&&'waiting')||'sin activo')))}catch(e){reg.push('no se pudo leer ('+e.message+')')}
+  const row=(k,v,ok)=>`<li class="${ok===true?'ok':ok===false?'ko':''}">${ok===true?'✓':ok===false?'✗':'·'} <b>${k}</b>: ${escapeHTML(String(v))}</li>`,sub=s.OS&&s.OS.User&&s.OS.User.PushSubscription;
+  $f('flashBody').innerHTML=`<p class="fp">${extra?escapeHTML(extra):''}</p><ul class="fchk">`+
+    row('Abierta como',IS_STANDALONE?'app instalada':'página del navegador',null)+
+    row('Navegador integrado (WhatsApp u otra app)',wv?'sí: no admite avisos, abre el enlace en Chrome':'no',!wv)+
+    row('Permiso de notificaciones',s.perm,s.perm==='granted')+
+    row('Servicio de avisos cargado',s.OS?'sí':'no',!!s.OS)+
+    row('Dispositivo registrado',s.id?'sí':'no',!!s.id)+
+    row('Suscrito',sub&&sub.optedIn?'sí':'no',!!(sub&&sub.optedIn))+
+    row('Service worker',reg.join(' | ')||'ninguno',reg.length>0)+
+    row('Android',(/Android ([\d.]+)/.exec(ua)||[])[1]||'—',null)+`</ul>
+    <div class="fbtns"><button class="fb" onclick="flashClose()">Cerrar</button><button class="fb primary" onclick="pushToggle(true)">Reintentar</button></div>`;
+}
+async function pushToggle(retry){
+  document.body.classList.remove('navopen');
   const s0=pushState(),OS=s0.OS;
   if(IS_IOS&&!IS_STANDALONE){toast('En iPhone: pulsa Compartir › «Añadir a pantalla de inicio», abre la app desde el icono y vuelve a pulsar aquí.',10000);return}
-  if(!('Notification' in window)){toast('Este navegador no admite avisos.',8000);return}
-  if(Notification.permission==='denied'){toast('Los avisos están bloqueados. En Android: mantén pulsado el icono de la app › Información › Notificaciones (o Chrome › ⋮ › Ajustes › Ajustes de sitios › Notificaciones) y permite este sitio; después vuelve a pulsar.',15000);return}
-  if(!OS){toast('Cargando el servicio de avisos… inténtalo en unos segundos.');return}
+  if(!('Notification' in window)){await pushDiag('Este navegador no admite notificaciones.');return}
+  if(Notification.permission==='denied'){await pushDiag('Las notificaciones están bloqueadas para este sitio. En Android: Chrome › ⋮ › Ajustes › Ajustes de sitios › Notificaciones (o mantén pulsado el icono de la app › Información › Notificaciones), permite este sitio y vuelve a pulsar.');return}
+  if(!OS){await pushDiag('El servicio de avisos (OneSignal) no ha cargado. Puede estar bloqueado por tu red, el DNS privado, un bloqueador de anuncios o el navegador integrado.');return}
   try{
-    if(s0.on){await OS.User.PushSubscription.optOut();toast('Avisos desactivados en este dispositivo.')}
+    if(s0.on&&retry!==true){await OS.User.PushSubscription.optOut();toast('Avisos desactivados en este dispositivo.')}
     else{
-      if(Notification.permission!=='granted'){const p=await Notification.requestPermission();if(p!=='granted'){toast('No se han permitido las notificaciones ('+p+').',8000);pushUi();return}}
+      let msg='';
+      try{if(OS.Notifications&&OS.Notifications.requestPermission)await OS.Notifications.requestPermission();else if(Notification.permission!=='granted')await Notification.requestPermission()}catch(e){msg=' Permiso: '+e.message+'.'}
+      if(Notification.permission!=='granted'){await pushDiag('No se han permitido las notificaciones ('+Notification.permission+').'+msg);pushUi();return}
       await OS.User.PushSubscription.optIn();
-      for(let i=0;i<20&&!(OS.User.PushSubscription.optedIn&&OS.User.PushSubscription.id);i++)await new Promise(r=>setTimeout(r,500));
+      for(let i=0;i<30&&!(OS.User.PushSubscription.optedIn&&OS.User.PushSubscription.id);i++)await new Promise(r=>setTimeout(r,500));
       const s=pushState();
-      toast(s.on&&s.id?'Avisos activados ✓ Te llegarán cuando se suban datos nuevos.':'Permiso concedido pero el dispositivo no se ha registrado en el servicio de avisos (permiso: '+s.perm+', registro: '+(s.id?'sí':'no')+'). Cierra y abre la app y reinténtalo; si sigue igual, envíame este mensaje.',14000);
+      if(s.on&&s.id){flashClose();toast('Avisos activados ✓ Te llegarán cuando se suban datos nuevos.',8000)}
+      else await pushDiag('El permiso está concedido pero el dispositivo no se ha registrado en el servicio de avisos.'+msg);
     }
-  }catch(e){toast('No se pudieron activar los avisos: '+e.message,10000)}
+  }catch(e){await pushDiag('No se pudieron activar los avisos: '+e.message)}
   pushUi();
 }
 // aviso dentro de la app: si abres o vuelves a la app y hay datos más recientes que los que tienes cargados

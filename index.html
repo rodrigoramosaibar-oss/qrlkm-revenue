@@ -3073,16 +3073,17 @@ function fbWaCard(){
   const {o:o0,t}=waBase(c,F,'F&amp;B',label);let o=o0;
   const rev=isYTD?s.ytdRevenue:s.revenue,obj=isYTD?s.ytdObjective:s.expectedRevenue,vb=obj?rev/obj-1:null;
   o+=t(60,266,'REVENUE F&amp;B',24,600,c.mut)+t(60,350,hn(rev)+' €',96,800,c.ink);
-  let fcv=null;
-  if(HAS_HOT&&!isYTD&&DATA.config.year===2026&&HOT.ref&&HOT.ref.forecast26&&HOT.ref.forecast26.fb[DATA.config.month-1]>0)fcv=cv(s.projectedTotal,HOT.ref.forecast26.fb[DATA.config.month-1]);
-  o+=waChip(t,c,60,398,'VS BUDGET A LA FECHA',cvs(vb),vb)+(fcv==null?'':waChip(t,c,520,398,'CIERRE PROY. VS FORECAST',cvs(fcv),fcv));
-  if(!isYTD)o+=`<rect x="48" y="470" width="984" height="120" rx="${rx}" fill="${c.hi}"/>`+t(76,512,'PROYECCIÓN DE CIERRE',20,700,'#3A3000')+t(76,566,hn(s.projectedTotal)+' €',46,800,'#161616')+t(1004,566,cvs(s.projectedTotal&&s.totalObjective?s.projectedTotal/s.totalObjective-1:null)+' vs objetivo del mes',26,700,'#161616','end');
-  const list=s.outlets.map(x=>({n:x.Outlet,real:isYTD?x.YTDReal:x.Real,obj:isYTD?x.YTDObjetivo:x.Objetivo,p:isYTD?x.YTDPct:x['% Ritmo'],ytd:isYTD})).filter(x=>x.obj>0||x.real>0).sort((a,b)=>b.real-a.real);
+  const cn=/forecast/i.test(s.compare||'')?'FORECAST':String(s.compare||'').toUpperCase(),sn=/forecast/i.test(s.scenario||'')?'Forecast':/budget/i.test(s.scenario||'')?'Budget':String(s.scenario||'objetivo'),cnl=/forecast/i.test(s.compare||'')?'Forecast':String(s.compare||'');
+  const fcOf=x=>{const dd=Number(x.DiasApertura)||s.monthDays;return isYTD?ytdObjectiveForVenue(x.Outlet,s.compare,s.lastDay):Number(x.ObjetivoComparado||0)/dd*Math.min(s.lastDay,dd)};
+  const hasC=!!s.compare&&s.compare!==s.scenario,fcTot=hasC?s.outlets.reduce((q,x)=>q+fcOf(x),0):0,vf=fcTot>0?rev/fcTot-1:null;
+  o+=waChip(t,c,60,398,'VS BUDGET A LA FECHA',cvs(vb),vb)+(vf==null?'':waChip(t,c,520,398,'VS '+cn+' A LA FECHA',cvs(vf),vf));
+  if(!isYTD)o+=`<rect x="48" y="470" width="984" height="120" rx="${rx}" fill="${c.hi}"/>`+t(76,512,'PROYECCIÓN DE CIERRE',20,700,'#3A3000')+t(76,566,hn(s.projectedTotal)+' €',46,800,'#161616')+t(1004,524,cvs(s.projectedTotal&&s.totalObjective?s.projectedTotal/s.totalObjective-1:null)+' vs '+sn,26,700,'#161616','end')+(hasC&&s.totalCompare>0?t(1004,566,cvs(s.projectedTotal/s.totalCompare-1)+' vs '+cnl,26,700,'#161616','end'):'');
+  const list=s.outlets.map(x=>({n:x.Outlet,real:isYTD?x.YTDReal:x.Real,obj:isYTD?x.YTDObjetivo:x.Objetivo,p:isYTD?x.YTDPct:x['% Ritmo'],ytd:isYTD,fo:hasC?fcOf(x):0})).filter(x=>x.obj>0||x.real>0).sort((a,b)=>b.real-a.real);
   const y0=isYTD?480:620,rh=Math.max(46,Math.min(84,Math.floor((1270-y0-40)/Math.max(1,list.length))));
-  o+=t(76,y0,'VENUE',20,700,c.mut)+t(700,y0,'REAL',20,700,c.mut,'end')+t(1004,y0,'VS BUDGET',20,700,c.mut,'end');
-  list.forEach((v,i)=>{const y=y0+12+i*rh,d=v.obj>0?v.p-1:null;
-    o+=`<rect x="48" y="${y}" width="984" height="${rh-8}" rx="${Math.min(rx,14)}" fill="${c.pn}"/>`+t(76,y+(rh-8)/2+10,xe(v.n),30,700,c.ink)+t(700,y+(rh-8)/2+10,hn(v.real)+' €',30,600,c.ink,'end')+t(1004,y+(rh-8)/2+10,cvs(d),32,800,d==null?c.mut:d>=0?c.pos:c.neg,'end')});
-  o+=t(60,1318,'Datos hasta el '+(s.lastDay?dayLabel(DATA.config.month,s.lastDay):'—')+' · netos · desviación vs objetivo al ritmo del mes',20,500,c.mut);
+  o+=t(76,y0,'VENUE',20,700,c.mut)+t(640,y0,'REAL',20,700,c.mut,'end')+t(820,y0,'VS BUDGET',20,700,c.mut,'end')+t(1004,y0,hasC?'VS '+cn:'',20,700,c.mut,'end');
+  list.forEach((v,i)=>{const y=y0+12+i*rh,d=v.obj>0?v.p-1:null,df=v.fo>0?v.real/v.fo-1:null,ym=y+(rh-8)/2+10,cl=z=>z==null?c.mut:z>=0?c.pos:c.neg;
+    o+=`<rect x="48" y="${y}" width="984" height="${rh-8}" rx="${Math.min(rx,14)}" fill="${c.pn}"/>`+t(76,ym,xe(v.n),30,700,c.ink)+t(640,ym,hn(v.real)+' €',28,600,c.ink,'end')+t(820,ym,cvs(d),30,800,cl(d),'end')+(hasC?t(1004,ym,cvs(df),30,800,cl(df),'end'):'')});
+  o+=t(60,1318,'Datos hasta el '+(s.lastDay?dayLabel(DATA.config.month,s.lastDay):'—')+' · netos · desviación al ritmo del mes vs Budget y Forecast',20,500,c.mut);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">${o}</svg>`;
 }
 function hotelCardSVG(){

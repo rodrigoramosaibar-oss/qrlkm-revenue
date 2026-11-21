@@ -3078,19 +3078,24 @@ function fbWaCard(){
   const {o:o0,t}=waBase(c,F,'F&amp;B',label);let o=o0;
   const rev=isYTD?s.ytdRevenue:s.revenue,obj=isYTD?s.ytdObjective:s.expectedRevenue,vb=obj?rev/obj-1:null;
   o+=t(60,266,'REVENUE F&amp;B',24,600,c.mut)+t(60,350,hn(rev)+' €',96,800,c.ink);
-  const cn=/forecast/i.test(s.compare||'')?'FORECAST':String(s.compare||'').toUpperCase(),sn=/forecast/i.test(s.scenario||'')?'Forecast':/budget/i.test(s.scenario||'')?'Budget':String(s.scenario||'objetivo'),cnl=/forecast/i.test(s.compare||'')?'Forecast':String(s.compare||'');
+  const sn=/forecast/i.test(s.scenario||'')?'Forecast':/budget/i.test(s.scenario||'')?'Budget':String(s.scenario||'objetivo');
   const fcOf=x=>{const dd=Number(x.DiasApertura)||s.monthDays;return isYTD?ytdObjectiveForVenue(x.Outlet,s.compare,s.lastDay):Number(x.ObjetivoComparado||0)/dd*Math.min(s.lastDay,dd)};
-  const hasC=!!s.compare&&s.compare!==s.scenario,fcTot=hasC?s.outlets.reduce((q,x)=>q+fcOf(x),0):0,vf=fcTot>0?rev/fcTot-1:null;
-  const mt=isYTD?'YTD':'MTD',V0=getVenues(),yrT=scn=>[...Array(12)].reduce((q,_,i)=>q+V0.reduce((z,v)=>z+Number((monthObjectives(i+1)[v]||{})[scn]||0),0),0),fB=isYTD?yrT(s.scenario):s.totalObjective,fC=hasC?(isYTD?yrT(s.compare):s.totalCompare):0;
+  const hasC0=!!s.compare&&s.compare!==s.scenario,fcT0=hasC0?s.outlets.reduce((q,x)=>q+fcOf(x),0):0,hasC=fcT0>0;
+  let fcTot=fcT0,fcFull=hasC?(isYTD?0:s.totalCompare):0,cn=/forecast/i.test(s.compare||'')?'FORECAST':String(s.compare||'').toUpperCase(),cnl=/forecast/i.test(s.compare||'')?'Forecast':String(s.compare||''),hSrc=false;
+  if(!hasC&&HAS_HOT&&HOT.ref&&HOT.ref.forecast26&&DATA.config.year===2026){try{const m=Number(DATA.config.month)||1,L=hLastInfo(),fr=s.lastDay/s.monthDays;
+    fcTot=isYTD?hRef('forecast26',m,1,fr).fb:(L.m===m&&L.d===s.lastDay?mPtd('forecast26',L,m):hRef('forecast26',m,m,fr)).fb;
+    fcFull=isYTD?hRef('forecast26',12,1,1).fb:hRef('forecast26',m,m,1).fb;cn='FORECAST';cnl='Forecast';hSrc=true}catch(e){fcTot=0;fcFull=0}}
+  const vf=fcTot>0?rev/fcTot-1:null;
+  const mt=isYTD?'YTD':'MTD',V0=getVenues(),yrT=scn=>[...Array(12)].reduce((q,_,i)=>q+V0.reduce((z,v)=>z+Number((monthObjectives(i+1)[v]||{})[scn]||0),0),0),fB=isYTD?yrT(s.scenario):s.totalObjective,fC=isYTD&&hasC?yrT(s.compare):fcFull;
   o+=waChip(t,c,60,398,'VS BUDGET '+mt,cvs(vb),vb)+(vf==null?'':waChip(t,c,520,398,'VS '+cn+' '+mt,cvs(vf),vf));
   if(fB>0||fC>0)o+=t(1032,266,'OBJETIVO '+(isYTD?'AÑO':'MES COMPLETO'),20,700,c.mut,'end')+t(1032,312,sn+'  '+hn(fB)+' €',27,700,c.ink,'end')+(fC>0?t(1032,352,cnl+'  '+hn(fC)+' €',27,700,c.ink,'end'):'');
-  if(!isYTD)o+=`<rect x="48" y="470" width="984" height="120" rx="${rx}" fill="${c.hi}"/>`+t(76,512,'PROYECCIÓN DE CIERRE',20,700,'#3A3000')+t(76,566,hn(s.projectedTotal)+' €',46,800,'#161616')+t(1004,524,cvs(s.projectedTotal&&s.totalObjective?s.projectedTotal/s.totalObjective-1:null)+' vs '+sn+(isYTD?'':' mes'),26,700,'#161616','end')+(hasC&&s.totalCompare>0?t(1004,566,cvs(s.projectedTotal/s.totalCompare-1)+' vs '+cnl+(isYTD?'':' mes'),26,700,'#161616','end'):'');
+  if(!isYTD)o+=`<rect x="48" y="470" width="984" height="120" rx="${rx}" fill="${c.hi}"/>`+t(76,512,'PROYECCIÓN DE CIERRE',20,700,'#3A3000')+t(76,566,hn(s.projectedTotal)+' €',46,800,'#161616')+t(1004,524,cvs(s.projectedTotal&&s.totalObjective?s.projectedTotal/s.totalObjective-1:null)+' vs '+sn+(isYTD?'':' mes'),26,700,'#161616','end')+(fcFull>0?t(1004,566,cvs(s.projectedTotal/fcFull-1)+' vs '+cnl+(isYTD?'':' mes'),26,700,'#161616','end'):'');
   const list=s.outlets.map(x=>({n:x.Outlet,real:isYTD?x.YTDReal:x.Real,obj:isYTD?x.YTDObjetivo:x.Objetivo,p:isYTD?x.YTDPct:x['% Ritmo'],ytd:isYTD,fo:hasC?fcOf(x):0,mb:isYTD?0:Number(x.Objetivo||0),mc:isYTD||!hasC?0:Number(x.ObjetivoComparado||0)})).filter(x=>x.obj>0||x.real>0).sort((a,b)=>b.real-a.real);
   const y0=isYTD?480:620,rh=Math.max(46,Math.min(84,Math.floor((1270-y0-40)/Math.max(1,list.length))));
   o+=t(76,y0,'VENUE',20,700,c.mut)+t(640,y0,'REAL',20,700,c.mut,'end')+t(820,y0,'VS BUD '+mt,20,700,c.mut,'end')+t(1004,y0,hasC?'VS '+(cn==='FORECAST'?'FC':cn)+' '+mt:'',20,700,c.mut,'end');
   list.forEach((v,i)=>{const y=y0+12+i*rh,d=v.obj>0?v.p-1:null,df=v.fo>0?v.real/v.fo-1:null,ym=y+(rh-8)/2+10,cl=z=>z==null?c.mut:z>=0?c.pos:c.neg;
     o+=`<rect x="48" y="${y}" width="984" height="${rh-8}" rx="${Math.min(rx,14)}" fill="${c.pn}"/>`+t(76,rh>=58&&(v.mb>0||v.mc>0)?ym-8:ym,xe(v.n),30,700,c.ink)+(rh>=58&&(v.mb>0||v.mc>0)?t(76,ym+18,'Mes: BUD '+hn(v.mb)+' €'+(v.mc>0?' · FC '+hn(v.mc)+' €':''),19,600,c.mut):'')+t(640,ym,hn(v.real)+' €',28,600,c.ink,'end')+t(820,ym,cvs(d),30,800,cl(d),'end')+(hasC?t(1004,ym,cvs(df),30,800,cl(df),'end'):'')});
-  o+=t(60,1318,'Datos hasta el '+(s.lastDay?dayLabel(DATA.config.month,s.lastDay):'—')+' · netos · '+mt+' = '+(isYTD?'año':'mes')+' a la fecha, al ritmo del objetivo',20,500,c.mut);
+  o+=t(60,1318,'Datos hasta el '+(s.lastDay?dayLabel(DATA.config.month,s.lastDay):'—')+' · netos · '+mt+' = '+(isYTD?'año':'mes')+' a la fecha, al ritmo del objetivo',20,500,c.mut)+(hSrc?t(60,1290,'Forecast: '+xe(HCMP.forecast26)+' · solo a nivel total F&amp;B (sin desglose por venue)',20,500,c.mut):'');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">${o}</svg>`;
 }
 function hotelCardSVG(){

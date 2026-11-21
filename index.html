@@ -3039,32 +3039,37 @@ function hWaCard(kind){
   const rb=Pb&&Pb.r,rf=Pf&&Pf.r,Kb=rb?kpis(rb):null,Kf=rf?kpis(rf):null;
   const {o:o0,t}=waBase(c,F,kind==='rooms'?'ROOMS':'HOTEL',P.label);let o=o0;
   const V=(f,r)=>r?cv(a[f],r[f]):null;
+  const mt=P.ytd?'YTD':'MTD',fu=P.ytd?'PERIODO COMPLETO':'MES COMPLETO',Fbf=Pb&&Pb.full,Fff=Pf&&Pf.full,Kbf=Fbf?kpis(Fbf):null,Kff=Fff?kpis(Fff):null,fl=(r,f)=>r?hn(r[f])+' €':'—';
   if(kind==='hotel'){
     o+=t(60,266,'REVENUE TOTAL',24,600,c.mut)+t(60,350,hn(a.tot)+' €',96,800,c.ink);
-    o+=waChip(t,c,60,398,'VS BUDGET',cvs(V('tot',rb)),V('tot',rb))+waChip(t,c,430,398,'VS FORECAST',cvs(V('tot',rf)),V('tot',rf));
+    o+=waChip(t,c,60,398,'VS BUDGET '+mt,cvs(V('tot',rb)),V('tot',rb))+waChip(t,c,430,398,'VS FORECAST '+mt,cvs(V('tot',rf)),V('tot',rf));
+    if(Fbf||Fff)o+=t(1032,266,'OBJETIVO '+fu,20,700,c.mut,'end')+t(1032,312,'Budget  '+fl(Fbf,'tot'),27,700,c.ink,'end')+t(1032,352,'Forecast  '+fl(Fff,'tot'),27,700,c.ink,'end');
     [['ROOMS','rr'],['F&amp;B','fb'],['OTROS INGRESOS','ot']].forEach((l,i)=>{const y=480+i*140,f=l[1];
       o+=`<rect x="48" y="${y}" width="984" height="124" rx="${rx}" fill="${c.pn}"/>`+t(76,y+42,l[0],22,700,c.mut)+t(76,y+98,hn(a[f])+' €',50,800,c.ink);
       const vb=V(f,rb),vf=V(f,rf);
-      o+=t(700,y+42,'BUD',18,700,c.mut)+t(700,y+92,cvs(vb),34,800,vb==null?c.mut:vb>=0?c.pos:c.neg)+t(880,y+42,'FC',18,700,c.mut)+t(880,y+92,cvs(vf),34,800,vf==null?c.mut:vf>=0?c.pos:c.neg)});
-    [['OCC',hp(K.occ),Kb&&cpp(K.occ,Kb.occ),Kf&&cpp(K.occ,Kf.occ),1],['ADR',hn(K.adr,0)+' €',Kb&&cv(K.adr,Kb.adr),Kf&&cv(K.adr,Kf.adr)],['RevPAR',hn(K.revpar,0)+' €',Kb&&cv(K.revpar,Kb.revpar),Kf&&cv(K.revpar,Kf.revpar)]].forEach((k,i)=>{const x=48+i*332,col=v=>v==null?c.mut:v>=0?c.pos:c.neg,fm=k[4]?cpps:cvs;
-      o+=`<rect x="${x}" y="920" width="320" height="196" rx="${rx}" fill="${c.pn}"/>`+t(x+24,962,k[0],22,700,c.mut)+t(x+24,1024,k[1],50,800,c.ink)+t(x+24,1068,'BUD '+fm(k[2]),26,700,col(k[2]))+t(x+24,1100,'FC '+fm(k[3]),26,700,col(k[3]))});
+      o+=t(420,y+42,fu,17,700,c.mut)+t(420,y+78,'BUD '+fl(Fbf,f),26,700,c.ink)+t(420,y+110,'FC '+fl(Fff,f),26,700,c.ink);
+      o+=t(700,y+42,'BUD '+mt,18,700,c.mut)+t(700,y+92,cvs(vb),34,800,vb==null?c.mut:vb>=0?c.pos:c.neg)+t(880,y+42,'FC '+mt,18,700,c.mut)+t(880,y+92,cvs(vf),34,800,vf==null?c.mut:vf>=0?c.pos:c.neg)});
+    o+=t(60,908,'KPI · vs a la fecha ('+mt+') · a la derecha, objetivo de '+(P.ytd?'periodo':'mes')+' completo',18,600,c.mut);
+    [['OCC',hp(K.occ),Kb&&cpp(K.occ,Kb.occ),Kf&&cpp(K.occ,Kf.occ),1,Kbf&&hp(Kbf.occ),Kff&&hp(Kff.occ)],['ADR',hn(K.adr,0)+' €',Kb&&cv(K.adr,Kb.adr),Kf&&cv(K.adr,Kf.adr),0,Kbf&&hn(Kbf.adr,0)+' €',Kff&&hn(Kff.adr,0)+' €'],['RevPAR',hn(K.revpar,0)+' €',Kb&&cv(K.revpar,Kb.revpar),Kf&&cv(K.revpar,Kf.revpar),0,Kbf&&hn(Kbf.revpar,0)+' €',Kff&&hn(Kff.revpar,0)+' €']].forEach((k,i)=>{const x=48+i*332,col=v=>v==null?c.mut:v>=0?c.pos:c.neg,fm=k[4]?cpps:cvs;
+      o+=`<rect x="${x}" y="920" width="320" height="196" rx="${rx}" fill="${c.pn}"/>`+t(x+24,962,k[0],22,700,c.mut)+t(x+24,1024,k[1],50,800,c.ink)+t(x+24,1068,'BUD '+fm(k[2]),26,700,col(k[2]))+t(x+24,1100,'FC '+fm(k[3]),26,700,col(k[3]))+t(x+306,1068,'mes '+(k[5]||'—'),20,600,c.mut,'end')+t(x+306,1100,'mes '+(k[6]||'—'),20,600,c.mut,'end')});
     const pr=hProjection(P);
     if(pr){const vb=Pb?cv(pr.tot,Pb.full.tot):null,vf=Pf?cv(pr.tot,Pf.full.tot):null;
-      o+=t(60,1166,'Cierre estimado del mes: '+hn(pr.tot)+' €',32,800,c.ink)+t(60,1204,'vs budget '+cvs(vb)+' · vs forecast '+cvs(vf),26,700,(vb==null?vf:vb)>=0?c.pos:c.neg)}
+      o+=t(60,1166,'Cierre estimado del mes: '+hn(pr.tot)+' €',32,800,c.ink)+t(60,1204,'vs budget mes '+cvs(vb)+' · vs forecast mes '+cvs(vf),26,700,(vb==null?vf:vb)>=0?c.pos:c.neg)}
     const ld=HOT.days[P.L.key];
     if(ld){const tot=ld.rr+ld.fb+ld.ot;o+=t(60,1262,'Último día ('+P.L.d+'/'+P.L.m+'): '+hn(tot)+' € · OCC '+hp(ld.av?ld.so/ld.av:0,0)+' · ADR '+hn(ld.so?ld.rr/ld.so:0,0)+' €',24,600,c.mut)}
   }else{
     o+=t(60,266,'OCUPACIÓN',24,600,c.mut)+t(60,376,hp(K.occ),110,800,c.ink);
     const pb=Kb?cpp(K.occ,Kb.occ):null,pf=Kf?cpp(K.occ,Kf.occ):null;
-    o+=waChip(t,c,480,306,'VS BUDGET',cpps(pb),pb)+waChip(t,c,730,306,'VS FORECAST',cpps(pf),pf);
-    const tiles=[['ADR',hn(K.adr,2)+' €',Kb&&cv(K.adr,Kb.adr),Kf&&cv(K.adr,Kf.adr)],['RevPAR',hn(K.revpar,2)+' €',Kb&&cv(K.revpar,Kb.revpar),Kf&&cv(K.revpar,Kf.revpar)],['ROOM REVENUE',hn(a.rr)+' €',V('rr',rb),V('rr',rf)],['HAB. VENDIDAS',hn(a.so),V('so',rb),V('so',rf)]];
+    o+=waChip(t,c,480,306,'VS BUDGET '+mt,cpps(pb),pb)+waChip(t,c,730,306,'VS FORECAST '+mt,cpps(pf),pf);
+    if(Kbf||Kff)o+=t(480,418,fu.charAt(0)+fu.slice(1).toLowerCase()+' · BUD '+(Kbf?hp(Kbf.occ):'—')+' · FC '+(Kff?hp(Kff.occ):'—'),23,700,c.mut);
+    const tiles=[['ADR',hn(K.adr,2)+' €',Kb&&cv(K.adr,Kb.adr),Kf&&cv(K.adr,Kf.adr),Kbf&&hn(Kbf.adr,2)+' €',Kff&&hn(Kff.adr,2)+' €'],['RevPAR',hn(K.revpar,2)+' €',Kb&&cv(K.revpar,Kb.revpar),Kf&&cv(K.revpar,Kf.revpar),Kbf&&hn(Kbf.revpar,2)+' €',Kff&&hn(Kff.revpar,2)+' €'],['ROOM REVENUE',hn(a.rr)+' €',V('rr',rb),V('rr',rf),Fbf&&hn(Fbf.rr)+' €',Fff&&hn(Fff.rr)+' €'],['HAB. VENDIDAS',hn(a.so),V('so',rb),V('so',rf),Fbf&&hn(Fbf.so),Fff&&hn(Fff.so)]];
     tiles.forEach((k,i)=>{const x=48+(i%2)*500,y=470+Math.floor(i/2)*220,col=v=>v==null?c.mut:v>=0?c.pos:c.neg;
-      o+=`<rect x="${x}" y="${y}" width="484" height="200" rx="${rx}" fill="${c.pn}"/>`+t(x+26,y+44,k[0],22,700,c.mut)+t(x+26,y+106,k[1],54,800,c.ink)+t(x+26,y+148,'vs BUD '+cvs(k[2]),26,700,col(k[2]))+t(x+26,y+182,'vs FC '+cvs(k[3]),26,700,col(k[3]))});
+      o+=`<rect x="${x}" y="${y}" width="484" height="200" rx="${rx}" fill="${c.pn}"/>`+t(x+26,y+44,k[0],22,700,c.mut)+t(x+26,y+106,k[1],54,800,c.ink)+t(x+26,y+148,'vs BUD '+cvs(k[2]),26,700,col(k[2]))+t(x+26,y+182,'vs FC '+cvs(k[3]),26,700,col(k[3]))+t(x+458,y+148,'mes '+(k[4]||'—'),22,600,c.mut,'end')+t(x+458,y+182,'mes '+(k[5]||'—'),22,600,c.mut,'end')});
     const dk=hkeys().filter(k=>+k.slice(5,7)===P.m).slice(-14),bw=984/14;
     o+=t(60,950,'OCUPACIÓN · ÚLTIMOS '+dk.length+' DÍAS',22,700,c.mut);
     dk.forEach((k,i)=>{const x=HOT.days[k],oc=x.av?x.so/x.av:0,h=oc*220;o+=`<rect x="${48+i*bw+6}" y="${1236-h}" width="${bw-12}" height="${h}" rx="4" fill="${c.acc}"/>`+t(48+i*bw+bw/2,1262,+k.slice(8,10),20,500,c.mut,'middle')+t(48+i*bw+bw/2,1230-h,Math.round(oc*100),18,700,c.ink,'middle')});
   }
-  o+=t(60,1318,'Datos hasta el '+P.L.d+'/'+P.L.m+' · netos sin IVA · '+xe(HCMP.forecast26),20,500,c.mut);
+  o+=t(60,1318,'Datos hasta el '+P.L.d+'/'+P.L.m+' · netos sin IVA · '+xe(HCMP.forecast26)+' · '+mt+' = '+(P.ytd?'año':'mes')+' a la fecha',20,500,c.mut);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">${o}</svg>`;
 }
 function fbWaCard(){
@@ -3076,14 +3081,16 @@ function fbWaCard(){
   const cn=/forecast/i.test(s.compare||'')?'FORECAST':String(s.compare||'').toUpperCase(),sn=/forecast/i.test(s.scenario||'')?'Forecast':/budget/i.test(s.scenario||'')?'Budget':String(s.scenario||'objetivo'),cnl=/forecast/i.test(s.compare||'')?'Forecast':String(s.compare||'');
   const fcOf=x=>{const dd=Number(x.DiasApertura)||s.monthDays;return isYTD?ytdObjectiveForVenue(x.Outlet,s.compare,s.lastDay):Number(x.ObjetivoComparado||0)/dd*Math.min(s.lastDay,dd)};
   const hasC=!!s.compare&&s.compare!==s.scenario,fcTot=hasC?s.outlets.reduce((q,x)=>q+fcOf(x),0):0,vf=fcTot>0?rev/fcTot-1:null;
-  o+=waChip(t,c,60,398,'VS BUDGET A LA FECHA',cvs(vb),vb)+(vf==null?'':waChip(t,c,520,398,'VS '+cn+' A LA FECHA',cvs(vf),vf));
-  if(!isYTD)o+=`<rect x="48" y="470" width="984" height="120" rx="${rx}" fill="${c.hi}"/>`+t(76,512,'PROYECCIÓN DE CIERRE',20,700,'#3A3000')+t(76,566,hn(s.projectedTotal)+' €',46,800,'#161616')+t(1004,524,cvs(s.projectedTotal&&s.totalObjective?s.projectedTotal/s.totalObjective-1:null)+' vs '+sn,26,700,'#161616','end')+(hasC&&s.totalCompare>0?t(1004,566,cvs(s.projectedTotal/s.totalCompare-1)+' vs '+cnl,26,700,'#161616','end'):'');
-  const list=s.outlets.map(x=>({n:x.Outlet,real:isYTD?x.YTDReal:x.Real,obj:isYTD?x.YTDObjetivo:x.Objetivo,p:isYTD?x.YTDPct:x['% Ritmo'],ytd:isYTD,fo:hasC?fcOf(x):0})).filter(x=>x.obj>0||x.real>0).sort((a,b)=>b.real-a.real);
+  const mt=isYTD?'YTD':'MTD',V0=getVenues(),yrT=scn=>[...Array(12)].reduce((q,_,i)=>q+V0.reduce((z,v)=>z+Number((monthObjectives(i+1)[v]||{})[scn]||0),0),0),fB=isYTD?yrT(s.scenario):s.totalObjective,fC=hasC?(isYTD?yrT(s.compare):s.totalCompare):0;
+  o+=waChip(t,c,60,398,'VS BUDGET '+mt,cvs(vb),vb)+(vf==null?'':waChip(t,c,520,398,'VS '+cn+' '+mt,cvs(vf),vf));
+  if(fB>0||fC>0)o+=t(1032,266,'OBJETIVO '+(isYTD?'AÑO':'MES COMPLETO'),20,700,c.mut,'end')+t(1032,312,sn+'  '+hn(fB)+' €',27,700,c.ink,'end')+(fC>0?t(1032,352,cnl+'  '+hn(fC)+' €',27,700,c.ink,'end'):'');
+  if(!isYTD)o+=`<rect x="48" y="470" width="984" height="120" rx="${rx}" fill="${c.hi}"/>`+t(76,512,'PROYECCIÓN DE CIERRE',20,700,'#3A3000')+t(76,566,hn(s.projectedTotal)+' €',46,800,'#161616')+t(1004,524,cvs(s.projectedTotal&&s.totalObjective?s.projectedTotal/s.totalObjective-1:null)+' vs '+sn+(isYTD?'':' mes'),26,700,'#161616','end')+(hasC&&s.totalCompare>0?t(1004,566,cvs(s.projectedTotal/s.totalCompare-1)+' vs '+cnl+(isYTD?'':' mes'),26,700,'#161616','end'):'');
+  const list=s.outlets.map(x=>({n:x.Outlet,real:isYTD?x.YTDReal:x.Real,obj:isYTD?x.YTDObjetivo:x.Objetivo,p:isYTD?x.YTDPct:x['% Ritmo'],ytd:isYTD,fo:hasC?fcOf(x):0,mb:isYTD?0:Number(x.Objetivo||0),mc:isYTD||!hasC?0:Number(x.ObjetivoComparado||0)})).filter(x=>x.obj>0||x.real>0).sort((a,b)=>b.real-a.real);
   const y0=isYTD?480:620,rh=Math.max(46,Math.min(84,Math.floor((1270-y0-40)/Math.max(1,list.length))));
-  o+=t(76,y0,'VENUE',20,700,c.mut)+t(640,y0,'REAL',20,700,c.mut,'end')+t(820,y0,'VS BUDGET',20,700,c.mut,'end')+t(1004,y0,hasC?'VS '+cn:'',20,700,c.mut,'end');
+  o+=t(76,y0,'VENUE',20,700,c.mut)+t(640,y0,'REAL',20,700,c.mut,'end')+t(820,y0,'VS BUD '+mt,20,700,c.mut,'end')+t(1004,y0,hasC?'VS '+(cn==='FORECAST'?'FC':cn)+' '+mt:'',20,700,c.mut,'end');
   list.forEach((v,i)=>{const y=y0+12+i*rh,d=v.obj>0?v.p-1:null,df=v.fo>0?v.real/v.fo-1:null,ym=y+(rh-8)/2+10,cl=z=>z==null?c.mut:z>=0?c.pos:c.neg;
-    o+=`<rect x="48" y="${y}" width="984" height="${rh-8}" rx="${Math.min(rx,14)}" fill="${c.pn}"/>`+t(76,ym,xe(v.n),30,700,c.ink)+t(640,ym,hn(v.real)+' €',28,600,c.ink,'end')+t(820,ym,cvs(d),30,800,cl(d),'end')+(hasC?t(1004,ym,cvs(df),30,800,cl(df),'end'):'')});
-  o+=t(60,1318,'Datos hasta el '+(s.lastDay?dayLabel(DATA.config.month,s.lastDay):'—')+' · netos · desviación al ritmo del mes vs Budget y Forecast',20,500,c.mut);
+    o+=`<rect x="48" y="${y}" width="984" height="${rh-8}" rx="${Math.min(rx,14)}" fill="${c.pn}"/>`+t(76,rh>=58&&(v.mb>0||v.mc>0)?ym-8:ym,xe(v.n),30,700,c.ink)+(rh>=58&&(v.mb>0||v.mc>0)?t(76,ym+18,'Mes: BUD '+hn(v.mb)+' €'+(v.mc>0?' · FC '+hn(v.mc)+' €':''),19,600,c.mut):'')+t(640,ym,hn(v.real)+' €',28,600,c.ink,'end')+t(820,ym,cvs(d),30,800,cl(d),'end')+(hasC?t(1004,ym,cvs(df),30,800,cl(df),'end'):'')});
+  o+=t(60,1318,'Datos hasta el '+(s.lastDay?dayLabel(DATA.config.month,s.lastDay):'—')+' · netos · '+mt+' = '+(isYTD?'año':'mes')+' a la fecha, al ritmo del objetivo',20,500,c.mut);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">${o}</svg>`;
 }
 function hotelCardSVG(){

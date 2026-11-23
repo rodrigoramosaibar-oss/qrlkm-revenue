@@ -35,7 +35,7 @@ function sources(){
   out.push({n:'PickUp de Revenue (Excel)',q:'Evolución de reservas por mes y año para medir pickup',cad:'Semanal',last:pu,a,st:rate(a,7,10),ll:lastLoad(/^PickUp/),hint:h.pu&&h.pu.years?'Años: '+Object.keys(h.pu.years).join(', '):''});
   // 4 Group Pace
   const G=R.gp,gl=G&&(G.upd||G.asof)||null;a=age(gl);
-  out.push({n:'Group Pace (Excel)',q:'Grupos en libros por mes: habitaciones, banqueting, salas',cad:'Semanal',last:G?(G.upd||G.asof):null,a,st:G?rate(a,7,10):'ko',ll:lastLoad(/Group Pace/),
+  out.push({n:'Group Pace (Excel)',q:'Grupos en libros por mes: habitaciones, banqueting, salas',cad:'Cuando cambie (aviso a los 14 días)',last:G?(G.upd||G.asof):null,a,st:G?rate(a,14,21):'ko',ll:lastLoad(/Group Pace/),
     hint:G?'Group Pace '+G.year+(G.asof?' · fecha de control '+fd(G.asof):''):'No hay Group Pace cargado: los banquetes parten solo del histórico'});
   // 5 Calendario de eventos
   const E=R.ev;a=age(E&&E.upd);let st=E?rate(a,7,10):'ko',hint='No hay calendario de eventos cargado';

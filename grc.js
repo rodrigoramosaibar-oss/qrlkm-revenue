@@ -12,7 +12,7 @@ const esc=s=>typeof escapeHTML==='function'?escapeHTML(s):String(s).replace(/[&<
 const num=n=>typeof fmtNum==='function'?fmtNum(n):Math.round(n).toLocaleString('es-ES');
 let GRC_ST=null;
 window.grcDetect=async function(f,names){
-  try{if(!names||!names.length)return false;const g=await gxRead(f,6);const s=g[names[0]];return !!(s&&s[1]&&s[1][1]==='GRC Report')}catch(e){return false}
+  try{const {gxRead}=window.__GX;if(!names||!names.length)return false;const g=await gxRead(f,6);const s=g[names[0]];return !!(s&&s[1]&&s[1][1]==='GRC Report')}catch(e){return false}
 };
 function grcParse(g,names){
   const groups=[];let asof=null,bad=0;
@@ -44,6 +44,7 @@ function totals(groups){const t={};groups.forEach(x=>{
   const seen={};for(const d in x.days){const m=d.slice(0,7);(t[m]=t[m]||{D:[0,0],T:[0,0],P:[0,0]})[x.s][0]+=x.days[d];(t[m][x.s])[1]+=x.days[d]*x.adr}});return t}
 window.grcTotals=totals;window.grcParse=grcParse;
 window.grcHandle=async function(file){
+  const {gxRead,gxSheetNames,$f,ghConfigured,HOT}=window.__GX;
   const body=$f('flashBody');body.innerHTML='<p class="fp">Leyendo «'+esc(file.name)+'»…</p>';
   try{
     const names=await gxSheetNames(file),g=await gxRead(file,40),R=grcParse(g,names);
@@ -61,6 +62,7 @@ window.grcHandle=async function(file){
   }catch(e){console.error(e);body.innerHTML=`<div class="ferr">${esc(e.message||String(e))}</div><div class="fbtns"><button class="fb" onclick="dataOpen()">Reintentar</button></div>`}
 };
 window.grcCommit=async function(publish){
+  const {HOT,HST,PUB,hotDraftSave,flashClose,hRender,hotelPublish,ghConfigured,toast}=window.__GX;
   const S=GRC_ST;if(!S)return;const upd=new Date().toISOString(),T=totals(S.groups);
   const prev=HOT.grc||{},snaps=(prev.snaps||[]).filter(x=>x.asof!==S.asof),k={};
   S.groups.forEach(x=>{k[x.n+'|'+x.o+'|'+(x.b||'')+'|'+x.m]=[x.s,x.rn]});

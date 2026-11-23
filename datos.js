@@ -41,6 +41,9 @@ function sources(){
   const E=R.ev;a=age(E&&E.upd);let st=E?rate(a,7,10):'ko',hint='No hay calendario de eventos cargado';
   if(E){hint='Cubre '+fd(E.from)+' → '+fd(E.to);const ahead=Math.round((pd(E.to)-today())/DAY);if(ahead<0){hint+=' · ya terminó: no cubre los próximos días';st='ko'}else if(ahead<45){hint+=' · termina en '+ahead+' días';if(st==='ok')st='warn'}}
   out.push({n:'Calendario de eventos (Excel)',q:'Eventos con estado Definite/Tentative/Prospect, pax y sala',cad:'Semanal',last:E?E.upd:null,a,st,ll:lastLoad(/Eventos/),hint});
+  // GRC Opera (grupos de habitaciones, bruto: lo fiable es el pipeline en Prospect)
+  const GR=h.grc;a=age(GR&&GR.asof);let pr=0;if(GR)GR.groups.forEach(x=>{if(x.s==='P')pr+=x.rn});
+  out.push({n:'GRC de Opera (Excel)',q:'Grupos de habitaciones por día. Definite/Tentative son brutos: para eso, PickUp',cad:'Semanal',last:GR?GR.asof:null,a,st:GR?rate(a,7,10):'ko',ll:lastLoad(/^GRC/),hint:GR?GR.groups.length+' grupos · pipeline en Prospect: '+Math.round(pr).toLocaleString('es-ES')+' noches':'No hay GRC cargado'});
   // 6 Budget
   const B=R.b27;
   out.push({n:'Budget'+(B?' '+B.year:'')+' (Excel)',q:'Referencia presupuestaria por mes',cad:'Una vez al año',last:B?B.upd:null,a:age(B&&B.upd),st:B?'ok':'warn',ll:lastLoad(/^Budget/),hint:B?'':'Sin cargar'});

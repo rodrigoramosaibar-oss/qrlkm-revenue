@@ -863,6 +863,7 @@ body.skin-glass.pal-kimpton.mode-light:not(.mobHome) .main{padding-bottom:104px}
   <button class="tab" data-hot data-view="pu" onclick="showView('pu',this)"><svg viewBox="0 0 24 24"><path d="M4 19h16M6 16l4-5 3 3 5-7"/></svg>PickUp</button>
   <button class="tab" data-hot data-view="fz" onclick="showView('fz',this)"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-9M15 6h6v6"/></svg>Forecast hotel</button>
   <button class="tab" data-own data-view="m2" onclick="showView('m2',this)"><svg viewBox="0 0 24 24"><path d="M3 17l4-4 3 3 5-8 6 6"/><path d="M3 21h18"/></svg>Motor v2 · prueba</button>
+  <button class="tab" data-edit data-view="dq" onclick="showView('dq',this)"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg>Estado de datos</button>
   <div class="sbGroup" data-edit>Gestión</div>
   <button class="tab" data-edit data-own data-view="entry" onclick="showView('entry',this)"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Entrada diaria</button>
   <button class="tab" data-edit data-own data-view="objectives" onclick="showView('objectives',this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>Objetivos</button>
@@ -930,7 +931,7 @@ body.skin-glass.pal-kimpton.mode-light:not(.mobHome) .main{padding-bottom:104px}
 <div id="rooms" class="view"></div>
 <div id="otb" class="view"></div>
 <div id="wx" class="view"></div>
-<div id="pu" class="view"></div><div id="fz" class="view"></div><div id="m2" class="view"></div><script src="motor2.js?v=1"></script>
+<div id="pu" class="view"></div><div id="fz" class="view"></div><div id="m2" class="view"></div><div id="dq" class="view"></div><script src="motor2.js?v=1"></script><script src="datos.js?v=1"></script>
 <div id="entry" class="view" data-edit><div class="entry">
 <section class="formPanel"><h2>Entrada diaria</h2><p class="small" style="margin-bottom:.9rem">Carga el revenue por venue. Puedes sumar importes con +, por ejemplo 120+35,50+18.</p><div class="formGrid" id="dailyForm"></div><div class="totalLine"><span>Total día</span><b id="formTotal">0,00K€</b></div><button class="btn primary wide" onclick="saveDay()">Guardar día y recalcular</button>
 <details class="paste"><summary>Pegar varios días desde Excel</summary><p class="small" style="margin:.4rem 0 .6rem">Una fila por día: <code>Día, Venue1, Venue2, ...</code> separados por tabulador o punto y coma, en el orden de las columnas de la tabla.</p><textarea id="pasteArea" placeholder="1&#9;2649,55&#9;651,13&#9;949,98"></textarea><button class="btn primary wide" style="margin-top:.6rem" onclick="importPaste()">Importar filas pegadas</button><div class="small" id="pasteResult" style="margin-top:.5rem"></div></details>
@@ -3753,7 +3754,7 @@ function applySkin(){document.body.classList.add('skin-glass');setTimeout(()=>{t
 Object.assign(window,{publishData,openCard,closeCard,shareCard,applyRole,money2,parseValue,setLayout,cycleLayout});
 applyTheme();applySkin();applyRole();renderAll();setLayout(LAYOUT);
 window.addEventListener('resize',()=>{const d=window.innerWidth<=900?'bento':'exec';if(d!==LAYOUT)setLayout(d)});
-Object.assign(RENDERERS,{hotel:renderHotel,rooms:renderRooms,otb:renderOtb,wx:renderWx,pu:renderPu,fz:renderFz,m2:()=>{if(window.Motor2UI)Motor2UI.render()}});
+Object.assign(RENDERERS,{hotel:renderHotel,rooms:renderRooms,otb:renderOtb,wx:renderWx,pu:renderPu,fz:renderFz,m2:()=>{if(window.Motor2UI)Motor2UI.render()},dq:()=>{if(window.DatosUI)DatosUI.render()}});
 if(HAS_HOT){document.body.classList.add('has-hot');let ar='hotel';try{ar=localStorage.getItem('fbAreaV47')||'hotel'}catch(e){}if(ar!=='fb'){setArea(ar,false)}}
 showView('dash',document.querySelector('.tab[data-view="'+(DATA.dashboardMode==='ytd'?'dash-ytd':'dash')+'"]'));
 renderDashboard();

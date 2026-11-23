@@ -8,6 +8,7 @@ const pd=s=>{if(!s)return null;const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(s)
 const today=()=>{const n=new Date();return Date.UTC(n.getFullYear(),n.getMonth(),n.getDate(),12)};
 const age=s=>{const t=pd(s);return t==null?null:Math.round((today()-t)/DAY)};
 const fd=s=>{const t=pd(s);if(t==null)return '—';const d=new Date(t);return String(d.getUTCDate()).padStart(2,'0')+'/'+String(d.getUTCMonth()+1).padStart(2,'0')+'/'+d.getUTCFullYear()};
+const hh=s=>{const d=new Date(s);return isNaN(d)?'':String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
 const MN=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const H=()=>window.__HOT||null;
 const lastLoad=re=>{const L=(H()&&H().loads)||[];for(let i=L.length-1;i>=0;i--)if(re.test(L[i].what||''))return L[i];return null};
@@ -44,6 +45,21 @@ function sources(){
   // GRC Opera (grupos de habitaciones, bruto: lo fiable es el pipeline en Prospect)
   const GR=h.grc;a=age(GR&&GR.asof);let pr=0;if(GR)GR.groups.forEach(x=>{if(x.s==='P')pr+=x.rn});
   out.push({n:'GRC de Opera (Excel)',q:'Grupos de habitaciones por día. Definite/Tentative son brutos: para eso, PickUp',cad:'Semanal',last:GR?GR.asof:null,a,st:GR?rate(a,7,10):'ko',ll:lastLoad(/^GRC/),hint:GR?GR.groups.length+' grupos · pipeline en Prospect: '+Math.round(pr).toLocaleString('es-ES')+' noches':'No hay GRC cargado'});
+  // Rooms Flash (diario): revenue de habitaciones por segmento de mercado
+  const RF=h.rf&&h.rf.last,rfd=RF?RF.d:null;a=age(rfd);
+  out.push({n:'Rooms Flash (PDF)',q:'Revenue de habitaciones por segmento de mercado, hoy y acumulado, frente a Budget y año anterior',cad:'Diario',last:rfd,a,st:rate(a,1,3),ll:lastLoad(/^Rooms Flash/),
+    hint:RF?(h.rf.days?Object.keys(h.rf.days).length+' días guardados':''):'Sin cargar todavía',cuadre:true});
+  // Reservation Summary: noches futuras con adultos y niños
+  const RS=h.rs&&h.rs.asof?h.rs:null;a=age(RS&&RS.asof);
+  out.push({n:'Reservation Summary (PDF)',q:'Noche a noche hasta fin del año siguiente: ocupación, adultos y niños, revenue',cad:'Cada 2-3 días (semanal como máximo)',last:RS?RS.asof:null,a,st:RS?rate(a,3,7):'ko',ll:lastLoad(/^Reservation Summary/),
+    hint:RS?(RS.snaps?RS.snaps.length+' fotos guardadas':''):'Sin cargar todavía'});
+  // Monthly STAR: se carga una vez al mes, entre el día 20 y el 25
+  const SR=h.star&&h.star.last?h.star:null,nw=new Date(),dm=nw.getDate(),mk=(y,m)=>y+'-'+String(m).padStart(2,'0'),pv=new Date(nw.getFullYear(),nw.getMonth()-1,1),pv2=new Date(nw.getFullYear(),nw.getMonth()-2,1);
+  const needK=mk(pv.getFullYear(),pv.getMonth()+1),prevK=mk(pv2.getFullYear(),pv2.getMonth()+1);let stS='ko',hintS='Sin cargar todavía';
+  if(SR){const L=SR.last;stS=L>=needK?'ok':L===prevK?(dm>=26?'ko':dm>=20?'warn':'ok'):'ko';
+    hintS='Informe de '+MN[+L.slice(5)-1]+' '+L.slice(0,4)+(L<needK?(' · falta el de '+MN[pv.getMonth()]+(dm<20?' (disponible hacia el 20-25)':'')):'')}
+  const sm=SR&&SR.months[SR.last];
+  out.push({n:'Monthly STAR (Excel)',q:'Performance Set y 5* nuevos (y Group y PGI): ocupación, ADR y RevPAR por día de la semana y segmento',cad:'Mensual (entre el 20 y el 25)',last:sm?sm.upd:null,a:sm?age(sm.upd):null,st:stS,ll:lastLoad(/^STAR/),hint:hintS});
   // 6 Budget
   const B=R.b27;
   out.push({n:'Budget'+(B?' '+B.year:'')+' (Excel)',q:'Referencia presupuestaria por mes',cad:'Una vez al año',last:B?B.upd:null,a:age(B&&B.upd),st:B?'ok':'warn',ll:lastLoad(/^Budget/),hint:B?'':'Sin cargar'});
@@ -78,7 +94,7 @@ async function html(){
     `<b style="color:${c.ko?ST.ko[1]:ST.warn[1]}">${c.ko} sin cargar o caducadas · ${c.warn} por cargar esta semana</b> de ${rows.length} fuentes.`;
   const body=rows.map(r=>{
     const lastTxt=r.last?fd(r.last):'—',ageTxt=r.a==null?'—':(r.a===0?'hoy':'hace '+r.a+' d');
-    const who=r.ll?`<div style="color:var(--muted);font-size:.72rem">${esc(r.ll.by||'')} · ${fd(r.ll.at)}</div>`:'';
+    const who=r.ll?`<div style="color:var(--muted);font-size:.72rem">Subido por <b>${esc(r.ll.by||'—')}</b> · ${fd(r.ll.at)} ${esc(hh(r.ll.at))}</div>`:'';
     return`<tr><td ${td}><b>${esc(r.n)}</b><div style="color:var(--muted);font-size:.72rem">${esc(r.q)}</div></td><td ${td}>${esc(r.cad)}</td><td ${td}>${lastTxt}<div style="color:var(--muted);font-size:.72rem">${ageTxt}</div>${who}</td><td ${td}>${pill(r.st)}${r.hint?`<div style="color:var(--muted);font-size:.72rem;margin-top:.25rem">${esc(r.hint)}</div>`:''}</td></tr>`}).join('');
   const pend=PENDING.map(p=>`<li style="margin:.25rem 0"><b>${esc(p[0])}</b> · <span style="color:var(--muted)">${esc(p[1])}</span></li>`).join('');
   return`<div class="hwrap" style="padding:1.4rem 1.6rem;max-width:1100px"><div class="eyebrow">DATOS · REVISIÓN SEMANAL</div>
@@ -97,7 +113,7 @@ function badge(){
     d.style.background=c.ko?ST.ko[1]:c.warn?ST.warn[1]:ST.ok[1];d.title=c.ko+' faltan · '+c.warn+' por cargar'}
   return c;
 }
-window.DatosUI={render:async function(){const host=document.getElementById('dq');if(!host)return;host.innerHTML='<div class="hwrap" style="padding:1.4rem 1.6rem"><p class="hnote">Revisando…</p></div>';host.innerHTML=await html();badge()}};
+window.DatosUI={sources:sources,render:async function(){const host=document.getElementById('dq');if(!host)return;host.innerHTML='<div class="hwrap" style="padding:1.4rem 1.6rem"><p class="hnote">Revisando…</p></div>';host.innerHTML=await html();badge()}};
 // aviso al entrar: una vez al día, y siempre el lunes si hay algo pendiente
 let tries=0;const iv=setInterval(async()=>{
   tries++;if(tries>90){clearInterval(iv);return}

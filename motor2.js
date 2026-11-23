@@ -169,6 +169,29 @@ function html(){
   // 2 próximos meses
   const fut=[];let yy=C.cm[0],mm=C.cm[1];for(let i=0;i<4;i++){const p=M.predictMonth(D,yy,mm,0);if(p){const s=statFor(sum,7),b=band(p.close,s);fut.push(`<tr><td ${tdl}>${MN[mm-1]} ${yy}</td><td ${tdr}><b>${eur(p.close)}</b></td><td ${tdr}>${b?eur(b[0])+' – '+eur(b[1]):'—'}</td><td ${tdr}>${eur(p.Lly)}/día</td><td ${tdr}>×${p.g.toFixed(2)}</td></tr>`)}if(++mm>12){mm=1;yy++}}
   h+=card('Próximos meses (sin datos del mes: año anterior × crecimiento reciente × calendario)',`<table style="border-collapse:collapse;width:100%"><tr><th ${th} style="text-align:left">Mes</th><th ${th}>Total previsto</th><th ${th}>Rango amplio</th><th ${th}>Nivel diario</th><th ${th}>Crecimiento</th></tr>${fut.join('')}</table><p class="hnote" style="color:var(--muted);font-size:.74rem;margin:.5rem 0 0">Ojo: son meses sin reservas en libros (OTB/PickUp) ni eventos. Sirven de referencia estructural, no de compromiso. 2027: festivos locales de Marbella aún sin publicar.</p>`);
+  // 2a reservas en libros (OTB/PickUp): suelo duro para rooms + comparación con el pace de la app
+  const ADJ={};
+  (function(){try{
+    const GX=window.__GX,HOTx=GX&&GX.HOT,pu=HOTx&&HOTx.pu&&HOTx.pu.years;
+    if(!pu||!GX.PU_I||!GX.fzRun)return;
+    const run=GX.fzRun();if(!run||!run.res)return;
+    const ks=Object.keys(D).filter(k=>D[k].tot>0&&D[k].rm>0).sort().slice(-365);
+    let sr=0,sa=0;ks.forEach(k=>{sr+=D[k].rm;sa+=D[k].tot});const share=sa>0?sr/sa:0;if(!(share>0))return;
+    const kk=st.k||1,rowsO=[];
+    run.res.forEach(r=>{
+      const PUy=pu[r.Y];if(!PUy||!PUy.d)return;
+      const isCur=!C.full&&r.Y===Y&&r.M===Mo,p=isCur?cur:M.predictMonth(D,r.Y,r.M,0);if(!p)return;
+      let otb=0,nd=0;Object.keys(PUy.d).forEach(k=>{if(+k.slice(5,7)!==r.M)return;if(isCur&&k<=ld)return;otb+=(PUy.d[k][GX.PU_I.rv]||0);nd++});
+      if(!nd)return;
+      let mtdRm=0;if(isCur)for(let d=1;d<=day;d++){const k=Y+'-'+String(Mo).padStart(2,'0')+'-'+String(d).padStart(2,'0');if(D[k]&&D[k].rm>0)mtdRm+=D[k].rm}
+      const floorR=mtdRm+otb*kk,v2R=p.close*share,adj=floorR>v2R?floorR/share-p.close:0;
+      ADJ[r.Y+'-'+r.M]=adj;
+      const rvb=r.rv,pace=rvb&&rvb.vals&&rvb.vals.p>0?rvb.vals.p*kk:null,fapp=rvb?rvb.val*kk:null;
+      rowsO.push(`<tr><td ${tdl}>${MN[r.M-1]} ${r.Y}</td><td ${tdr}>${eur(floorR)}</td><td ${tdr}>${eur(v2R)}</td><td ${tdr}>${pa(floorR/v2R)}</td><td ${tdr}>${pace?eur(pace):'—'}</td><td ${tdr}>${fapp?eur(fapp):'—'}</td><td ${tdr}>${adj>0?'<b>+'+eur(adj)+'</b>':'—'}</td></tr>`);
+    });
+    if(rowsO.length)h+=card('Reservas en libros (PickUp) frente a la previsión de habitaciones',`<table style="border-collapse:collapse;width:100%"><tr><th ${th} style="text-align:left">Mes</th><th ${th}>Rooms ya hecho + en libros</th><th ${th}>Rooms según v2 (≈ total × ${(share*100).toFixed(0)} %)</th><th ${th}>Cobertura</th><th ${th}>Pace de la app (rooms)</th><th ${th}>Forecast app (rooms)</th><th ${th}>Ajuste v2 por suelo</th></tr>${rowsO.join('')}</table>
+    <p class="hnote" style="color:var(--muted);font-size:.74rem;margin:.5rem 0 0">Lo que ya está en libros es un suelo: si supera lo que v2 prevé para rooms, v2 se sube hasta ese suelo (columna «Ajuste»), y ese ajuste entra en el total hotel de abajo. Importes del PickUp llevados a la escala del histórico (×${kk.toFixed(3)}). Es un suelo, no un pronóstico: faltan los pickups que llegarán. Aún no se puede calibrar el ritmo de pickup con backtest porque la app guarda instantáneas de PickUp desde hace poco; mejora con cada subida semanal.</p>`);
+  }catch(e){console.error('2a',e)}})();
   // 2b banquetes (modelo de la app: Group Pace x factor real/GP + eventos) y total hotel
   (function(){
     const GX=window.__GX;let run=null,err=null;
@@ -181,7 +204,7 @@ function html(){
       const p=isCur?cur:M.predictMonth(D,r.Y,r.M,0);
       if(!p)return;
       const E=b&&b.ev;
-      rowsB.push(`<tr><td ${tdl}>${MN[r.M-1]} ${r.Y}</td><td ${tdr}>${eur(p.close)}</td><td ${tdr}>${b?'<b>'+eur(b.val)+'</b>':'—'}</td><td ${tdr}>${E?eur(E.firm):'—'}</td><td ${tdr}>${E?eur(E.exp):'—'}</td><td ${tdr}>${b&&b.cut>0?'−'+eur(b.cut):'—'}</td><td ${tdr}><b>${eur(p.close+(b?b.val:0))}</b></td></tr>`);
+      rowsB.push(`<tr><td ${tdl}>${MN[r.M-1]} ${r.Y}</td><td ${tdr}>${eur(p.close)}</td><td ${tdr}>${b?'<b>'+eur(b.val)+'</b>':'—'}</td><td ${tdr}>${E?eur(E.firm):'—'}</td><td ${tdr}>${E?eur(E.exp):'—'}</td><td ${tdr}>${b&&b.cut>0?'−'+eur(b.cut):'—'}</td><td ${tdr}><b>${eur(p.close+(ADJ[r.Y+'-'+r.M]||0)+(b?b.val:0))}</b></td></tr>`);
     });
     h+=card('Banquetes y total hotel · usa el modelo de Group Pace y eventos de la app',`<table style="border-collapse:collapse;width:100%"><tr><th ${th} style="text-align:left">Mes</th><th ${th}>Rooms + F&B (v2)</th><th ${th}>Banquetes (forecast app)</th><th ${th}>De ello firme (GP + Definite)</th><th ${th}>Esperado (con Tentative/Prospect ponderados)</th><th ${th}>Recorte por pocas hab. de grupo</th><th ${th}>Total hotel</th></tr>${rowsB.join('')}</table>
     <p class="hnote" style="color:var(--muted);font-size:.74rem;margin:.5rem 0 0">Los banquetes no se vuelven a modelar aquí: se toma el forecast de la app (lo firmado en Group Pace calibrado contra lo realmente facturado + eventos del calendario valorados por €/pax y estado). El total suma ambos bloques, porque el histórico del motor v2 excluye banquetes. Si el calendario de eventos está caducado, los meses lejanos infravaloran banquetes.</p>`);

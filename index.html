@@ -931,7 +931,7 @@ body.skin-glass.pal-kimpton.mode-light:not(.mobHome) .main{padding-bottom:104px}
 <div id="rooms" class="view"></div>
 <div id="otb" class="view"></div>
 <div id="wx" class="view"></div>
-<div id="pu" class="view"></div><div id="fz" class="view"></div><div id="m2" class="view"></div><div id="dq" class="view"></div><script src="motor2.js?v=3"></script><script src="grc.js?v=1"></script><script src="datos.js?v=1"></script>
+<div id="pu" class="view"></div><div id="fz" class="view"></div><div id="m2" class="view"></div><div id="dq" class="view"></div><script src="motor2.js?v=3"></script><script src="grc.js?v=1"></script><script src="datos.js?v=2"></script><script src="nuevos.js?v=1"></script>
 <div id="entry" class="view" data-edit><div class="entry">
 <section class="formPanel"><h2>Entrada diaria</h2><p class="small" style="margin-bottom:.9rem">Carga el revenue por venue. Puedes sumar importes con +, por ejemplo 120+35,50+18.</p><div class="formGrid" id="dailyForm"></div><div class="totalLine"><span>Total día</span><b id="formTotal">0,00K€</b></div><button class="btn primary wide" onclick="saveDay()">Guardar día y recalcular</button>
 <details class="paste"><summary>Pegar varios días desde Excel</summary><p class="small" style="margin:.4rem 0 .6rem">Una fila por día: <code>Día, Venue1, Venue2, ...</code> separados por tabulador o punto y coma, en el orden de las columnas de la tabla.</p><textarea id="pasteArea" placeholder="1&#9;2649,55&#9;651,13&#9;949,98"></textarea><button class="btn primary wide" style="margin-top:.6rem" onclick="importPaste()">Importar filas pegadas</button><div class="small" id="pasteResult" style="margin-top:.5rem"></div></details>
@@ -1774,6 +1774,7 @@ async function flashHandleFile(file){
 // Enruta el PDF al lector correcto según su contenido (Revenue Flash u ocupación Opera H&F), sea cual sea el cargador abierto y se suelte o se elija.
 async function pdfAutoHandle(file){
   if(!file)return;
+  try{const k=window.nuevosKind?await nuevosKind(file):'';if(k==='rf'||k==='rs'){if(!HOT_EDIT){toast('Tu usuario no puede cargar datos.');return}return nuevosHandle(k,file)}}catch(e){}
   if(/\.xlsx$/i.test(file.name)){if(!HOT_EDIT){toast('Tu usuario no puede cargar datos.');return}return puHandle([file])}
   let kind='';
   try{
@@ -3009,14 +3010,14 @@ Object.assign(window,{gpOpen,gpHandle,gpCommit,evUnitSet});
 // ======================= v58 · carga única de datos =======================
 async function gxSheetNames(file){const z=await puZip(await file.arrayBuffer()),wb=await z.get('xl/workbook.xml'),o=[];if(wb)for(const m of wb.matchAll(/<sheet\b[^>]*>/g)){const n=/\bname="([^"]*)"/.exec(m[0]);if(n)o.push(puUnesc(n[1]))}return o}
 async function dataKind(f){
-  if(/\.pdf$/i.test(f.name))return'pdf';if(!/\.xlsx$/i.test(f.name))return'';
-  try{const n=await gxSheetNames(f);if(window.grcDetect&&await grcDetect(f,n))return'grc';if(n.some(x=>/^Daily PU/i.test(x)))return'pu';if(n.some(x=>/^Rooms Totals/i.test(x)))return'budget';if(n.includes('Executive View')||n.includes('Revenue Detail'))return'gp';return'ev'}catch(e){return''}
+  if(/\.pdf$/i.test(f.name)){try{const k=window.nuevosKind?await nuevosKind(f):'';if(k)return k}catch(e){}return'pdf'}if(!/\.xlsx$/i.test(f.name))return'';
+  try{const n=await gxSheetNames(f);{const k=window.nuevosKind?await nuevosKind(f,n):'';if(k)return k}if(window.grcDetect&&await grcDetect(f,n))return'grc';if(n.some(x=>/^Daily PU/i.test(x)))return'pu';if(n.some(x=>/^Rooms Totals/i.test(x)))return'budget';if(n.includes('Executive View')||n.includes('Revenue Detail'))return'gp';return'ev'}catch(e){return''}
 }
-const DATA_KN={pdf:'PDF (Revenue Flash u ocupación Opera)',pu:'PickUp de Revenue',budget:'Budget P&L',gp:'Group Pace',ev:'Calendario de eventos',grc:'GRC de Opera (grupos de habitaciones)'};
+const DATA_KN={pdf:'PDF (Revenue Flash u ocupación Opera)',pu:'PickUp de Revenue',budget:'Budget P&L',gp:'Group Pace',ev:'Calendario de eventos',grc:'GRC de Opera (grupos de habitaciones)',rf:'Rooms Flash (PDF)',rs:'Reservation Summary (PDF)',star:'Monthly STAR (Excel)'};
 function dataOpen(){
   if(!IS_EDITOR){toast('Tu usuario no puede cargar datos.');return}
   document.body.classList.remove('navopen');const m=flashModalEl();m.classList.add('show');FLASH_ST=null;$f('flashTitle').textContent='Cargar datos';
-  $f('flashBody').innerHTML=`<p class="fp">Elige el archivo y la app lo reconoce sola: <b>Revenue Flash</b> y <b>ocupación Opera</b> (PDF), <b>PickUp</b>, <b>Budget</b>, <b>Group Pace</b> y <b>calendario de eventos</b> (Excel). Se leen en este dispositivo; no se envían a ningún servidor.</p>
+  $f('flashBody').innerHTML=`<p class="fp">Elige el archivo y la app lo reconoce sola: <b>Revenue Flash</b>, <b>Rooms Flash</b>, <b>Reservation Summary</b> y <b>ocupación Opera</b> (PDF), <b>Monthly STAR</b>, <b>PickUp</b>, <b>Budget</b>, <b>Group Pace</b> y <b>calendario de eventos</b> (Excel). Se leen en este dispositivo; no se envían a ningún servidor.</p>
   <label class="fpick"><input type="file" multiple accept=".pdf,.xlsx,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden onchange="dataHandle(Array.from(this.files))"><span>Elegir archivo(s)</span><small>o arrástralos aquí</small></label>
   <div class="fgh"><a href="#" onclick="flashSettings();return false">${ghConfigured()?'Publicación automática activada · ajustes':'Configurar publicación automática'}</a></div>`;
 }
@@ -3024,9 +3025,9 @@ async function dataHandle(files){
   files=(Array.isArray(files)?files:[files]).filter(Boolean);if(!files.length)return;
   const m=flashModalEl();m.classList.add('show');const body=$f('flashBody');body.innerHTML='<p class="fp">Reconociendo '+files.map(f=>'«'+escapeHTML(f.name)+'»').join(' y ')+'…</p>';
   const ks=await Promise.all(files.map(dataKind)),G={},bad=[];files.forEach((f,i)=>{if(ks[i])(G[ks[i]]=G[ks[i]]||[]).push(f);else bad.push(f.name)});
-  const kinds=['pdf','pu','budget','gp','ev','grc'].filter(k=>G[k]);
-  if(!kinds.length){body.innerHTML=`<div class="ferr">No reconozco ${bad.length>1?'estos archivos':'este archivo'}: ${bad.map(escapeHTML).join(', ')}. Acepto PDF del Revenue Flash o de Opera, y Excel de PickUp, Budget, Group Pace o calendario de eventos.</div><div class="fbtns"><button class="fb" onclick="dataOpen()">Reintentar</button></div>`;return}
-  if(G.pu&&!HOT_EDIT||G.budget&&!HOT_EDIT||G.gp&&!HOT_EDIT||G.ev&&!HOT_EDIT||G.grc&&!HOT_EDIT){if(!kinds.includes('pdf')||kinds.length>1){toast('Tu usuario no puede cargar este tipo de datos.');return}}
+  const kinds=['pdf','rf','rs','star','pu','budget','gp','ev','grc'].filter(k=>G[k]);
+  if(!kinds.length){body.innerHTML=`<div class="ferr">No reconozco ${bad.length>1?'estos archivos':'este archivo'}: ${bad.map(escapeHTML).join(', ')}. Acepto PDF del Revenue Flash, Rooms Flash, Reservation Summary o de Opera, y Excel de PickUp, Budget, Group Pace, calendario de eventos o Monthly STAR.</div><div class="fbtns"><button class="fb" onclick="dataOpen()">Reintentar</button></div>`;return}
+  if(G.rf&&!HOT_EDIT||G.rs&&!HOT_EDIT||G.star&&!HOT_EDIT||G.pu&&!HOT_EDIT||G.budget&&!HOT_EDIT||G.gp&&!HOT_EDIT||G.ev&&!HOT_EDIT||G.grc&&!HOT_EDIT){if(!kinds.includes('pdf')||kinds.length>1){toast('Tu usuario no puede cargar este tipo de datos.');return}}
   const first=kinds[0],gpFiles=[].concat(G.gp||[],G.ev||[]),rest=[];
   kinds.slice(1).forEach(k=>{if(!(first==='gp'&&k==='ev')&&!(first==='ev'&&k==='gp'))rest.push(...(G[k]||[]))});
   if(first==='pdf'&&G.pdf.length>1)rest.push(...G.pdf.slice(1));
@@ -3034,12 +3035,13 @@ async function dataHandle(files){
   else if(first==='pu')await puHandle(G.pu);
   else if(first==='budget')await b27Handle(G.budget[0]);
   else if(first==='grc')await grcHandle(G.grc[0]);
+  else if(first==='rf'||first==='rs'||first==='star')await nuevosHandle(first,G[first][0]);
   else await gpHandle(gpFiles);
   const note=(rest.length?`<p class="fp">Me has dado más de un tipo de archivo. Termina esta carga y vuelve a subir: ${rest.map(f=>'«'+escapeHTML(f.name)+'» ('+DATA_KN[ks[files.indexOf(f)]]+')').join(', ')}.</p>`:'')+(bad.length?`<p class="fp">No he reconocido: ${bad.map(escapeHTML).join(', ')}.</p>`:'');
   if(note){const b=$f('flashBody');if(b)b.insertAdjacentHTML('beforeend',note)}
 }
 Object.assign(window,{dataOpen,dataHandle});
-window.__GX={gxRead,gxSheetNames,$f,flashClose,hotDraftSave,hRender,hotelPublish,ghConfigured,toast,escapeHTML,fmtNum,HOT,HST,PUB,fzRun,PU_I};
+window.__GX={flashReadPdf,HOT_EDIT,gxRead,gxSheetNames,$f,flashClose,hotDraftSave,hRender,hotelPublish,ghConfigured,toast,escapeHTML,fmtNum,HOT,HST,PUB,fzRun,PU_I};
 function hRender(){const v=document.body.dataset.view;if(v==='hotel')renderHotel();else if(v==='rooms')renderRooms();else if(v==='otb')renderOtb();else if(v==='wx')renderWx();else if(v==='pu')renderPu();else if(v==='fz')renderFz()}
 // ---------------- áreas ----------------
 function setArea(a,go){

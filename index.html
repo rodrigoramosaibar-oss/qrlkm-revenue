@@ -1354,7 +1354,7 @@ let cardBlob=null;
 function openCard(){
   document.body.classList.remove('navopen');
   const hc=(typeof hotelCardSVG==='function')?hotelCardSVG():null;
-  const svg=hc?hc.svg:buildCardSVG(),img=new Image();
+  const svg=waFin(hc?hc.svg:buildCardSVG()),img=new Image();
   img.onload=()=>{
     const c=document.createElement('canvas');c.width=1080;c.height=1350;
     const g=c.getContext('2d');g.drawImage(img,0,0);
@@ -3052,6 +3052,7 @@ function setArea(a,go){
 // ======================= v59 · tarjetas WhatsApp: Hotel, Rooms y F&B con vs Budget y vs Forecast =======================
 const HPAL={exec:{bg:'#F3F2EE',pn:'#FFFFFF',ink:'#161616',mut:'#6F6E68',acc:'#F4C20D',hdr:'#141414',hi:'#F4C20D',pos:'#1E8A4C',neg:'#C23B4F',ln:'#E4E2DB'},
   bento:{bg:'#EDEAE2',pn:'#FFFFFF',ink:'#1B1B1B',mut:'#77756C',acc:'#F4C20D',hdr:'#1B1B1B',hi:'#F4C20D',pos:'#1E8A4C',neg:'#C23B4F',ln:'#DDD9CE'}};
+HPAL.exec=HPAL.bento={bg:'#F4F0E4',pn:'url(#gl)',ink:'#17150F',mut:'#6B6759',acc:'#F4C20D',hdr:'#1B1A14',hi:'#F4C20D',pos:'#1E8A4C',neg:'#C23B4F',ln:'#E4E2DB'};
 const xe=s=>String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
 function hPer(cmp){const o=HST.cmp;HST.cmp=cmp;try{return hPeriod()}finally{HST.cmp=o}}
 const cv=(x,y)=>Math.abs(y||0)<0.5?null:x/y-1;
@@ -3059,15 +3060,24 @@ const cvs=(v,d=1)=>v==null||!isFinite(v)?'—':(v>0.00005?'+':v<-0.00005?'−':'
 const cpp=(a,b)=>b==null||!isFinite(b)?null:(a-b);
 const cpps=v=>v==null?'—':(v>0.00005?'+':v<-0.00005?'−':'')+hn(Math.abs(v)*100,1)+' pp';
 function waBase(c,F,sub,label){
-  const t=(x,y,s,sz,w,f,an)=>`<text x="${x}" y="${y}" font-family="${F}" font-size="${sz}" font-weight="${w}" fill="${f}" ${an?`text-anchor="${an}"`:''}>${s}</text>`;
-  let o=`<rect width="1080" height="1350" fill="${c.bg}"/><rect width="1080" height="190" fill="${c.hdr}"/><rect x="0" y="186" width="1080" height="6" fill="${c.hi}"/>`;
-  o+=t(60,84,'KIMPTON LOS MONTEROS · '+sub,26,700,c.hi).replace('font-size="26"','font-size="26" letter-spacing="4"');
-  o+=t(60,146,xe(label),50,800,'#fff');
+  const t=(x,y,s,sz,w,f,an)=>`<text x="${x}" y="${y}" font-family="${F}" font-size="${sz}" font-weight="${w>=800?700:w}" fill="${f}" ${an?`text-anchor="${an}"`:''}>${s}</text>`;
+  const rg=(id,cx,cy,r,col,a)=>`<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${cx}" cy="${cy}" r="${r}"><stop offset="0" stop-color="${col}" stop-opacity="${a}"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></radialGradient>`;
+  const lg=(id,a,b,oa,ob)=>`<linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}" stop-opacity="${oa}"/><stop offset="1" stop-color="${b}" stop-opacity="${ob}"/></linearGradient>`;
+  const sh=(id,col,al,dy,sd)=>`<filter id="${id}" x="-12%" y="-12%" width="124%" height="140%"><feDropShadow dx="0" dy="${dy}" stdDeviation="${sd}" flood-color="${col}" flood-opacity="${al}"/></filter>`;
+  let o=`<defs>${rg('bY',1010,-40,760,'#F4C20D',.42)}${rg('bP',40,1180,620,'#F6B88C',.44)}${rg('bS',560,640,700,'#C4DEC8',.48)}${rg('hg',930,40,280,'#F4C20D',.34)}${lg('gl','#FFFFFF','#FFFFFF',.78,.36)}${lg('gy','#F7CB2B','#EDB90B',.98,.88)}${lg('gd','#1B1A14','#2E2A1C',.96,.90)}${sh('sh','#5A460A',.11,14,16)}${sh('shd','#282208',.30,20,22)}<clipPath id="hc"><rect x="36" y="36" width="1008" height="168" rx="34"/></clipPath></defs>`;
+  o+=`<rect width="1080" height="1350" fill="#F4F0E4"/><rect width="1080" height="1350" fill="url(#bY)"/><rect width="1080" height="1350" fill="url(#bP)"/><rect width="1080" height="1350" fill="url(#bS)"/>`;
+  o+=`<rect x="36" y="36" width="1008" height="168" rx="34" fill="url(#gd)" stroke="rgba(255,255,255,.16)" stroke-width="1.5" filter="url(#shd)"/><g clip-path="url(#hc)"><circle cx="930" cy="40" r="280" fill="url(#hg)"/></g>`;
+  o+=`<rect x="48" y="236" width="984" height="216" rx="26" fill="url(#gl)"/>`;
+  o+=t(72,96,'KIMPTON LOS MONTEROS · '+sub,24,700,c.hi).replace('font-size="24"','font-size="24" letter-spacing="4"');
+  o+=`<text x="72" y="162" font-family="Georgia,'Iowan Old Style','Palatino Linotype',serif" font-size="54" font-weight="500" fill="#fff">${xe(label)}</text>`;
   return{o,t};
+}
+function waFin(svg){ // cristal: borde claro + sombra suave en los paneles, y el recuadro amarillo con degradado
+  return svg.replace(/(<rect [^>]*?)fill="url\(#gl\)"/g,'$1fill="url(#gl)" stroke="rgba(255,255,255,.85)" stroke-width="1.5" filter="url(#sh)"').replace(/(<rect [^>]*rx="26"[^>]*?)fill="#F4C20D"/g,'$1fill="url(#gy)" stroke="rgba(255,255,255,.55)" stroke-width="1.5" filter="url(#sh)"');
 }
 function waChip(t,c,x,y,lab,txt,v,tone){const col=v==null||!isFinite(v)?c.mut:(tone||v)>=0?c.pos:c.neg;return t(x,y,lab,20,700,c.mut)+t(x,y+38,txt,34,800,col)}
 function hWaCard(kind){
-  const P=hPeriod(),a=P.a,K=kpis(a),F="Inter,Segoe UI,Helvetica,Arial,sans-serif",c=HPAL[LAYOUT]||HPAL.exec,rx=LAYOUT==='bento'?24:10;
+  const P=hPeriod(),a=P.a,K=kpis(a),F="'Segoe UI',Inter,system-ui,Arial,sans-serif",c=HPAL[LAYOUT]||HPAL.exec,rx=26;
   const Pb=HOT.ref&&HOT.ref.budget26?hPer('budget26'):null,Pf=HOT.ref&&HOT.ref.forecast26?hPer('forecast26'):null;
   const rb=Pb&&Pb.r,rf=Pf&&Pf.r,Kb=rb?kpis(rb):null,Kf=rf?kpis(rf):null;
   const {o:o0,t}=waBase(c,F,kind==='rooms'?'ROOMS':'HOTEL',P.label);let o=o0;
@@ -3085,6 +3095,7 @@ function hWaCard(kind){
     o+=t(60,908,'KPI · vs a la fecha ('+mt+') · a la derecha, objetivo de '+(P.ytd?'periodo':'mes')+' completo',18,600,c.mut);
     [['OCC',hp(K.occ),Kb&&cpp(K.occ,Kb.occ),Kf&&cpp(K.occ,Kf.occ),1,Kbf&&hp(Kbf.occ),Kff&&hp(Kff.occ)],['ADR',hn(K.adr,0)+' €',Kb&&cv(K.adr,Kb.adr),Kf&&cv(K.adr,Kf.adr),0,Kbf&&hn(Kbf.adr,0)+' €',Kff&&hn(Kff.adr,0)+' €'],['RevPAR',hn(K.revpar,0)+' €',Kb&&cv(K.revpar,Kb.revpar),Kf&&cv(K.revpar,Kf.revpar),0,Kbf&&hn(Kbf.revpar,0)+' €',Kff&&hn(Kff.revpar,0)+' €']].forEach((k,i)=>{const x=48+i*332,col=v=>v==null?c.mut:v>=0?c.pos:c.neg,fm=k[4]?cpps:cvs;
       o+=`<rect x="${x}" y="920" width="320" height="196" rx="${rx}" fill="${c.pn}"/>`+t(x+24,962,k[0],22,700,c.mut)+t(x+24,1024,k[1],50,800,c.ink)+t(x+24,1068,'BUD '+fm(k[2]),26,700,col(k[2]))+t(x+24,1100,'FC '+fm(k[3]),26,700,col(k[3]))+t(x+306,1068,'mes '+(k[5]||'—'),20,600,c.mut,'end')+t(x+306,1100,'mes '+(k[6]||'—'),20,600,c.mut,'end')});
+    o+=`<rect x="48" y="1130" width="984" height="154" rx="26" fill="${c.pn}"/>`;
     const pr=hProjection(P);
     if(pr){const vb=Pb?cv(pr.tot,Pb.full.tot):null,vf=Pf?cv(pr.tot,Pf.full.tot):null;
       o+=t(60,1166,'Cierre estimado del mes: '+hn(pr.tot)+' €',32,800,c.ink)+t(60,1204,'vs budget mes '+cvs(vb)+' · vs forecast mes '+cvs(vf),26,700,(vb==null?vf:vb)>=0?c.pos:c.neg)}
@@ -3113,7 +3124,7 @@ function fbWaCard(){ // la tarjeta compara siempre contra Budget Y contra Foreca
   try{return fbWaCardInner()}finally{DATA.activeScenario=a0;DATA.compareScenario=c0}
 }
 function fbWaCardInner(){
-  const s=calcState(),isYTD=(DATA.dashboardMode||'month')==='ytd',F="Inter,Segoe UI,Helvetica,Arial,sans-serif",c=HPAL[LAYOUT]||HPAL.exec,rx=LAYOUT==='bento'?24:10;
+  const s=calcState(),isYTD=(DATA.dashboardMode||'month')==='ytd',F="'Segoe UI',Inter,system-ui,Arial,sans-serif",c=HPAL[LAYOUT]||HPAL.exec,rx=26;
   const label=isYTD?'Acumulado '+DATA.config.year:monthName()+' '+DATA.config.year+(s.lastDay&&s.lastDay<s.monthDays?' · hasta el '+s.lastDay:'');
   const {o:o0,t}=waBase(c,F,'F&amp;B',label);let o=o0;
   const rev=isYTD?s.ytdRevenue:s.revenue,obj=isYTD?s.ytdObjective:s.expectedRevenue,vb=obj?rev/obj-1:null;

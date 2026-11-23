@@ -106,6 +106,6 @@ let tries=0;const iv=setInterval(async()=>{
   let seen='';try{seen=localStorage.getItem('dq_seen')||''}catch(e){}
   const t=new Date().toISOString().slice(0,10);if(seen===t)return;
   try{localStorage.setItem('dq_seen',t)}catch(e){}
-  if(typeof toast==='function')toast('Datos: '+c.ko+' sin cargar y '+c.warn+' por cargar esta semana. Mira «Estado de datos».',9000);
+  if(window.__GX&&window.__GX.toast)window.__GX.toast('Datos: '+c.ko+' sin cargar y '+c.warn+' por cargar esta semana. Mira «Estado de datos».',9000);
 },1000);
 })();

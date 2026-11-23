@@ -3729,6 +3729,7 @@ async function publishData(){
   }catch(e){console.error(e);toast('No se pudo cifrar y publicar: '+e.message)}
 }
 // ======================= v63 · skin Cristal Kimpton =======================
+function dkGreeting(){const n=String((PUB&&PUB.name)||'').trim().split(/\s+/)[0];if(!n)return '';const h=new Date().getHours();return (h>=6&&h<14?'Buenos días':h>=14&&h<21?'Buenas tardes':'Buenas noches')+', '+n}
 const SKIN_KEY='fbSkinV63';
 function applySkin(){let on;try{const v=localStorage.getItem(SKIN_KEY);on=v===null?!!IS_OWNER:v==='1'}catch(e){on=!!IS_OWNER}
   document.body.classList.toggle('skin-glass',on);
@@ -4059,7 +4060,7 @@ function dkView(M){
   const o4=M.mix?`<div class="dCard"><div class="dH">Reparto de ingresos<small>${xe(M.label.split(' · ')[0])}</small></div>${dkDonut(M.mix)}</div>`:`<div class="dCard"><div class="dH">Ocupación diaria<small>línea roja: Budget</small></div><div class="dChart" data-k="occ"></div></div>`;
   const ico=['◎','◆','✦','↗'];
   const ins=M.insights.map((t,i)=>`<li><span class="dIc">${ico[i%4]}</span><div>${t}</div></li>`).join('');
-  return `<div class="dk"><div class="dTop"><div><div class="dEy">Kimpton Los Monteros Marbella · Revenue Control</div><h1>${xe(M.title)}</h1><div class="dSub">${xe(M.label)}</div></div><div class="dRt"><div class="dSeg">${seg}</div><button class="dBtn" onclick="mobShare()">Compartir tarjeta</button></div></div>
+  const GR=dkGreeting();return `<div class="dk"><div class="dTop"><div><div class="dEy">Kimpton Los Monteros Marbella · Revenue Control${GR?' · '+xe(M.title):''}</div><h1>${GR?xe(GR):xe(M.title)}</h1><div class="dSub">${xe(M.label)}</div></div><div class="dRt"><div class="dSeg">${seg}</div><button class="dBtn" onclick="mobShare()">Compartir tarjeta</button></div></div>
   <div class="dKs6">${tiles}</div>
   <div class="dRow r1"><div class="dCard"><div class="dH">${M.cum.kind==='year'?'Año por meses':'Ritmo acumulado del mes'}<div class="dLeg">${legend}</div></div><div class="dChart" data-k="cum"></div></div>
   <div class="dCard"><div class="dH">Por partida<small>barra: real · marca: dónde deberíamos estar</small></div><div class="dParts">${M.parts.map(dkPartRow).join('')}</div></div></div>

@@ -3039,6 +3039,7 @@ async function dataHandle(files){
   if(note){const b=$f('flashBody');if(b)b.insertAdjacentHTML('beforeend',note)}
 }
 Object.assign(window,{dataOpen,dataHandle});
+window.__GX={gxRead,gxSheetNames,$f,flashClose,hotDraftSave,hRender,hotelPublish,ghConfigured,toast,escapeHTML,fmtNum,HOT,HST,PUB};
 function hRender(){const v=document.body.dataset.view;if(v==='hotel')renderHotel();else if(v==='rooms')renderRooms();else if(v==='otb')renderOtb();else if(v==='wx')renderWx();else if(v==='pu')renderPu();else if(v==='fz')renderFz()}
 // ---------------- áreas ----------------
 function setArea(a,go){

@@ -931,7 +931,7 @@ body.skin-glass.pal-kimpton.mode-light:not(.mobHome) .main{padding-bottom:104px}
 <div id="rooms" class="view"></div>
 <div id="otb" class="view"></div>
 <div id="wx" class="view"></div>
-<div id="pu" class="view"></div><div id="fz" class="view"></div><div id="m2" class="view"></div><div id="dq" class="view"></div><script src="motor2.js?v=1"></script><script src="grc.js?v=1"></script><script src="datos.js?v=1"></script>
+<div id="pu" class="view"></div><div id="fz" class="view"></div><div id="m2" class="view"></div><div id="dq" class="view"></div><script src="motor2.js?v=2"></script><script src="grc.js?v=1"></script><script src="datos.js?v=1"></script>
 <div id="entry" class="view" data-edit><div class="entry">
 <section class="formPanel"><h2>Entrada diaria</h2><p class="small" style="margin-bottom:.9rem">Carga el revenue por venue. Puedes sumar importes con +, por ejemplo 120+35,50+18.</p><div class="formGrid" id="dailyForm"></div><div class="totalLine"><span>Total día</span><b id="formTotal">0,00K€</b></div><button class="btn primary wide" onclick="saveDay()">Guardar día y recalcular</button>
 <details class="paste"><summary>Pegar varios días desde Excel</summary><p class="small" style="margin:.4rem 0 .6rem">Una fila por día: <code>Día, Venue1, Venue2, ...</code> separados por tabulador o punto y coma, en el orden de las columnas de la tabla.</p><textarea id="pasteArea" placeholder="1&#9;2649,55&#9;651,13&#9;949,98"></textarea><button class="btn primary wide" style="margin-top:.6rem" onclick="importPaste()">Importar filas pegadas</button><div class="small" id="pasteResult" style="margin-top:.5rem"></div></details>
@@ -3039,7 +3039,7 @@ async function dataHandle(files){
   if(note){const b=$f('flashBody');if(b)b.insertAdjacentHTML('beforeend',note)}
 }
 Object.assign(window,{dataOpen,dataHandle});
-window.__GX={gxRead,gxSheetNames,$f,flashClose,hotDraftSave,hRender,hotelPublish,ghConfigured,toast,escapeHTML,fmtNum,HOT,HST,PUB};
+window.__GX={gxRead,gxSheetNames,$f,flashClose,hotDraftSave,hRender,hotelPublish,ghConfigured,toast,escapeHTML,fmtNum,HOT,HST,PUB,fzRun,PU_I};
 function hRender(){const v=document.body.dataset.view;if(v==='hotel')renderHotel();else if(v==='rooms')renderRooms();else if(v==='otb')renderOtb();else if(v==='wx')renderWx();else if(v==='pu')renderPu();else if(v==='fz')renderFz()}
 // ---------------- áreas ----------------
 function setArea(a,go){

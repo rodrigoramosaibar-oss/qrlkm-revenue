@@ -155,7 +155,7 @@ function html(){
   if(!C.full&&cur){log[ld]={m:Y+'-'+String(Mo).padStart(2,'0'),v2:Math.round(cur.close),lin:Math.round(lin||0)};try{localStorage.setItem('m2log',JSON.stringify(log))}catch(e){}}
   const th='style="text-align:right;padding:.3rem .6rem;font-size:.7rem;color:var(--muted);font-weight:700;border-bottom:1px solid var(--line)"',tdl='style="padding:.3rem .6rem;border-bottom:1px solid var(--line)"',tdr='style="text-align:right;padding:.3rem .6rem;border-bottom:1px solid var(--line)"';
   const card=(t,b)=>`<section style="background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:1rem 1.2rem;margin:0 0 1rem"><h3 style="margin:0 0 .6rem;font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)">${t}</h3>${b}</section>`;
-  let h=`<div class="hwrap" style="padding:1.4rem 1.6rem;max-width:1100px"><div class="eyebrow">MOTOR V2 · VISTA DE PRUEBA</div><h2 style="margin:.2rem 0 .3rem">Previsión diaria no lineal · rooms + F&B sin banquetes</h2><p class="hnote" style="color:var(--muted);margin:0 0 1rem">Histórico diario hasta el <b>${ld.slice(8)}/${ld.slice(5,7)}/${Y}</b> (${Object.keys(D).length} días desde feb-2025; GL hasta ${st.lr.slice(8)}/${st.lr.slice(5,7)}${st.live?' + '+st.live+' días del flash de la app, calibrados ×'+st.k.toFixed(3):''}). No sustituye a «Cierre del mes · motor»: convive para comparar. Cada día que abras esta vista se guarda la previsión para medirla cuando cierre el mes.</p>`;
+  let h=`<div class="hwrap" style="padding:1.4rem 1.6rem;max-width:1100px"><div class="eyebrow">MOTOR V2 · VISTA DE PRUEBA</div><h2 style="margin:.2rem 0 .3rem">Previsión diaria no lineal · rooms + F&B, con banquetes aparte</h2><p class="hnote" style="color:var(--muted);margin:0 0 1rem">Histórico diario hasta el <b>${ld.slice(8)}/${ld.slice(5,7)}/${Y}</b> (${Object.keys(D).length} días desde feb-2025; GL hasta ${st.lr.slice(8)}/${st.lr.slice(5,7)}${st.live?' + '+st.live+' días del flash de la app, calibrados ×'+st.k.toFixed(3):''}). No sustituye a «Cierre del mes · motor»: convive para comparar. Cada día que abras esta vista se guarda la previsión para medirla cuando cierre el mes.</p>`;
   // 1 mes en curso
   if(!C.full&&cur){
     const b=band(cur.close,stc),hits=cur.daily.length;
@@ -169,6 +169,37 @@ function html(){
   // 2 próximos meses
   const fut=[];let yy=C.cm[0],mm=C.cm[1];for(let i=0;i<4;i++){const p=M.predictMonth(D,yy,mm,0);if(p){const s=statFor(sum,7),b=band(p.close,s);fut.push(`<tr><td ${tdl}>${MN[mm-1]} ${yy}</td><td ${tdr}><b>${eur(p.close)}</b></td><td ${tdr}>${b?eur(b[0])+' – '+eur(b[1]):'—'}</td><td ${tdr}>${eur(p.Lly)}/día</td><td ${tdr}>×${p.g.toFixed(2)}</td></tr>`)}if(++mm>12){mm=1;yy++}}
   h+=card('Próximos meses (sin datos del mes: año anterior × crecimiento reciente × calendario)',`<table style="border-collapse:collapse;width:100%"><tr><th ${th} style="text-align:left">Mes</th><th ${th}>Total previsto</th><th ${th}>Rango amplio</th><th ${th}>Nivel diario</th><th ${th}>Crecimiento</th></tr>${fut.join('')}</table><p class="hnote" style="color:var(--muted);font-size:.74rem;margin:.5rem 0 0">Ojo: son meses sin reservas en libros (OTB/PickUp) ni eventos. Sirven de referencia estructural, no de compromiso. 2027: festivos locales de Marbella aún sin publicar.</p>`);
+  // 2b banquetes (modelo de la app: Group Pace x factor real/GP + eventos) y total hotel
+  (function(){
+    const GX=window.__GX;let run=null,err=null;
+    try{run=GX&&GX.fzRun?GX.fzRun():null}catch(e){err=e.message}
+    if(!run||!run.res||!run.res.length){h+=card('Banquetes · total hotel',`<p class="hnote" style="color:var(--muted);margin:0">${err?'No se pudo leer el modelo de banquetes de la app: '+esc(err):'Sin conexión con el modelo de banquetes de la app (carga Group Pace y eventos, o recarga la app).'}</p>`);return}
+    const rowsB=[];
+    run.res.forEach(r=>{
+      const k=Object.keys(r.ven).find(v=>/banquet/i.test(v)),b=k?r.ven[k]:null;
+      const isCur=!C.full&&r.Y===Y&&r.M===Mo;
+      const p=isCur?cur:M.predictMonth(D,r.Y,r.M,0);
+      if(!p)return;
+      const E=b&&b.ev;
+      rowsB.push(`<tr><td ${tdl}>${MN[r.M-1]} ${r.Y}</td><td ${tdr}>${eur(p.close)}</td><td ${tdr}>${b?'<b>'+eur(b.val)+'</b>':'—'}</td><td ${tdr}>${E?eur(E.firm):'—'}</td><td ${tdr}>${E?eur(E.exp):'—'}</td><td ${tdr}>${b&&b.cut>0?'−'+eur(b.cut):'—'}</td><td ${tdr}><b>${eur(p.close+(b?b.val:0))}</b></td></tr>`);
+    });
+    h+=card('Banquetes y total hotel · usa el modelo de Group Pace y eventos de la app',`<table style="border-collapse:collapse;width:100%"><tr><th ${th} style="text-align:left">Mes</th><th ${th}>Rooms + F&B (v2)</th><th ${th}>Banquetes (forecast app)</th><th ${th}>De ello firme (GP + Definite)</th><th ${th}>Esperado (con Tentative/Prospect ponderados)</th><th ${th}>Recorte por pocas hab. de grupo</th><th ${th}>Total hotel</th></tr>${rowsB.join('')}</table>
+    <p class="hnote" style="color:var(--muted);font-size:.74rem;margin:.5rem 0 0">Los banquetes no se vuelven a modelar aquí: se toma el forecast de la app (lo firmado en Group Pace calibrado contra lo realmente facturado + eventos del calendario valorados por €/pax y estado). El total suma ambos bloques, porque el histórico del motor v2 excluye banquetes. Si el calendario de eventos está caducado, los meses lejanos infravaloran banquetes.</p>`);
+  })();
+  // 2c pipeline de grupos en Prospect (GRC de Opera). Informativo: NO se suma al total.
+  (function(){
+    const GX=window.__GX,HOTx=GX&&GX.HOT,G=HOTx&&HOTx.grc;
+    if(!G||!G.groups||!G.groups.length)return;
+    const PR=.2; // mismo a priori que usa la app para Prospect de eventos (EV_PRIOR.P); PROVISIONAL hasta medir conversión con las instantáneas
+    const bm={};G.groups.forEach(x=>{const o=bm[x.m]||(bm[x.m]={D:0,T:0,P:0,rvP:0,nP:0});o[x.s]+=x.rn;if(x.s==='P'){o.rvP+=x.rev;o.nP++}});
+    const pu=HOTx.pu&&HOTx.pu.years;
+    const ms=Object.keys(bm).sort();
+    const rowsG=ms.map(m=>{const o=bm[m],Yy=+m.slice(0,4),Mm=+m.slice(5,7);let lib='—';
+      const PUy=pu&&pu[Yy];if(PUy&&PUy.d){let g=0,any=false;Object.keys(PUy.d).forEach(k=>{if(+k.slice(5,7)===Mm){any=true;g+=PUy.d[k][GX.PU_I?GX.PU_I.rnG:0]||0}});if(any&&GX.PU_I)lib=g.toLocaleString('es-ES')}
+      return`<tr><td ${tdl}>${MN[Mm-1]} ${Yy}</td><td ${tdr}>${lib}</td><td ${tdr}>${o.P.toLocaleString('es-ES')}</td><td ${tdr}>${o.nP}</td><td ${tdr}>${Math.round(o.P*PR).toLocaleString('es-ES')}</td><td ${tdr}>${eur(o.rvP*PR)}</td></tr>`});
+    h+=card('Pipeline de grupos en Prospect · GRC de Opera del '+G.asof.slice(8)+'/'+G.asof.slice(5,7)+' (informativo, no suma al total)',`<table style="border-collapse:collapse;width:100%"><tr><th ${th} style="text-align:left">Mes</th><th ${th}>Hab-noche de grupo en libros (PickUp)</th><th ${th}>Prospect bruto (noches)</th><th ${th}>Nº grupos Prospect</th><th ${th}>Prospect ponderado ×${PR.toFixed(2)} (noches)</th><th ${th}>Revenue habitaciones ponderado</th></tr>${rowsG.join('')}</table>
+    <p class="hnote" style="color:var(--muted);font-size:.74rem;margin:.5rem 0 0"><b>Provisional:</b> el ${(PR*100).toFixed(0)} % de conversión Prospect→Definite es el supuesto a priori de la app, no un dato medido. Definite y Tentative del GRC se ignoran a propósito (el GRC es bruto y se queda desfasado cuando el grupo pasa a Opera; para eso está el PickUp). No se suma al forecast de habitaciones porque el nivel del año anterior ya incluye grupos y se contaría dos veces; se mide primero con las instantáneas semanales.</p>`);
+  })();
   // 3 backtest
   h+=card('Backtest: ¿acierta más que el lineal? ('+rows.length/3+' meses cerrados, solo con datos anteriores)',`<table style="border-collapse:collapse;width:100%"><tr><th ${th} style="text-align:left">Con datos hasta el día</th><th ${th}>Error medio lineal</th><th ${th}>Error medio v2</th><th ${th}>Sesgo v2</th><th ${th}>Rango error v2 (p10 / p90)</th></tr>${sum.map(s=>`<tr><td ${tdl}>${s.cut}</td><td ${tdr}>${pa(s.maeLin)}</td><td ${tdr}><b>${pa(s.maeV2)}</b></td><td ${tdr}>${pc(s.biasV2)}</td><td ${tdr}>${pc(s.p10)} / ${pc(s.p90)}</td></tr>`).join('')}</table>`);
   const c14=rows.filter(r=>r.cut===14);
@@ -180,7 +211,7 @@ function html(){
   // 5 log
   const lk=Object.keys(log).sort().slice(-10).reverse();
   if(lk.length)h+=card('Registro de previsiones (se guarda cada día que abres la vista)',`<table style="border-collapse:collapse;width:100%"><tr><th ${th} style="text-align:left">Fecha</th><th ${th}>Mes</th><th ${th}>Cierre v2</th><th ${th}>Cierre lineal</th></tr>${lk.map(k=>`<tr><td ${tdl}>${k}</td><td ${tdr}>${log[k].m}</td><td ${tdr}>${eur(log[k].v2)}</td><td ${tdr}>${eur(log[k].lin)}</td></tr>`).join('')}</table>`);
-  h+=`<p class="hnote" style="color:var(--muted);font-size:.74rem">Limitaciones de la fase 1: sin banquetes (modelo aparte con Group Pace), sin OTB/PickUp, sin meteo ni eventos, calendario escolar por mercados y shocks (p. ej. AVE Madrid–Málaga) pendientes. La mejora sobre el lineal es real a principio de mes, pero con ~10–16 % de error a mitad de mes todavía no vale para decidir plantilla o compras por sí sola.</p></div>`;
+  h+=`<p class="hnote" style="color:var(--muted);font-size:.74rem">Limitaciones: rooms+F&B sin OTB/PickUp aún (los banquetes ya vienen del modelo de la app), sin meteo ni eventos, calendario escolar por mercados y shocks (p. ej. AVE Madrid–Málaga) pendientes. La mejora sobre el lineal es real a principio de mes, pero con ~10–16 % de error a mitad de mes todavía no vale para decidir plantilla o compras por sí sola.</p></div>`;
   return h;
 }
 window.Motor2UI={render:async function(){

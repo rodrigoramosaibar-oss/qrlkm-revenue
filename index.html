@@ -2992,13 +2992,25 @@ function gpParse(sh){
   const t=k=>Object.values(G.m).reduce((s,m)=>s+m.rows.reduce((a,l)=>a+l[k],0),0);G.chk={rn:Math.round(t(1)),bq:Math.round(t(3)),mt:Math.round(t(4)),lines:Object.values(G.m).reduce((s,m)=>s+m.rows.length,0)};
   return G;
 }
+function evDate(v,mixed){ // fecha del calendario: serial de Excel o texto dd/mm/aaaa. Si la columna mezcla texto y fechas, las fechas de Excel con día<=12 vienen con día y mes cambiados (Excel las leyó como mm/dd)
+  if(typeof v==='number'){const d=new Date(Math.round((v-25569)*864e5));const y=d.getUTCFullYear(),m=d.getUTCMonth()+1,dy=d.getUTCDate();
+    if(mixed&&dy<=12&&dy!==m)return{iso:y+'-'+String(dy).padStart(2,'0')+'-'+String(m).padStart(2,'0'),fix:1};
+    return{iso:y+'-'+String(m).padStart(2,'0')+'-'+String(dy).padStart(2,'0'),fix:0}}
+  const t=/^\s*(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})\s*$/.exec(String(v==null?'':v));
+  if(!t)return null;const y=+t[3]<100?2000+ +t[3]:+t[3];return{iso:y+'-'+String(+t[2]).padStart(2,'0')+'-'+String(+t[1]).padStart(2,'0'),fix:0};
+}
 function evParse(sh){
   const nm=Object.keys(sh)[0],s=sh[nm];if(!s||!/Booking: Local Account/i.test(String((s[1]||{})[1]||'')))throw new Error('No reconozco el calendario de eventos (cabecera «Booking: Local Account Name»).');
-  const rows=[],bad={};
-  Object.keys(s).map(Number).sort((a,b)=>a-b).forEach(r=>{if(r<2)return;const x=s[r],d=gxIso(x[3]);if(!d||!x[1])return;const st=EV_ST[String(x[11]||'').trim()];if(!st){bad[x[11]]=(bad[x[11]]||0)+1;return}
-    const p=typeof x[8]==='number'?x[8]:0;rows.push([String(x[1]).trim(),String(x[2]||'').trim(),d,String(x[6]||'').trim(),p,st,String(x[9]||'').trim()])});
-  if(!rows.length)throw new Error('El calendario no tiene eventos con fecha y estado.');
-  const ds=rows.map(r=>r[2]).sort();return{from:ds[0],to:ds[ds.length-1],rows,bad,chk:{n:rows.length,D:rows.filter(r=>r[5]==='D').length,T:rows.filter(r=>r[5]==='T').length,P:rows.filter(r=>r[5]==='P').length}};
+  const col={};Object.keys(s[1]||{}).forEach(c=>{col[String(s[1][c]).trim().toLowerCase()]=+c});
+  const C={acc:col['booking: local account name']||1,cls:col['event classification']||2,date:col['event date']||3,room:col['function room']||6,pax:col['agreed']||8,seg:col['booking: market segment']||9,st:col['booking: status']||col['status']||11};
+  const rowsN=Object.keys(s).map(Number).sort((a,b)=>a-b).filter(r=>r>=2);
+  const mixed=rowsN.some(r=>typeof(s[r]||{})[C.date]==='string')&&rowsN.some(r=>typeof(s[r]||{})[C.date]==='number');
+  const rows=[],bad={};let fixed=0,nodate=0;
+  rowsN.forEach(r=>{const x=s[r];if(!x[C.acc])return;const dt=evDate(x[C.date],mixed);if(!dt){nodate++;return}
+    const st=EV_ST[String(x[C.st]||'').trim()];if(!st){bad[x[C.st]]=(bad[x[C.st]]||0)+1;return}
+    fixed+=dt.fix;const p=typeof x[C.pax]==='number'?x[C.pax]:0;rows.push([String(x[C.acc]).trim(),String(x[C.cls]||'').trim(),dt.iso,String(x[C.room]||'').trim(),p,st,String(x[C.seg]||'').trim()])});
+  if(!rows.length)throw new Error('El calendario no tiene eventos con fecha y estado'+(nodate?' ('+nodate+' filas con la fecha ilegible en la columna «Event Date»)':'')+'.');
+  const ds=rows.map(r=>r[2]).sort();return{from:ds[0],to:ds[ds.length-1],rows,bad,chk:{n:rows.length,D:rows.filter(r=>r[5]==='D').length,T:rows.filter(r=>r[5]==='T').length,P:rows.filter(r=>r[5]==='P').length,fix:fixed}};
 }
 // ---- parámetros aprendidos ----
 function evKeyOf(r){return r[0].slice(0,14)+'|'+r[2]+'|'+r[1].slice(0,6)+'|'+r[3].slice(0,8)}
@@ -3049,7 +3061,7 @@ async function gpHandle(files){
       if(!done){try{S.ev=Object.assign(evParse(sh),{src:f.name});done=true}catch(e){S.errs.push(f.name+': '+e.message)}}}
     GP_ST=S;const li=[];
     if(S.gp){const c=S.gp.chk,HG=HOT.ref&&HOT.ref.gp;li.push(`<li class="ok">✓ <b>Group Pace ${S.gp.year}</b> · ${c.lines} líneas de grupo en ${Object.keys(S.gp.m).length} meses · ${fmtNum(c.rn)} hab-noche · banqueting ${fmtNum(c.bq)} € · fecha de control ${S.gp.asof?S.gp.asof.slice(8)+'/'+S.gp.asof.slice(5,7):'—'}${HG?' <i>(sustituye al guardado)</i>':''}</li>`)}
-    if(S.ev){const c=S.ev.chk,bad=Object.keys(S.ev.bad).length;li.push(`<li class="ok">✓ <b>Calendario de eventos</b> ${S.ev.from.slice(8)}/${S.ev.from.slice(5,7)} → ${S.ev.to.slice(8)}/${S.ev.to.slice(5,7)} · ${c.n} eventos: ${c.D} Definite, ${c.T} Tentative, ${c.P} Prospect${bad?' · ignorados con otro estado: '+Object.keys(S.ev.bad).join(', '):''}${HOT.ref&&HOT.ref.ev?' <i>(sustituye al guardado y deja foto para comparar)</i>':''}</li>`)}
+    if(S.ev){const c=S.ev.chk,bad=Object.keys(S.ev.bad).length;li.push(`<li class="ok">✓ <b>Calendario de eventos</b> ${S.ev.from.slice(8)}/${S.ev.from.slice(5,7)} → ${S.ev.to.slice(8)}/${S.ev.to.slice(5,7)} · ${c.n} eventos: ${c.D} Definite, ${c.T} Tentative, ${c.P} Prospect${bad?' · ignorados con otro estado: '+Object.keys(S.ev.bad).join(', '):''}${c.fix?' · <i>'+c.fix+' fechas corregidas (el Excel las traía con día y mes cambiados)</i>':''}${HOT.ref&&HOT.ref.ev?' <i>(sustituye al guardado y deja foto para comparar)</i>':''}</li>`)}
     S.errs.forEach(e=>li.push(`<li class="ko">✗ ${escapeHTML(e)}</li>`));
     const ok=!!(S.gp||S.ev);
     body.innerHTML=`<ul class="fchk">${li.join('')}</ul><div class="fbtns"><button class="fb" onclick="flashClose()">Cancelar</button><button class="fb" ${ok?'':'disabled'} onclick="gpCommit(false)">Guardar</button><button class="fb primary" ${ok?'':'disabled'} onclick="gpCommit(true)">${ghConfigured()?'Guardar y publicar para todos':'Guardar y descargar para publicar'}</button></div>`;

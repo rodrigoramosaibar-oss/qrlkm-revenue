@@ -65,7 +65,7 @@ function sources(){
   out.push({n:'Budget'+(B?' '+B.year:'')+' (Excel)',q:'Referencia presupuestaria por mes',cad:'Una vez al año',last:B?B.upd:null,a:age(B&&B.upd),st:B?'ok':'warn',ll:lastLoad(/^Budget/),hint:B?'':'Sin cargar'});
   // 7 Forecast
   const FC=R.fc26;
-  out.push({n:'Forecast'+(FC&&FC.label?' ('+FC.label+')':'')+' (Excel P&L)',q:'Forecast oficial de IHG por mes: Rooms, F&B y venues; única referencia de forecast en la app',cad:'Mensual (cada vez que Revenue lo actualice)',last:FC?FC.upd:null,a:age(FC&&FC.upd),st:FC?'ok':'warn',ll:lastLoad(/^Forecast/),hint:FC?'':'Sin cargar'});
+  out.push({n:'Forecast'+(FC&&FC.label?' ('+FC.label+')':'')+' (Excel P&L)',q:'Forecast oficial de IHG por mes: Rooms, F&B y venues; única referencia de forecast en la app',cad:'Mensual (cada vez que Revenue lo actualice)',last:FC?FC.upd:null,a:age(FC&&FC.upd),st:FC?'ok':'warn',ll:lastLoad(/^Forecast/),hint:FC?('Meses: '+Object.keys(FC.months||{}).map(Number).sort((a,b)=>a-b).map(m=>MN[m-1].slice(0,3)).join(', ')):'Sin cargar'});
   return out;
 }
 function glRow(){
@@ -80,6 +80,52 @@ function glRow(){
     else{st='warn';hint='Toca cargar el cierre de '+MN[prev.getMonth()]+' cuando Contabilidad lo publique (hacia el día 10)'}
   }
   return{n:'Histórico GL INCOME + Micros',q:'Cierre mensual contable y ventas diarias por venue (alimenta el motor v2)',cad:'Mensual (hacia el día 10)',last:upd,a,st,ll:null,hint,manual:true};
+}
+
+// ---- Control de cifras: coherencia entre fuentes (no solo frescura) ----
+// crit = bloquea «Publicar para todos»; warn = solo avisa
+function audit(){
+  const out=[],h=H(),R=h&&h.ref,F=R&&R.fc26,add=(lv,t,d,ok)=>out.push({lv,t,d,ok});
+  if(!h)return out;
+  const f0=m=>F&&F.months&&F.months[m]&&F.months[m].f;
+  const ms=F?Object.keys(F.months||{}).map(Number).sort((a,b)=>a-b):[];
+  if(!F){add('warn','Forecast único','No hay Excel de forecast cargado: se usa la referencia anterior.',false);return out}
+  add('warn','Forecast único',"Fuente: Excel P&L '"+esc(F.label||'')+"' · meses "+ms.map(m=>MN[m-1].slice(0,3)).join(', '),true);
+  // 1 coherencia interna del Excel
+  const bad=(F.chk&&F.chk.fbv||[]).filter(x=>!x.ok);
+  add('crit','F&B del forecast = suma de venues',bad.length?'No cuadra en '+bad.map(x=>MN[x.m-1]+' ('+Math.round(x.fb)+' vs '+Math.round(x.sv)+')').join(', '):'Cuadra en todos los meses del archivo',!bad.length);
+  if(F.chk&&F.chk.tp!=null)add('warn','Suma de meses = Total Period',F.chk.tp?'Cuadra':'La suma de los meses no coincide con el bloque Total Period',!!F.chk.tp);
+  // 2 el forecast que usa el hotel es el del Excel
+  const fa=R.forecast26,dif=[];
+  if(fa)ms.forEach(m=>{const f=f0(m),i=m-1;if(!f||!fa.rooms)return;
+    [['rooms','rev'],['fb','fb'],['total','tot']].forEach(([a,b])=>{if(fa[a]&&f[b]!=null&&Math.abs((fa[a][i]||0)-f[b])>=2)dif.push(MN[m-1].slice(0,3)+' '+a)})});
+  add('crit','Hotel usa el forecast del Excel',dif.length?'Difieren: '+dif.join(', '):'Habitaciones, F&B y total coinciden con el archivo',!dif.length);
+  let lab='';try{lab=HCMP.forecast26}catch(e){}
+  if(lab)add('warn','Etiqueta del forecast',lab.indexOf(F.label||'~')>=0?'Coincide: '+esc(lab):'Dice «'+esc(lab)+"» y el archivo es '"+esc(F.label||'')+"'",lab.indexOf(F.label||'~')>=0);
+  // 3 Budget distinto de Forecast
+  const bu=R.budget26,same=[];
+  if(bu&&bu.total&&fa&&fa.total)ms.forEach(m=>{const i=m-1;if(Math.abs((bu.total[i]||0)-(fa.total[i]||0))<1&&(bu.total[i]||0)>0)same.push(MN[m-1].slice(0,3))});
+  add('warn','Budget ≠ Forecast',same.length?'Idénticos en '+same.join(', ')+': revisa que el Budget no se haya pisado':'Son cifras distintas en todos los meses',!same.length);
+  // 4 Minibar fuera de F&B y venues vs forecast del mes
+  try{
+    const vs=getVenues(),mini=vs.filter(v=>/mini\s*-?\s*bar/i.test(v));
+    add('warn','Minibar fuera de F&B',mini.length?'Aparece como venue: '+esc(mini.join(', ')):'No está entre los venues de F&B',!mini.length);
+    const M=Number(DATA.config.month),f=f0(M);
+    if(f&&DATA.config.year===2026){const o=monthObjectives(M);let sum=0,sc='';
+      vs.forEach(v=>{const x=o[v]||{};const k=Object.keys(x).find(n=>/^Forecast/i.test(n));if(k){sum+=Number(x[k])||0;sc=k}});
+      const d=Math.round(sum-f.fb);
+      add('warn','F&B por venues = F&B del hotel ('+MN[M-1]+')',Math.abs(d)<2?'Suma '+Math.round(sum).toLocaleString('es-ES')+' € = forecast hotel':'Venues suman '+Math.round(sum).toLocaleString('es-ES')+' € frente a '+Math.round(f.fb).toLocaleString('es-ES')+' € del hotel ('+(d>0?'+':'')+d.toLocaleString('es-ES')+' €). Comprueba venues sin mapear',Math.abs(d)<2)}
+  }catch(e){add('warn','Venues de F&B','No se pudo comprobar: '+esc(e.message),false)}
+  return out;
+}
+function auditHtml(){
+  let A=[];try{A=audit()}catch(e){A=[{lv:'warn',t:'Control de cifras',d:'Error al calcular: '+esc(e.message),ok:false}]}
+  if(!A.length)return'';
+  const ko=A.filter(a=>!a.ok),crit=ko.filter(a=>a.lv==='crit').length;
+  const col=a=>a.ok?ST.ok[1]:a.lv==='crit'?ST.ko[1]:ST.warn[1];
+  const head=!ko.length?`<b style="color:${ST.ok[1]}">Las cifras cuadran.</b>`:`<b style="color:${crit?ST.ko[1]:ST.warn[1]}">${ko.length} comprobación(es) con diferencias${crit?' · '+crit+' bloquea(n) la publicación':''}</b>`;
+  const rows=A.map(a=>`<tr><td style="padding:.35rem .6rem;border-bottom:1px solid var(--line);font-size:.82rem;white-space:nowrap"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${col(a)};margin-right:.5rem"></span><b>${esc(a.t)}</b>${a.lv==='crit'?' <span style="color:var(--muted);font-size:.68rem">(crítica)</span>':''}</td><td style="padding:.35rem .6rem;border-bottom:1px solid var(--line);font-size:.8rem;color:${a.ok?'var(--muted)':col(a)}">${a.d}</td></tr>`).join('');
+  return`<section style="background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:1rem 1.2rem;margin:0 0 1rem"><h3 style="margin:0 0 .5rem;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Control de cifras</h3><div style="margin:0 0 .6rem;font-size:.92rem">${head}</div><table style="border-collapse:collapse;width:100%">${rows}</table><p class="hnote" style="color:var(--muted);font-size:.72rem;margin:.6rem 0 0">Verde: cuadra. Ámbar: aviso. Rojo (crítica): no deja usar «Publicar para todos» hasta corregirlo.</p></section>`;
 }
 const PENDING=[
   ['Reservas de Navidad y Nochevieja (Excel compartido)','Existe, pero la app aún no tiene cargador: hoy no alimenta la previsión de diciembre.'],
@@ -103,7 +149,7 @@ async function html(){
   return`<div class="hwrap" style="padding:1.4rem 1.6rem;max-width:1100px"><div class="eyebrow">DATOS · REVISIÓN SEMANAL</div>
   <h2 style="margin:.2rem 0 .3rem">Estado de datos</h2>
   <p class="hnote" style="margin:0 0 1rem;color:var(--muted)">Qué hay cargado en la app, de cuándo es y qué falta. Revísalo cada lunes: el motor de previsión es tan bueno como el último archivo que le das.</p>
-  <section style="background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:1rem 1.2rem;margin:0 0 1rem"><div style="margin:0 0 .7rem;font-size:.95rem">${head} <button class="btn primary" style="margin-left:.8rem" onclick="dataOpen()">Cargar datos</button></div>
+  ${auditHtml()}<section style="background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:1rem 1.2rem;margin:0 0 1rem"><div style="margin:0 0 .7rem;font-size:.95rem">${head} <button class="btn primary" style="margin-left:.8rem" onclick="dataOpen()">Cargar datos</button></div>
   <table style="border-collapse:collapse;width:100%"><tr><th ${th}>Fuente</th><th ${th}>Frecuencia</th><th ${th}>Último dato</th><th ${th}>Estado</th></tr>${body}</table></section>
   <section style="background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:1rem 1.2rem"><h3 style="margin:0 0 .5rem;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Fuentes que aún no existen en la app</h3><ul style="margin:0;padding-left:1.1rem;font-size:.82rem">${pend}</ul></section>
   <p class="hnote" style="color:var(--muted);font-size:.74rem;margin:.8rem 0 0">Los umbrales: diario = 1 día (3 con fin de semana); semanal = 7 días (aviso hasta 10). La alerta es dentro de la app: aparece al entrar y en el menú. No envía correos ni notificaciones al móvil.</p></div>`;
@@ -116,7 +162,7 @@ function badge(){
     d.style.background=c.ko?ST.ko[1]:c.warn?ST.warn[1]:ST.ok[1];d.title=c.ko+' faltan · '+c.warn+' por cargar'}
   return c;
 }
-window.DatosUI={sources:sources,render:async function(){const host=document.getElementById('dq');if(!host)return;host.innerHTML='<div class="hwrap" style="padding:1.4rem 1.6rem"><p class="hnote">Revisando…</p></div>';host.innerHTML=await html();badge()}};
+window.DatosUI={sources:sources,audit:audit,render:async function(){const host=document.getElementById('dq');if(!host)return;host.innerHTML='<div class="hwrap" style="padding:1.4rem 1.6rem"><p class="hnote">Revisando…</p></div>';host.innerHTML=await html();badge()}};
 // aviso al entrar: una vez al día, y siempre el lunes si hay algo pendiente
 let tries=0;const iv=setInterval(async()=>{
   tries++;if(tries>90){clearInterval(iv);return}
@@ -127,4 +173,12 @@ let tries=0;const iv=setInterval(async()=>{
   try{localStorage.setItem('dq_seen',t)}catch(e){}
   if(window.__GX&&window.__GX.toast)window.__GX.toast('Datos: '+c.ko+' sin cargar y '+c.warn+' por cargar esta semana. Mira «Estado de datos».',9000);
 },1000);
+
+// bloqueo de «Publicar»: solo con comprobaciones críticas en rojo
+(function(){let n=0;const iv=setInterval(()=>{if(++n>120){clearInterval(iv);return}
+  const o=window.publishData;if(typeof o!=='function')return;clearInterval(iv);if(o.__dq)return;
+  const w=async function(){try{const bad=audit().filter(a=>a.lv==='crit'&&!a.ok);
+    if(bad.length){const m='No se publica: '+bad.map(a=>a.t).join(' · ')+'. Revisa Estado de datos.';if(typeof toast==='function')toast(m);else alert(m);return}}catch(e){}
+    return o.apply(this,arguments)};
+  w.__dq=1;window.publishData=w},500)})();
 })();

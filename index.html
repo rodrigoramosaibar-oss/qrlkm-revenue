@@ -1189,7 +1189,7 @@ function kpiCell(label,val,sub,p,opts={}){
   const col=opts.colored&&p!==undefined?` style="color:${perfColor(p)}"`:'';
   return `<div class="kpi${opts.hero?' hero':''}" style="${st}"><div class="kpiLabel">${label}</div><div class="kpiVal"${col}>${val}</div>${opts.bar||''}<div class="kpiSub">${sub}</div></div>`;
 }
-function renderDashboard(){
+function renderDashboard(){if(window.__navAfter)window.__navAfter();
   const s=calcState(),isYTD=(DATA.dashboardMode||'month')==='ytd';
   DATA.__lastDayCache=s.lastDay;
   const monthD=s.monthDays,ld=s.lastDay;
@@ -3117,8 +3117,8 @@ async function dataHandle(files){
   if(note){const b=$f('flashBody');if(b)b.insertAdjacentHTML('beforeend',note)}
 }
 Object.assign(window,{dataOpen,dataHandle});
-window.__GX={flashReadPdf,HOT_EDIT,gxRead,gxSheetNames,$f,flashClose,hotDraftSave,hRender,hotelPublish,ghConfigured,toast,escapeHTML,fmtNum,HOT,HST,PUB,fzRun,PU_I};
-function hRender(){const v=document.body.dataset.view;if(v==='hotel')renderHotel();else if(v==='rooms')renderRooms();else if(v==='otb')renderOtb();else if(v==='wx')renderWx();else if(v==='pu')renderPu();else if(v==='fz')renderFz()}
+window.__GX={flashReadPdf,HOT_EDIT,gxRead,gxSheetNames,$f,flashClose,hotDraftSave,hRender,hotelPublish,ghConfigured,toast,escapeHTML,fmtNum,HOT,HST,PUB,fzRun,PU_I,hPeriod,hAgg,hRef,mPtd,hdim,hLastInfo,hn,hp,hCard,hCell,calcState,monthObjectives,scenariosForMonth,getVenues,parseValue,months,IS_OWNER,IS_EDITOR,HAS_HOT,computeValidations,showView};
+function hRender(){const v=document.body.dataset.view;if(v==='hotel')renderHotel();else if(v==='rooms')renderRooms();else if(v==='otb')renderOtb();else if(v==='wx')renderWx();else if(v==='pu')renderPu();else if(v==='fz')renderFz();else if(v==='rsv'){if(window.renderRsv)window.renderRsv()}if(window.__navAfter)window.__navAfter()}
 // ---------------- áreas ----------------
 function setArea(a,go){
   if(!HAS_HOT)a='fb';
@@ -3784,6 +3784,7 @@ function showView(id,btn){
   if(id!=='dash'&&tb)$('ctxTitle').textContent=tb.textContent.trim();
   document.body.classList.remove('navopen');
   (RENDERERS[id]||(()=>{}))();
+  if(window.__navAfter)window.__navAfter();
 }
 function setDashMode(mode,btn){DATA.dashboardMode=mode||'month';showView('dash',btn);renderDashboard();saveState()}
 function manualSave(){saveState(false)}
@@ -3834,7 +3835,7 @@ function applySkin(){document.body.classList.add('skin-glass');setTimeout(()=>{t
 Object.assign(window,{publishData,openCard,closeCard,shareCard,applyRole,money2,parseValue,setLayout,cycleLayout});
 applyTheme();applySkin();applyRole();renderAll();setLayout(LAYOUT);
 window.addEventListener('resize',()=>{const d=window.innerWidth<=900?'bento':'exec';if(d!==LAYOUT)setLayout(d)});
-Object.assign(RENDERERS,{hotel:renderHotel,rooms:renderRooms,otb:renderOtb,wx:renderWx,pu:renderPu,fz:renderFz,m2:()=>{if(window.Motor2UI)Motor2UI.render()},dq:()=>{if(window.DatosUI)DatosUI.render()}});
+Object.assign(RENDERERS,{hotel:renderHotel,rooms:renderRooms,otb:renderOtb,wx:renderWx,pu:renderPu,fz:renderFz,m2:()=>{if(window.Motor2UI)Motor2UI.render()},dq:()=>{if(window.DatosUI)DatosUI.render()}});RENDERERS.rsv=()=>{if(window.renderRsv)window.renderRsv()};window.__GX.RENDERERS=RENDERERS;
 if(HAS_HOT){document.body.classList.add('has-hot');let ar='hotel';try{ar=localStorage.getItem('fbAreaV47')||'hotel'}catch(e){}if(ar!=='fb'){setArea(ar,false)}}
 showView('dash',document.querySelector('.tab[data-view="'+(DATA.dashboardMode==='ytd'?'dash-ytd':'dash')+'"]'));
 renderDashboard();
@@ -4286,6 +4287,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <script>if('serviceWorker' in navigator&&location.protocol.startsWith('http')&&!(window.__PUSH&&window.__PUSH.appId))navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
 <style id="navCss">.tab.subtab{display:none!important}.subNav{display:none;gap:.4rem;flex-wrap:wrap;padding:.55rem var(--gx,1.2rem) .1rem}.subNav.on{display:flex}.subNav button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:.32rem .85rem;font-size:.78rem;cursor:pointer;font-family:inherit}.subNav button.on{background:var(--hi,#F4C20D);color:#17150F;border-color:transparent;font-weight:650}.kStrip{display:none;margin:.5rem var(--gx,1.2rem) .2rem;padding:.7rem 1rem;background:var(--panel);border:1px solid var(--line);border-radius:12px}.kStrip.on{display:block}.kHead{display:flex;flex-wrap:wrap;gap:.3rem .9rem;align-items:baseline;margin-bottom:.45rem}.kHead b{font-size:.82rem;letter-spacing:.04em}.kHead span{font-size:.68rem;color:var(--muted)}.kGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:.6rem}.kc{display:flex;flex-direction:column;gap:.1rem;min-width:0}.kc small{font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}.kc b{font-size:1.02rem;line-height:1.25}.kc span{font-size:.7rem;color:var(--muted)}@media(max-width:900px){.kGrid{grid-template-columns:repeat(2,1fr)}}</style>
 <script id="navJs">(function(){
+const X=()=>window.__GX||{};
 const G=[
  {p:'rsv',v:[['rsv','Reservas'],['otb','Ocupación OTB (PDF)'],['pu','PickUp']]},
  {p:'fz',v:[['fz','Forecast hotel'],['wx','Meteo y revenue']]},
@@ -4293,44 +4295,32 @@ const G=[
  {p:'dq',v:[['dq','Estado de datos'],['entry','Entrada diaria'],['objectives','Objetivos'],['config','Configurar']]}
 ];
 const grpOf=id=>G.find(g=>g.v.some(x=>x[0]===id));
-const orig=window.showView;
+const hasHot=()=>!!X().HAS_HOT;
+const E=v=>X().hn(v)+' €',SG=v=>(v>0?'+':v<0?'−':'')+X().hn(Math.abs(v))+' €';
+const pc=(v,d=1)=>(v>0?'+':v<0?'−':'')+X().hn(Math.abs(v)*100,d)+'%';
 function draw(id){
   const el=document.getElementById('subNav');if(!el)return;
-  const g=grpOf(id);
-  const own=(typeof IS_OWNER!=='undefined')&&IS_OWNER,ed=(typeof IS_EDITOR!=='undefined')&&IS_EDITOR;
+  const g=grpOf(id),own=!!X().IS_OWNER;
   const vs=g?g.v.filter(x=>!['entry','objectives','config'].includes(x[0])||own):[];
   if(!g||vs.length<2){el.className='subNav';el.innerHTML='';return}
   el.className='subNav on';
   el.innerHTML=vs.map(x=>`<button class="${x[0]===id?'on':''}" onclick="showView('${x[0]}')">${x[1]}</button>`).join('');
 }
-window.showView=function(id,btn){
-  const g=grpOf(id);
-  if(g){btn=document.querySelector('.tab[data-view="'+g.p+'"]')||btn}
-  const r=orig.call(this,id,btn);
-  draw(document.body.dataset.view||id);
-  if(g){const tb=document.querySelector('.tab[data-view="'+id+'"]');const c=document.getElementById('ctxTitle');
-    const sub=g.v.find(x=>x[0]===id);if(c&&sub&&id!==g.p)c.textContent=sub[1];}
-  return r;
-};
-window.__NAV={G:G,draw:draw};
-})();</script>
-<script id="navJs2">(function(){
-const E=v=>hn(v)+' €',SG=v=>(v>0?'+':v<0?'−':'')+hn(Math.abs(v))+' €';
-const pc=(v,d=1)=>(v>0?'+':v<0?'−':'')+hn(Math.abs(v)*100,d)+'%';
 /* ============ FRANJA SUPERIOR COMÚN ============ */
 function hotelScope(rooms){
-  const P=hPeriod();if(P.ytd)return null;
+  const {hPeriod,hAgg,hRef,mPtd,hdim,months}=X(),P=hPeriod();if(P.ytd)return null;
   const L=P.L,M=P.m,dim=hdim(L.y,M),cur=M===L.m,upto=cur?L.d:dim,rem=cur?dim-L.d:0,a=hAgg(M,upto),k=rooms?'rr':'tot';
   const R=key=>{try{const mt=(cur?mPtd(key,L,M):hRef(key,M,M,1))[k],mo=hRef(key,M,M,1)[k];return mo>0?{mtd:mt,mon:mo}:null}catch(e){return null}};
   return{title:(rooms?'Room revenue':'Hotel total')+' · '+months[M-1]+' '+L.y,real:a[k]||0,days:cur?L.d:dim,dim,rem,bud:R('budget26'),fc:R('forecast26'),
     src:'Real: Revenue Flash · Budget: Excel de Budget · Forecast: Excel de IHG'};
 }
 function fbScope(){
-  const m=Number(DATA.config.month),S=calcState(),dim=S.monthDays,ld=S.lastDay,obj=monthObjectives(m),V=getVenues(),scs=scenariosForMonth(m);
+  const {calcState,monthObjectives,getVenues,scenariosForMonth,months}=X(),D=window.DATA;
+  const m=Number(D.config.month),S=calcState(),dim=S.monthDays,ld=S.lastDay,obj=monthObjectives(m),V=getVenues(),scs=scenariosForMonth(m);
   const sum=n=>n?V.reduce((s,v)=>s+Number((obj[v]||{})[n]||0),0):0;
   const bn=scs.find(x=>/^original$/i.test(x))||scs.find(x=>/budget/i.test(x)),fn=scs.find(x=>/forecast/i.test(x));
   const mk=n=>{const t=sum(n);return t>0?{mtd:t/dim*ld,mon:t}:null};
-  return{title:'F&B · '+months[m-1]+' '+DATA.config.year,real:S.revenue,days:ld,dim,rem:Math.max(dim-ld,0),bud:mk(bn),fc:mk(fn),
+  return{title:'F&B · '+months[m-1]+' '+D.config.year,real:S.revenue,days:ld,dim,rem:Math.max(dim-ld,0),bud:mk(bn),fc:mk(fn),
     src:'Real: Entrada diaria de venues · Budget: «'+(bn||'—')+'» · Forecast: «'+(fn||'—')+'» (Excel de IHG)'};
 }
 const kc=(l,b,s,c)=>`<div class="kc"><small>${l}</small><b class="${c||''}">${b}</b><span>${s||''}</span></div>`;
@@ -4345,11 +4335,10 @@ function strip(){
   const el=document.getElementById('kStrip');if(!el)return;
   const v=document.body.dataset.view;let s=null;
   try{
-    const hot=typeof HAS_HOT!=='undefined'&&HAS_HOT;
-    if(['hotel','rsv','otb','pu','wx','fz'].includes(v)){if(hot)s=hotelScope(false)}
-    else if(v==='rooms'){if(hot)s=hotelScope(true)}
-    else if((v==='dash'&&DATA.dashboardMode!=='ytd')||['forecast','summary','m2'].includes(v))s=fbScope();
-  }catch(e){s=null}
+    if(['hotel','rsv','otb','pu','wx','fz'].includes(v)){if(hasHot())s=hotelScope(false)}
+    else if(v==='rooms'){if(hasHot())s=hotelScope(true)}
+    else if((v==='dash'&&window.DATA.dashboardMode!=='ytd')||['forecast','summary','m2'].includes(v))s=fbScope();
+  }catch(e){console.warn('strip',e);s=null}
   if(!s){el.className='kStrip';el.innerHTML='';return}
   el.className='kStrip on';el.innerHTML=stripHtml(s);
 }
@@ -4360,19 +4349,19 @@ const dd=s=>s.slice(8,10)+'/'+s.slice(5,7);
 function addDays(s,n){const d=new Date(s+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
 function renderRsv(){
   const host=document.getElementById('rsv');if(!host)return;
-  if(!(typeof HAS_HOT!=='undefined'&&HAS_HOT)){host.innerHTML='';return}
+  const {HOT,hn,hp,hCard,hCell,hdim,hLastInfo,hAgg,hRef,months}=X();
+  if(!hasHot()||!HOT){host.innerHTML='';return}
   const rs=HOT.rs;
   if(!rs||!rs.rows||!rs.rows.length||!rs.cols){host.innerHTML='<div class="hwrap"><p class="hnote">Aún no hay ningún Reservation Summary cargado. Súbelo desde «Cargar datos» (cada 2-3 días).</p></div>';return}
   const I=c=>rs.cols.indexOf(c)+1,asof=rs.asof,end=addDays(asof,RH),L=hLastInfo();
   const rows=rs.rows.filter(r=>r[0]>=asof&&r[0]<end);
   const key=d=>RH<=31?d:RH<=120?addDays(d,-((new Date(d+'T12:00:00Z').getUTCDay()+6)%7)):d.slice(0,7);
-  const G={},order=[];
-  rows.forEach(r=>{const k=key(r[0]);if(!G[k]){G[k]={k,n:0,tot:0,ind:0,av:0,rev:0,pax:0,last:r[0]};order.push(k)}const x=G[k];x.n++;x.tot+=r[I('tot')]||0;x.ind+=r[I('ind')]||0;x.av+=r[I('av')]||0;x.rev+=r[I('rev')]||0;x.pax+=(r[I('adl')]||0)+(r[I('chl')]||0);x.last=r[0]});
-  const T=order.reduce((o,k)=>{const x=G[k];o.tot+=x.tot;o.av+=x.av;o.rev+=x.rev;o.pax+=x.pax;o.ind+=x.ind;return o},{tot:0,av:0,rev:0,pax:0,ind:0});
+  const Gp={},order=[];
+  rows.forEach(r=>{const k=key(r[0]);if(!Gp[k]){Gp[k]={k,tot:0,ind:0,av:0,rev:0,pax:0,last:r[0]};order.push(k)}const x=Gp[k];x.tot+=r[I('tot')]||0;x.ind+=r[I('ind')]||0;x.av+=r[I('av')]||0;x.rev+=r[I('rev')]||0;x.pax+=(r[I('adl')]||0)+(r[I('chl')]||0);x.last=r[0]});
+  const T=order.reduce((o,k)=>{const x=Gp[k];o.tot+=x.tot;o.av+=x.av;o.rev+=x.rev;o.pax+=x.pax;o.ind+=x.ind;return o},{tot:0,av:0,rev:0,pax:0,ind:0});
   const monthly=RH>120,asm=+asof.slice(5,7),asd=+asof.slice(8,10);
-  let cmp=false;
   const body=order.map(k=>{
-    const x=G[k],occ=x.av?x.tot/x.av:null,adr=x.tot?x.rev/x.tot:0,grp=Math.max(x.tot-x.ind,0);
+    const x=Gp[k],occ=x.av?x.tot/x.av:null,adr=x.tot?x.rev/x.tot:0,grp=Math.max(x.tot-x.ind,0);
     let lab=RH<=31?dd(k)+' '+['dom','lun','mar','mié','jue','vie','sáb'][new Date(k+'T12:00:00Z').getUTCDay()]:RH<=120?'sem. '+dd(k):months[+k.slice(5,7)-1]+' '+k.slice(2,4);
     let extra='<td class="hm"></td><td class="hm"></td><td class="hm"></td><td class="hm"></td>';
     if(monthly){
@@ -4380,7 +4369,7 @@ function renderRsv(){
       if(y===L.y&&full){
         try{
           let tot=x.rev;if(m===asm&&asd>1)tot+=hAgg(m,asd-1).rr;
-          const B=hRef('budget26',m,m,1).rr,F=hRef('forecast26',m,m,1).rr;cmp=true;
+          const B=hRef('budget26',m,m,1).rr,F=hRef('forecast26',m,m,1).rr;
           extra=`<td class="hm">${B>0?E(B):'—'}</td><td class="hm ${B>0&&tot>=B?'pos':'neg'}">${B>0?hp(tot/B,0):'—'}</td><td class="hm">${F>0?E(F):'—'}</td><td class="hm ${F>0&&tot>=F?'pos':'neg'}">${F>0?hp(tot/F,0):'—'}</td>`;
           if(m===asm&&asd>1)lab+=' <small>(real + libros)</small>';
         }catch(e){}
@@ -4397,13 +4386,17 @@ function renderRsv(){
   host.innerHTML=`<div class="hwrap"><div class="subNav on" style="padding:.2rem 0 .6rem">${chips}</div>${kp}${hCard('Reservas en libros · próximos '+RH+' días','Reservation Summary del '+dd(asof)+' '+(rs.time||'')+' · ¿dónde hay huecos que vender o precio que subir?',tbl+pu)}</div>`;
 }
 window.renderRsv=renderRsv;
-/* ============ ganchos ============ */
-const post=()=>{try{strip()}catch(e){}};
-['hRender','renderDashboard','renderAll'].forEach(n=>{const o=window[n];if(typeof o!=='function')return;window[n]=function(){const r=o.apply(this,arguments);if(n==='hRender'&&document.body.dataset.view==='rsv'){try{renderRsv()}catch(e){}}post();return r}});
-const sv=window.showView;
-window.showView=function(id,btn){const r=sv.call(this,id,btn);if(document.body.dataset.view==='rsv'){try{renderRsv()}catch(e){}}post();return r};
-window.__strip=strip;
-post();
+/* ============ gancho único: lo llama la propia app al cambiar de vista o recalcular ============ */
+window.__navAfter=function(){
+  try{
+    const id=document.body.dataset.view,g=grpOf(id);
+    if(g){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));const t=document.querySelector('.tab[data-view="'+g.p+'"]');if(t)t.classList.add('active');
+      const sub=g.v.find(x=>x[0]===id),c=document.getElementById('ctxTitle');if(c&&sub)c.textContent=sub[1]}
+    draw(id);
+  }catch(e){console.warn('nav',e)}
+  try{strip()}catch(e){console.warn('strip',e)}
+  try{if(window.__NV2&&window.__NV2.after)window.__NV2.after()}catch(e){}
+};
 })();
 </script>
 </body></html>

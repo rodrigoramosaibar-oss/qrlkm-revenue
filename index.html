@@ -2143,12 +2143,25 @@ function renderHotel(){
   const bul=hBul([`<b>${hn(a.tot)} €</b> en total · <span class="${dcls(a.tot-r.tot)}">${hsg(a.tot-r.tot)} €</span> vs comp. (${hp(tp,0)})`,
     `Rooms <b>${hn(a.rr)} €</b> <span class="${dcls(a.rr-r.rr)}">${hsg(a.rr-r.rr)}</span> · F&amp;B <b>${hn(a.fb)} €</b> <span class="${dcls(a.fb-r.fb)}">${hsg(a.fb-r.fb)}</span>`,
     `Otros <b>${hn(a.ot)} €</b> · Ocupación <b>${hp(K.occ)}</b> (${hp(Kr.occ)})`,`ADR <b>${hn(K.adr,2)} €</b> · RevPAR <b>${hn(K.revpar,2)} €</b>`,pr?`Cierre estimado <b>${hn(pr.tot)} €</b> (<span class="${dcls(pr.tot-P.full.tot)}">${hsg(pr.tot-P.full.tot)}</span> vs mes)`:'']);
-  const left=(P.ytd?hCard('Rooms · F&B · Otros','vs '+C,tbl):hDualCards(P,pr))+hCard('Evolución mensual','total hotel · vs Forecast y Budget',hMonthTable(P))+hFcstAcc(P);
+  const left=(P.ytd?hCard('Rooms · F&B · Otros','vs '+C,tbl):hDualCards(P,pr))+hPaceCard(P,false)+hCard('Evolución mensual','total hotel · vs Forecast y Budget',hMonthTable(P))+hFcstAcc(P);
   const right=(P.ytd?hCard('Ocupación por mes','%',hBars(Array.from({length:P.m},(_,i)=>kpis(hAgg(i+1)).occ*100),MS3.slice(0,P.m))):hCard('Revenue total por día','mes de '+months[P.m-1].toLowerCase(),hBars(vals,dayKeys.map(k=>+k.slice(8,10)))))
     +hCard('Ocupación en libros · próximos 14 días','Opera',hOtbMini())+hCard('Previsión meteorológica · 7 días','Open-Meteo',hWxMini())+(P.ytd?'':hCard('Mejores días del mes','revenue total',hTopDays(P)));
   host.innerHTML=`<div class="hwrap">${hHead('HOTEL',P.ytd?'Informe de ingresos · acumulado':'Informe de ingresos del hotel',intro,hCtl())}<div class="mOnly">${bul}</div>${strip}<div class="dOnly">${kp}</div>
   <div class="hgrid"><div class="hcol">${left}</div><div class="hcol">${right}</div></div>
   ${pr?`<p class="hnote dOnly">Cierre estimado = lo facturado + Opera en libros (${pr.days} días, ${hn(pr.rr)} € Rooms, foto del ${pr.asof.slice(0,10)}) + F&amp;B/Otros al ratio actual por habitación vendida. Es una estimación que se afinará con las semanas de OTB.</p>`:''}${hNote(P)}</div>`;
+}
+
+// ======================= v61 · Ritmo del mes: Budget y Forecast a la fecha, a fin de mes y lo que falta por día =======================
+function hPaceCard(P,rooms){
+  if(P.ytd)return'';
+  const L=P.L,M=P.m,dim=hdim(L.y,M),cur=M===L.m,upto=cur?L.d:dim,rem=cur?dim-L.d:0,a=hAgg(M,upto);
+  const refs=k=>({mtd:cur?mPtd(k,L,M):hRef(k,M,M,1),mon:hRef(k,M,M,1)});
+  const parts=rooms?[['Room revenue','rr'],['Hab. vendidas','so']]:[['Habitaciones','rr'],['F&B','fb'],['Otros','ot'],['Total hotel','tot']];
+  const tbl=R=>{const rf=refs(R.k);return`<div class="fscroll"><table class="ftab htab"><thead><tr><th></th><th>Real</th><th>A la fecha</th><th>Desv.</th><th>Fin de mes</th><th>Falta</th><th>Por día</th></tr></thead><tbody>`+parts.map(([lab,k])=>{const real=a[k]||0,mt=rf.mtd[k]||0,mo=rf.mon[k]||0,dv=real-mt,fl=mo-real;return`<tr><td class="vn">${lab}</td><td>${hn(real)}</td><td>${hn(mt)}</td><td class="${dcls(dv)}">${hsg(dv)}</td><td>${hn(mo)}</td><td>${fl>0?hn(fl):'cumplido'}</td><td><b>${fl>0&&rem?hn(fl/rem):'—'}</b></td></tr>`}).join('')+`</tbody></table></div>`};
+  const need=R=>{const rf=refs(R.k).mon,rs=rf.so-a.so,ra=rf.av-a.av;return rem&&rs>0&&ra>0?`<li><b>${R.n}</b>: ${hp(rs/ra)} de ocupación y ${hn((rf.rr-a.rr)/rs,2)} € de ADR los ${rem} días que quedan (llevas ${hp(a.av?a.so/a.av:0)} y ${hn(a.so?a.rr/a.so:0,2)} €).</li>`:''};
+  const B={k:'budget26',n:'Budget'},F={k:'forecast26',n:HCMP.forecast26};
+  const body=`<p class="hnote"><b>${B.n}</b></p>${tbl(B)}<p class="hnote" style="margin-top:.8rem"><b>${F.n}</b></p>${tbl(F)}`+(rooms&&rem?`<ul class="hbul" style="margin-top:.6rem">${need(B)}${need(F)}</ul>`:'')+`<p class="hnote">«A la fecha» es lo que tocaba llevar hasta hoy; «Falta» es lo que queda para llegar a fin de mes y «Por día» lo que hay que hacer cada día de los ${rem||0} que quedan. El Forecast es el del Excel de IHG, repartido por días.</p>`;
+  return hCard('Ritmo del mes · Budget y Forecast',cur?'día '+L.d+' de '+dim+' · quedan '+rem:'mes cerrado',body);
 }
 function renderRooms(){
   const host=$('rooms');if(!HAS_HOT){host.innerHTML='';return}
@@ -2162,7 +2175,7 @@ function renderRooms(){
   const chart=P.ytd?hBarsV(Array.from({length:P.m},(_,i)=>kpis(hAgg(i+1)).occ*100),MS3.slice(0,P.m)):hBarsV(dk.map(k=>HOT.days[k].av?HOT.days[k].so/HOT.days[k].av*100:0),dk.map(k=>+k.slice(8,10)));
   const tbl=`<div class="fscroll"><table class="ftab htab"><thead><tr><th>${P.ytd?'Mes':'Día'}</th><th>Ocup.</th><th>ADR</th><th>RevPAR</th><th>Room rev.</th><th class="${P.ytd?'':'hm'}">${P.ytd?'Δ vs '+hCL(P):'Vendidas'}</th></tr></thead><tbody>${tr}</tbody></table></div>`;
   const bul=hBul([`Ocupación <b>${hp(K.occ)}</b> · <span class="${dcls(K.occ-Kr.occ)}">${K.occ>=Kr.occ?'+':'−'}${hn(Math.abs(K.occ-Kr.occ)*100,1)} pts</span> vs ${hCL(P)}`,`ADR <b>${hn(K.adr,2)} €</b> <span class="${dcls(K.adr-Kr.adr)}">${hsg(K.adr-Kr.adr)}</span> · RevPAR <b>${hn(K.revpar,2)} €</b> <span class="${dcls(K.revpar-Kr.revpar)}">${hsg(K.revpar-Kr.revpar)}</span>`,`Room revenue <b>${hn(a.rr)} €</b> <span class="${dcls(a.rr-r.rr)}">${hsg(a.rr-r.rr)}</span> · ${hn(a.so)} hab. vendidas`,!P.ytd&&best?`Mejor día: ${dn[new Date(best.k+'T12:00:00').getDay()].toLowerCase()} ${+best.k.slice(8,10)} (${hp(best.o,0)})`:'']);
-  const left=hRoomsDual(P,hProjection(P))+hCard(P.ytd?'Ocupación por mes':'Ocupación diaria','%',chart)+(P.ytd?'':hCard('ADR por día','€',hAdrBars(dk)))+hCard('Ocupación en libros · próximos 14 días','Opera',hOtbMini());
+  const left=hRoomsDual(P,hProjection(P))+hPaceCard(P,true)+hCard(P.ytd?'Ocupación por mes':'Ocupación diaria','%',chart)+(P.ytd?'':hCard('ADR por día','€',hAdrBars(dk)))+hCard('Ocupación en libros · próximos 14 días','Opera',hOtbMini());
   host.innerHTML=`<div class="hwrap">${hHead('ROOMS',P.ytd?'Habitaciones · acumulado':'Habitaciones',intro,hCtl())}<div class="mOnly">${bul}</div>${strip}
   <div class="hgrid"><div class="hcol">${left}</div><div class="hcol">${hCard(P.ytd?'Detalle por mes':'Detalle por día',P.ytd?'':'* día estimado',tbl)}</div></div>${hNote(P)}</div>`;
 }
@@ -4039,9 +4052,9 @@ function dkModelF(per){
   const bm2=(x,y)=>{const q=Math.max(x||0,y||0,1e-9);return{bar:Math.max(0,x||0)/q,mk:Math.max(0,y||0)/q}};
   const kp=[{l:'Ingresos F&B',v:dkE(tot),s:'vs '+scnName(sc)+' a la fecha',chip:dev,bar:tf>0?tot/tf:null,mk:tf>0?tb/tf:null},
     Object.assign({l:'Deberíamos llevar',v:dkE(tb),s:scnName(sc)+' a la fecha'+(tf>0?' · '+hn(tb/tf*100,0)+' % del mes':'')},{bar:tf>0?tb/tf:null,mk:tf>0?tot/tf:null}),
-    Object.assign({l:'vs '+scnName(cmp),v:fcd==null?'—':dkS(fcd),s:tc>0?scnName(cmp)+' a la fecha: '+dkE(tc):'sin escenario',chip:tc>0?dkRat(tot,tc):null},tc>0?bm2(tot,tc):{}),
+    Object.assign({l:'vs '+scnName(cmp),v:fcd==null?'—':dkS(fcd),s:tc>0?scnName(cmp)+' a la fecha: '+dkE(tc)+(rem&&fm>0?' · hay que hacer '+dkE(Math.max(0,fm-tot)/rem)+'/día':''):'sin escenario',chip:tc>0?dkRat(tot,tc):null},tc>0?bm2(tot,tc):{}),
     Object.assign({l:'Cierre del mes · motor',v:pj!=null?dkE(pj):'—',s:pj!=null?'vs '+scnName(sc)+' '+dkP(dkRat(pj,bm))+' · vs '+scnName(cmp)+' '+dkP(dkRat(pj,fm)):'sin proyección'},pj!=null?bm2(pj,bm):{}),
-    {l:rem?'Hay que hacer al día':'Objetivo diario',v:dkE(needT),s:rem?rem+' días restantes':scnName(sc)+' por día'},
+    {l:rem?'Hay que hacer al día':'Objetivo diario',v:dkE(needT),s:rem?scnName(sc)+' · '+rem+' días restantes':scnName(sc)+' por día'},
     {l:'F&B por hab. ocupada',v:fpr!=null?dkE(fpr):'—',s:'Ingresos F&B ÷ hab. vendidas',bar:fpr!=null&&tot>0?Math.min(1,fpr/(fpr*1.6)):null}];
   let cum;
   if(per==='ano'){const ms=[];for(let i=1;i<=12;i++){let r=0,b=0,c=0;if(i<=mS){const mx=i===mS?last:dim(i);for(let d=1;d<=mx;d++){const x=rowOf[i+'-'+d];V.forEach(v=>{r+=x?parseValue(x[v]):0})}}V.forEach(v=>{b+=Number((ob(i)[v]||{})[sc]||0);c+=Number((ob(i)[v]||{})[cmp]||0)});ms.push({m:i,real:i<=mS?r:null,bud:b,fc:c,proj:i===mS&&pj!=null?pj:null})}cum={kind:'year',ms}}

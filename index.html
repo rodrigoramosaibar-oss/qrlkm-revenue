@@ -1063,8 +1063,10 @@ function scenariosForMonth(m=DATA.config.month){
   let arr=[...preferred.filter(x=>set.has(x)),...[...set].filter(x=>!preferred.includes(x)).sort()];
   return arr.length?arr:['Original'];
 }
-function activeForDashboard(){let scs=scenariosForMonth(DATA.config.month);return scs.includes(DATA.activeScenario)?DATA.activeScenario:scs[0]}
-function compareForDashboard(){let scs=scenariosForMonth(DATA.config.month);if(!scs.includes(DATA.compareScenario))DATA.compareScenario=scs.find(s=>s!==activeForDashboard())||scs[0];return DATA.compareScenario}
+// F&B compara SIEMPRE Budget (Original) contra Forecast, sea cual sea el selector: son dos importes distintos y los dos se ven siempre
+const scnName=n=>/^original$/i.test(n||'')?'Budget':/^forecast/i.test(n||'')?'Forecast':String(n||'');
+function activeForDashboard(){let scs=scenariosForMonth(DATA.config.month);const b=scs.find(x=>/^original$/i.test(x))||scs.find(x=>/budget/i.test(x));if(b)return b;return scs.includes(DATA.activeScenario)?DATA.activeScenario:scs[0]}
+function compareForDashboard(){let scs=scenariosForMonth(DATA.config.month);const fcs=scs.filter(x=>/forecast/i.test(x));if(fcs.length){DATA.compareScenario=fcs[fcs.length-1];return DATA.compareScenario}if(!scs.includes(DATA.compareScenario))DATA.compareScenario=scs.find(s=>s!==activeForDashboard())||scs[0];return DATA.compareScenario}
 function activeForObjectives(){
   let m=Number(DATA.objectiveEditMonth||DATA.config.month||6),scs=scenariosForMonth(m);
   if(!DATA.objectiveActiveScenario)DATA.objectiveActiveScenario=scs.includes(DATA.activeScenario)?DATA.activeScenario:scs[0];
@@ -4035,11 +4037,11 @@ function dkModelF(per){
   let fpr=null,fprB=null;if(HAS_HOT){const hk=dkWinH(hLastInfo(),per),ha=dkSum(hk);fpr=ha.so?tot/ha.so:null}
   const dev=dkRat(tot,tb),fcd=tc>0?tot-tc:null;
   const bm2=(x,y)=>{const q=Math.max(x||0,y||0,1e-9);return{bar:Math.max(0,x||0)/q,mk:Math.max(0,y||0)/q}};
-  const kp=[{l:'Ingresos F&B',v:dkE(tot),s:'vs '+sc+' a la fecha',chip:dev,bar:tf>0?tot/tf:null,mk:tf>0?tb/tf:null},
-    Object.assign({l:'Deberíamos llevar',v:dkE(tb),s:sc+' a la fecha'+(tf>0?' · '+hn(tb/tf*100,0)+' % del mes':'')},{bar:tf>0?tb/tf:null,mk:tf>0?tot/tf:null}),
-    Object.assign({l:'vs '+cmp,v:fcd==null?'—':dkS(fcd),s:tc>0?cmp+' a la fecha: '+dkE(tc):'sin escenario',chip:tc>0?dkRat(tot,tc):null},tc>0?bm2(tot,tc):{}),
-    Object.assign({l:'Cierre del mes · motor',v:pj!=null?dkE(pj):'—',s:pj!=null?'vs '+sc+' '+dkP(dkRat(pj,bm))+' · vs '+cmp+' '+dkP(dkRat(pj,fm)):'sin proyección'},pj!=null?bm2(pj,bm):{}),
-    {l:rem?'Hay que hacer al día':'Objetivo diario',v:dkE(needT),s:rem?rem+' días restantes':sc+' por día'},
+  const kp=[{l:'Ingresos F&B',v:dkE(tot),s:'vs '+scnName(sc)+' a la fecha',chip:dev,bar:tf>0?tot/tf:null,mk:tf>0?tb/tf:null},
+    Object.assign({l:'Deberíamos llevar',v:dkE(tb),s:scnName(sc)+' a la fecha'+(tf>0?' · '+hn(tb/tf*100,0)+' % del mes':'')},{bar:tf>0?tb/tf:null,mk:tf>0?tot/tf:null}),
+    Object.assign({l:'vs '+scnName(cmp),v:fcd==null?'—':dkS(fcd),s:tc>0?scnName(cmp)+' a la fecha: '+dkE(tc):'sin escenario',chip:tc>0?dkRat(tot,tc):null},tc>0?bm2(tot,tc):{}),
+    Object.assign({l:'Cierre del mes · motor',v:pj!=null?dkE(pj):'—',s:pj!=null?'vs '+scnName(sc)+' '+dkP(dkRat(pj,bm))+' · vs '+scnName(cmp)+' '+dkP(dkRat(pj,fm)):'sin proyección'},pj!=null?bm2(pj,bm):{}),
+    {l:rem?'Hay que hacer al día':'Objetivo diario',v:dkE(needT),s:rem?rem+' días restantes':scnName(sc)+' por día'},
     {l:'F&B por hab. ocupada',v:fpr!=null?dkE(fpr):'—',s:'Ingresos F&B ÷ hab. vendidas',bar:fpr!=null&&tot>0?Math.min(1,fpr/(fpr*1.6)):null}];
   let cum;
   if(per==='ano'){const ms=[];for(let i=1;i<=12;i++){let r=0,b=0,c=0;if(i<=mS){const mx=i===mS?last:dim(i);for(let d=1;d<=mx;d++){const x=rowOf[i+'-'+d];V.forEach(v=>{r+=x?parseValue(x[v]):0})}}V.forEach(v=>{b+=Number((ob(i)[v]||{})[sc]||0);c+=Number((ob(i)[v]||{})[cmp]||0)});ms.push({m:i,real:i<=mS?r:null,bud:b,fc:c,proj:i===mS&&pj!=null?pj:null})}cum={kind:'year',ms}}

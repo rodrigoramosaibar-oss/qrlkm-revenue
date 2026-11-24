@@ -500,7 +500,7 @@ function fbHtml(R){
 }
 
 /* ---------- montaje en las pantallas existentes ---------- */
-function gl(n){try{return(0,eval)(n)}catch(e){return undefined}}
+function gl(n){const X=root.__GX;if(X&&X[n]!==undefined)return X[n];try{return(0,eval)(n)}catch(e){return undefined}}
 function roomsMount(){
   const host=document.getElementById('rooms'),h=root.__HOT;if(!host||!h)return;
   const old=document.getElementById('nvRooms');if(old)old.remove();
@@ -529,7 +529,7 @@ function hook(){
     if(typeof RENDERERS!=='undefined'&&RENDERERS.forecast&&RENDERERS.forecast.__nv)ok++}catch(e){}
   return ok>=2;
 }
-root.__NV2={rfHtml,starHtml,fbCompute,fbHtml,rfLine};
-if(typeof document!=='undefined'){let n=0;const iv=setInterval(()=>{if(++n>60||hook())clearInterval(iv)},400)}
+root.__NV2={rfHtml,starHtml,fbCompute,fbHtml,rfLine,after:function(){const v=document.body.dataset.view;try{if(v==='rooms')roomsMount();else if(v==='forecast')fbMount()}catch(e){console.warn('nv after',e)}}};
+
 })();
 

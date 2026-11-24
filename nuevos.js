@@ -378,3 +378,158 @@ root.nuevosCommit=async function(publish){
 root.__NV={nvParseRoomsFlash,nvRfRecord,nvParseResSummary,nvParseStar,nvKind,rowsOf,RS_COLS,NV_LEADS,nvBucket,num};
 if(typeof module!=='undefined')module.exports=root.__NV;
 })();
+
+/* ===================== VISTAS: dónde se ven Rooms Flash, Reservation Summary y STAR =====================
+   Sin pestañas nuevas: Habitaciones gana «Por segmento de mercado» y «Frente al mercado (STAR)»;
+   Previsión F&B gana «F&B esperado con huéspedes en casa» (Reservation Summary × gasto por huésped). */
+(function(){
+'use strict';
+const root=typeof window!=='undefined'?window:globalThis;
+const nf=(v,d)=>Number(v||0).toLocaleString('de-DE',{minimumFractionDigits:d||0,maximumFractionDigits:d||0});
+const sg=(v,d)=>(v>0.0001?'+':v<-0.0001?'−':'')+nf(Math.abs(v),d);
+const cl=v=>v>=0?'pos':'neg';
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const card=(t,r,b)=>`<section class="card hcard"><div class="cardHead"><h2>${t}</h2><span class="muted">${r||''}</span></div><div class="cardBody">${b}</div></section>`;
+const bul=a=>'<ul class="hbul">'+a.filter(Boolean).map(t=>`<li>${t}</li>`).join('')+'</ul>';
+const DN=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const MESN=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const addD=(s,n)=>{const d=new Date(s+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
+const dowOf=s=>new Date(s+'T12:00:00Z').getUTCDay();
+const fdm=s=>s.slice(8,10)+'/'+s.slice(5,7);
+const med=a=>{if(!a.length)return 0;const s=a.slice().sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+const sum=a=>a.reduce((s,v)=>s+v,0);
+const th='style="text-align:right"',thl='style="text-align:left"';
+
+/* ---------- 1 · Rooms Flash: revenue por segmento frente a Budget y año anterior ---------- */
+function rfLine(k,p){
+  const rev=p[0],rn=p[1],bRev=p[3],bRn=p[4],lRev=p[6],lRn=p[7];
+  const adr=rn?rev/rn:0,bAdr=bRn?bRev/bRn:0,lAdr=lRn?lRev/lRn:0;
+  return{k,rev,rn,adr,bRev,bRn,bAdr,lRev,lRn,lAdr,vol:(rn-bRn)*bAdr,rate:rn?(adr-bAdr)*rn:0,dB:rev-bRev,dL:rev-lRev};
+}
+function rfHtml(rf,appBud){
+  if(!rf||!rf.seg||!rf.tot)return'';
+  const tm=rf.tot['Total Market Segments']||rf.tot['Total Hotel'];if(!tm||!tm.p)return'';
+  const segs=Object.keys(rf.seg).map(k=>rfLine(k,rf.seg[k].p)).filter(r=>r.rev||r.bRev||r.lRev);
+  if(!segs.length)return'';
+  const T=rfLine('Total',tm.p),vol=sum(segs.map(r=>r.vol)),rate=sum(segs.map(r=>r.rate));
+  segs.sort((a,b)=>Math.abs(b.dB)-Math.abs(a.dB));
+  const top=segs.slice(0,8),rest=segs.slice(8);
+  if(rest.length){const R={k:'Resto ('+rest.length+' segmentos)'};['rev','rn','bRev','bRn','vol','rate','dB','dL','lRev'].forEach(f=>R[f]=sum(rest.map(r=>r[f])));R.adr=R.rn?R.rev/R.rn:0;top.push(R)}
+  const row=r=>`<tr><td class="vn">${esc(r.k)}</td><td>${nf(r.rn)}</td><td>${nf(r.adr,2)}</td><td>${nf(r.rev)}</td><td class="${cl(r.dB)}">${sg(r.dB)}</td><td class="hm ${cl(r.vol)}">${sg(r.vol)}</td><td class="hm ${cl(r.rate)}">${sg(r.rate)}</td><td class="hm ${cl(r.dL)}">${sg(r.dL)}</td></tr>`;
+  const neg=segs.filter(r=>r.dB<0).sort((a,b)=>a.dB-b.dB)[0],pos=segs.filter(r=>r.dB>0).sort((a,b)=>b.dB-a.dB)[0];
+  const ind=rf.tot['Total Individual Segments'],grp=rf.tot['Total Group Segments'];
+  const g=(t)=>t&&t.p?{rev:t.p[0],b:t.p[3],l:t.p[6]}:null,gi=g(ind),gg=g(grp);
+  const items=[
+    `Acumulado del mes a ${fdm(rf.d)}: <b>${nf(T.rev)} €</b> frente a Budget ${nf(T.bRev)} € (<span class="${cl(T.dB)}">${sg(T.dB)} €</span>): volumen <span class="${cl(vol)}">${sg(vol)} €</span> · precio <span class="${cl(rate)}">${sg(rate)} €</span>.`,
+    T.lRev?`Frente al año anterior: <span class="${cl(T.dL)}">${sg(T.dL)} €</span> (${sg(T.dL/T.lRev*100,1)}%).`:'',
+    gi&&gg?`Individuales ${nf(gi.rev)} € (<span class="${cl(gi.rev-gi.b)}">${sg(gi.rev-gi.b)}</span> vs Budget) · Grupos ${nf(gg.rev)} € (<span class="${cl(gg.rev-gg.b)}">${sg(gg.rev-gg.b)}</span>).`:'',
+    neg?`Mayor hueco: <b>${esc(neg.k)}</b> (${sg(neg.dB)} €).`:'',pos?`Mayor empuje: <b>${esc(pos.k)}</b> (${sg(pos.dB)} €).`:'',
+    appBud>0&&Math.abs(appBud-T.bRev)/T.bRev>0.01?`Ojo: el Budget a la fecha de este informe es ${nf(T.bRev)} € y la app lo prorratea por días en ${nf(appBud)} € (${sg(appBud-T.bRev)} €). Para comparar a la fecha, manda el del informe.`:''
+  ];
+  const tbl=`<div class="fscroll"><table class="ftab htab"><thead><tr><th ${thl}>Segmento</th><th>Hab.</th><th>ADR</th><th>Revenue</th><th>Δ vs Budget</th><th class="hm">Volumen</th><th class="hm">Precio</th><th class="hm">Δ vs 2025</th></tr></thead><tbody>${top.map(row).join('')}${row(Object.assign({},T,{k:'Total segmentos',vol:vol,rate:rate}))}</tbody></table></div>`;
+  return card('Por segmento de mercado','Rooms Flash · acumulado del mes',bul(items)+tbl+'<p class="hnote">Volumen = (hab. reales − hab. Budget) × ADR Budget. Precio = (ADR real − ADR Budget) × hab. reales. Suman la diferencia con el Budget.</p>');
+}
+
+/* ---------- 2 · STAR: frente al mercado ---------- */
+const DAYS_ES={Monday:'Lun',Tuesday:'Mar',Wednesday:'Mié',Thursday:'Jue',Friday:'Vie',Saturday:'Sáb',Sunday:'Dom'};
+const ixv=v=>v==null?null:(Math.abs(v)<3?v*100:v);
+const heat=v=>v==null?'':v>=100?`background:rgba(31,138,76,${Math.min(.4,.06+(v-100)/60).toFixed(2)})`:`background:rgba(192,57,43,${Math.min(.4,.06+(100-v)/60).toFixed(2)})`;
+function starHtml(star){
+  const S=star&&star.months&&star.last?star.months[star.last]:null;if(!S||!S.sets||!S.sets.length)return'';
+  const set=S.sets.find(s=>/performance/i.test(s.n))||S.sets[0];
+  const kp=(s,m)=>{const k=s.kpi&&s.kpi[m];if(!k||!k.my)return null;const my=k.my[0],cp=k.comp?k.comp[0]:null;return{my,cp,idx:cp?my/cp*100:null,dMy:k.my[1],dCp:k.comp?k.comp[1]:null}};
+  const mm=[['occ','Ocupación %',1],['adr','ADR €',2],['revpar','RevPAR €',2]];
+  const fmtm=(m,v)=>v==null?'—':m==='occ'?nf(v,1):nf(v,2);
+  const rows=mm.map(([m,t])=>{const k=kp(set,m);if(!k)return'';return`<tr><td class="vn">${t}</td><td>${fmtm(m,k.my)}</td><td>${fmtm(m,k.cp)}</td><td style="${heat(k.idx)}"><b>${k.idx==null?'—':nf(k.idx,1)}</b></td><td class="hm ${cl(k.dMy)}">${k.dMy==null?'—':sg(k.dMy,1)+'%'}</td><td class="hm ${cl(k.dCp)}">${k.dCp==null?'—':sg(k.dCp,1)+'%'}</td></tr>`}).join('');
+  const setRows=S.sets.map(s=>{const o=kp(s,'occ'),a=kp(s,'adr'),r=kp(s,'revpar');const c=k=>`<td style="${heat(k&&k.idx)}">${k&&k.idx!=null?nf(k.idx,1):'—'}</td>`;return`<tr><td class="vn">${esc(s.n)}</td>${c(o)}${c(a)}${c(r)}</tr>`}).join('');
+  const order=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const dw=order.map(d=>{const x=set.dow&&set.dow[d];if(!x||!x.M)return null;const g=(p,m)=>x[p]&&x[p][m]?ixv(x[p][m][2]):null;return{d,occ:g('M','occ'),adr:g('M','adr'),rp:g('M','revpar'),rp3:g('R3','revpar')}}).filter(Boolean);
+  const dr=dw.map(x=>{const c=v=>`<td style="${heat(v)}">${v==null?'—':nf(v,0)}</td>`;return`<tr><td class="vn">${DAYS_ES[x.d]}</td>${c(x.occ)}${c(x.adr)}${c(x.rp)}${c(x.rp3)}</tr>`}).join('');
+  const wk=dw.filter(x=>x.rp!=null).sort((a,b)=>a.rp-b.rp),w0=wk[0],w1=wk[wk.length-1];
+  const kr=kp(set,'revpar'),ko=kp(set,'occ'),ka=kp(set,'adr');
+  const items=[
+    kr&&kr.idx!=null?`RevPAR del hotel <b>${nf(kr.my,2)} €</b> frente a ${nf(kr.cp,2)} € del ${esc(set.n)}: índice <b>${nf(kr.idx,1)}</b>${ko&&ka?` (ocupación ${nf(ko.idx,1)} · precio ${nf(ka.idx,1)})`:''}.`:'',
+    w0&&w1&&wk.length>1?`Peor día frente al mercado: <b>${DAYS_ES[w0.d]}</b> (RevPAR ${nf(w0.rp,0)}). Mejor: <b>${DAYS_ES[w1.d]}</b> (${nf(w1.rp,0)}).`:''
+  ];
+  const t1=`<div class="fscroll"><table class="ftab htab"><thead><tr><th ${thl}>${esc(set.n)}</th><th>Hotel</th><th>Set</th><th>Índice</th><th class="hm">Δ 2025 hotel</th><th class="hm">Δ 2025 set</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  const t2=`<div class="fscroll"><table class="ftab htab"><thead><tr><th ${thl}>Índice del mes por set</th><th>Ocup.</th><th>ADR</th><th>RevPAR</th></tr></thead><tbody>${setRows}</tbody></table></div>`;
+  const t3=dr?`<div class="fscroll"><table class="ftab htab"><thead><tr><th ${thl}>Día · índice (100 = mercado)</th><th>Ocup.</th><th>ADR</th><th>RevPAR</th><th>RevPAR 3 meses</th></tr></thead><tbody>${dr}</tbody></table></div>`:'';
+  const mo=star.last,lab=MESN[+mo.slice(5)-1]+' '+mo.slice(0,4);
+  return card('Frente al mercado (STAR)','Informe de '+lab,bul(items)+t1+t2+t3+'<p class="hnote">Índice 100 = igual que el mercado; verde por encima, rojo por debajo. Es un informe mensual: sirve para fijar tarifas y programar, no para el control diario.</p>');
+}
+
+/* ---------- 3 · F&B esperado = huéspedes en casa (Reservation Summary) × gasto por huésped ---------- */
+const WIN=56;
+function fbCompute(ctx){
+  const rs=ctx.rs;if(!rs||!rs.rows||!rs.rows.length||!rs.cols)return null;
+  const vs=ctx.venues.filter(v=>!/banquet|evento|event|mini\s*-?\s*bar/i.test(String(v)));if(!vs.length)return null;
+  const days=ctx.days,rev=(v,k)=>Number((ctx.daily[v]||{})[k])||0;
+  const real=Object.keys(days).filter(k=>!days[k].est&&days[k].rr>0).sort();if(!real.length)return null;
+  const last=real[real.length-1];
+  const tr=real.filter(k=>days[k].gu>0&&k>addD(last,-WIN-30));
+  const ratio=(v,dw,end)=>{const pool=tr.filter(k=>k<=end&&k>addD(end,-WIN));const sel=pool.filter(k=>dowOf(k)===dw).map(k=>rev(v,k)/days[k].gu);const all=pool.map(k=>rev(v,k)/days[k].gu);return sel.length>=3?med(sel):all.length>=5?med(all):null};
+  const predict=(gu,k,end)=>vs.map(v=>{const r=ratio(v,dowOf(k),end);return r==null?null:r*gu});
+  const ix=c=>rs.cols.indexOf(c)+1,iA=ix('adl'),iC=ix('chl'),iO=ix('tot');
+  const fut=rs.rows.filter(r=>r[0]>last).slice(0,30).map(r=>{const ad=r[iA]||0,ch=r[iC]||0,p=predict(ad+ch,r[0],last);return{k:r[0],ad,ch,so:r[iO]||0,p,tot:p.every(x=>x==null)?null:sum(p.map(x=>x||0))}});
+  if(!fut.length)return null;
+  // fiabilidad: cada uno de los últimos 21 días se predice con las 8 semanas anteriores y los huéspedes reales de ese día
+  const bt=[];tr.slice(-21).forEach(k=>{const p=predict(days[k].gu,k,addD(k,-1));if(p.some(x=>x==null))return;const pr=sum(p),re=sum(vs.map(v=>rev(v,k)));if(re>0)bt.push({k,pr,re})});
+  const mape=bt.length?sum(bt.map(b=>Math.abs(b.pr-b.re)/b.re))/bt.length:null,bias=bt.length?(sum(bt.map(b=>b.pr))-sum(bt.map(b=>b.re)))/sum(bt.map(b=>b.re)):null;
+  // gasto por huésped: últimos 28 días con huéspedes frente a los 28 anteriores
+  const cap=(arr)=>vs.map(v=>{const g=sum(arr.map(k=>days[k].gu));return g?sum(arr.map(k=>rev(v,k)))/g:null});
+  const a28=tr.slice(-28),b28=tr.slice(-56,-28);
+  const last14=tr.slice(-14),avg14=last14.length?sum(last14.map(k=>sum(vs.map(v=>rev(v,k)))))/last14.length:null;
+  return{vs,last,fut,mape,bias,nbt:bt.length,cap:{now:cap(a28),prev:b28.length>=14?cap(b28):null,n:a28.length},avg14,rsAsof:rs.asof};
+}
+function fbHtml(R){
+  if(!R)return'';
+  const f14=R.fut.slice(0,14),t7=sum(R.fut.slice(0,7).map(x=>x.tot||0)),t14=sum(f14.map(x=>x.tot||0));
+  const g14=sum(f14.map(x=>x.ad+x.ch)),kids=sum(f14.map(x=>x.ch));
+  const row=x=>`<tr><td class="vn">${DN[dowOf(x.k)]} ${fdm(x.k)}</td><td>${nf(x.ad)} / ${nf(x.ch)}</td>${x.p.map(v=>`<td>${v==null?'—':nf(v)}</td>`).join('')}<td><b>${x.tot==null?'—':nf(x.tot)}</b></td></tr>`;
+  const items=[
+    `Próximos 7 días: <b>${nf(t7)} €</b> · 14 días: <b>${nf(t14)} €</b> (sin banquetes ni eventos).`,
+    R.avg14!=null&&f14.length?`Ritmo previsto <b>${nf(t14/f14.length)} €/día</b> frente a ${nf(R.avg14)} €/día de los últimos 14 días reales (<span class="${cl(t14/f14.length-R.avg14)}">${sg((t14/f14.length/R.avg14-1)*100,1)}%</span>).`:'',
+    `${nf(g14/f14.length,0)} huéspedes en casa de media, ${g14?nf(kids/g14*100,0):0}% niños.`,
+    R.mape!=null?`Fiabilidad (últimos ${R.nbt} días): error medio por día <b>${nf(R.mape*100,0)}%</b>, sesgo ${sg(R.bias*100,1)}%. ${R.mape>0.25?'Úsalo para tendencia y turnos, no para cifras exactas.':'Aceptable para planificar turnos y producción.'}`:'Aún no hay días suficientes para medir la fiabilidad.'
+  ];
+  const head=`<th ${thl}>Día</th><th>Adultos / niños</th>${R.vs.map(v=>`<th>${esc(v)}</th>`).join('')}<th>Total</th>`;
+  const tbl=`<div class="fscroll"><table class="ftab htab"><thead><tr>${head}</tr></thead><tbody>${f14.map(row).join('')}</tbody></table></div>`;
+  const cr=R.vs.map((v,i)=>{const a=R.cap.now[i],b=R.cap.prev?R.cap.prev[i]:null;return`<tr><td class="vn">${esc(v)}</td><td>${a==null?'—':nf(a,2)} €</td><td class="hm ${b==null||a==null?'':cl(a-b)}">${b==null||a==null||!b?'—':sg((a/b-1)*100,0)+'%'}</td></tr>`}).join('');
+  const t2=`<div class="fscroll"><table class="ftab htab"><thead><tr><th ${thl}>Gasto por huésped en casa (28 días)</th><th>€ / huésped</th><th class="hm">vs 28 días previos</th></tr></thead><tbody>${cr}</tbody></table></div>`;
+  return card('F&B esperado con los huéspedes en casa','Reservation Summary del '+fdm(R.rsAsof||R.last),bul(items)+tbl+t2+'<p class="hnote">Huéspedes (adultos + niños) × lo que se gasta por huésped en cada venue, según las últimas 8 semanas del mismo día de la semana. Incluye también a clientes externos, porque el gasto real no los separa. No cuenta banquetes ni eventos: esos van por Group Pace y calendario.</p>');
+}
+
+/* ---------- montaje en las pantallas existentes ---------- */
+function gl(n){try{return(0,eval)(n)}catch(e){return undefined}}
+function roomsMount(){
+  const host=document.getElementById('rooms'),h=root.__HOT;if(!host||!h)return;
+  const old=document.getElementById('nvRooms');if(old)old.remove();
+  let rf=h.rf&&h.rf.last,bud=0;
+  try{if(rf){const P=gl('hPeriod')(),mk=+rf.d.slice(5,7);if(P&&P.m===mk&&!P.ytd){const b=gl('hRef')('budget26',P.m,P.m,P.L.d/gl('hdim')(P.L.y,P.m));bud=b?b.rr:0}}}catch(e){}
+  const html=rfHtml(rf,bud)+starHtml(h.star);
+  if(!html)return;
+  host.insertAdjacentHTML('beforeend','<div class="hwrap" id="nvRooms" style="padding-top:0">'+html+'</div>');
+}
+function fbMount(){
+  const host=document.getElementById('forecast'),h=root.__HOT;if(!host||!h||!h.rs)return;
+  const old=document.getElementById('nvFb');if(old)old.remove();
+  const D=gl('DATA'),gv=gl('getVenues'),pv=gl('parseValue');if(!D||!gv||!pv)return;
+  const y=D.config.year,daily={},venues=gv();
+  venues.forEach(v=>daily[v]={});
+  (D.annualDaily||[]).forEach(r=>{const m=Number(r.Mes),d=Number(r['Día']);if(!m||!d)return;const k=y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');venues.forEach(v=>{const x=pv(r[v]);if(x>0)daily[v][k]=x})});
+  const R=fbCompute({rs:h.rs,days:h.days||{},daily,venues});
+  const html=fbHtml(R);if(!html)return;
+  host.insertAdjacentHTML('beforeend','<div id="nvFb" style="margin-top:1rem">'+html+'</div>');
+}
+function hook(){
+  let ok=0;
+  if(typeof root.renderRooms==='function'&&!root.renderRooms.__nv){const o=root.renderRooms,w=function(){const r=o.apply(this,arguments);try{roomsMount()}catch(e){console.warn('nv rooms',e)}return r};w.__nv=1;root.renderRooms=w}
+  if(root.renderRooms&&root.renderRooms.__nv)ok++;
+  try{if(typeof RENDERERS!=='undefined'&&RENDERERS.forecast&&!RENDERERS.forecast.__nv){const o=RENDERERS.forecast,w=function(){const r=o.apply(this,arguments);try{fbMount()}catch(e){console.warn('nv fb',e)}return r};w.__nv=1;RENDERERS.forecast=w}
+    if(typeof RENDERERS!=='undefined'&&RENDERERS.forecast&&RENDERERS.forecast.__nv)ok++}catch(e){}
+  return ok>=2;
+}
+root.__NV2={rfHtml,starHtml,fbCompute,fbHtml,rfLine};
+if(typeof document!=='undefined'){let n=0;const iv=setInterval(()=>{if(++n>60||hook())clearInterval(iv)},400)}
+})();
+

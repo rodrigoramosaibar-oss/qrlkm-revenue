@@ -542,6 +542,7 @@ body.area-hotel .dashOnly{display:none!important}
 .hb .bw i{display:block;width:78%;background:var(--accent);border-radius:2px 2px 0 0;min-height:1px}
 .hb .bv{font-size:.62rem;font-weight:650;color:var(--ink);line-height:1;margin-bottom:2px;white-space:nowrap}
 .hb .bl{font-size:.58rem;color:var(--muted);line-height:1;margin-top:3px}
+.puDense .bl{width:0;display:flex;justify-content:center;white-space:nowrap;overflow:visible;font-size:.54rem}.puDense.vv .bv{writing-mode:vertical-rl;transform:rotate(180deg);font-size:.55rem}
 @media(max-width:900px){.hbars{height:190px;gap:1px}.hb .bv{writing-mode:vertical-rl;transform:rotate(180deg);font-size:.6rem}.hb .bl{font-size:.54rem}}
 
 /* ---- marca ---- */
@@ -2320,7 +2321,7 @@ const PU_I={};PU_MAP.forEach((m,i)=>{PU_I[m[0]]=i});
 const PU_HDR=[['F',3,'occ'],['G',3,'rns'],['K',3,'ttoo'],['O',3,'adr'],['R',3,'revenue'],['U',3,'pu transient'],['AA',3,'total pu'],['AI',3,'fit rate'],['AY',3,'fc diario']];
 const puCol=s=>s.split('').reduce((a,c)=>a*26+c.charCodeAt(0)-64,0);
 const puDate=n=>new Date(Math.round((n-25569)*864e5)).toISOString().slice(0,10);
-let PU_ST=null;const PUST={y:null,m:0};
+let PU_ST=null;const PUST={y:null,m:0,n:60};
 async function puInflate(u8){return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer())}
 async function puZip(buf){
   const dv=new DataView(buf),u8=new Uint8Array(buf);let e=u8.length-22;
@@ -2451,6 +2452,16 @@ async function puCommit(publish){
 function puSet(k,v){PUST[k]=v;renderPu()}
 function puMonthRows(y,m){const P=HOT.pu.years[y];return P?Object.keys(P.d).sort().filter(k=>!m||+k.slice(5,7)===m).map(k=>({k,r:P.d[k]})):[]}
 function puAgg(rows){const a={rn:0,rv:0,pu:0,puRv:0,fc:0,ly:0,n:rows.length,tt:0,co:0,rw:0,em:0,ivn:0,ive:0,rnT:0,rnG:0};rows.forEach(({r})=>{a.rn+=r[PU_I.rn];a.rv+=r[PU_I.rv];a.pu+=r[PU_I.pu];a.puRv+=r[PU_I.puRv];a.fc+=r[PU_I.fc];a.ly+=r[PU_I.lyO]/100*PU_INV;['tt','co','rw','em','ivn','ive','rnT','rnG'].forEach(x=>{a[x]+=r[PU_I[x]]})});return a}
+function puChart(dr,n){
+  const occ=dr.map(({r})=>r[PU_I.rn]/PU_INV*100);
+  if(dr.length<=31)return hBarsV(occ.map(v=>Math.round(v)),dr.map(({k})=>+k.slice(8,10)));
+  const dm=k=>+k.slice(8,10)+'/'+k.slice(5,7);let vals,labs,tips,wk=n>60;
+  if(!wk){vals=occ.map(v=>Math.round(v));labs=dr.map(({k},i)=>i%5===0?dm(k):'');tips=dr.map(({k},i)=>dm(k)+' · '+vals[i]+'%')}
+  else{vals=[];labs=[];tips=[];const step=n>180?4:2;
+    for(let i=0,w=0;i<dr.length;i+=7,w++){const s=occ.slice(i,i+7),a=s.reduce((x,y)=>x+y,0)/s.length;vals.push(Math.round(a));labs.push(w%step===0?dm(dr[i].k):'');tips.push('Semana del '+dm(dr[i].k)+' · media '+Math.round(a)+'%')}}
+  const mx=Math.max(1,...vals);
+  return`<div class="hbars puDense${vals.length>40?' vv':''}">`+vals.map((v,i)=>`<div class="hb" title="${tips[i]}"><div class="bw">${wk?`<span class="bv">${v}</span>`:''}<i style="height:${(v/mx*78).toFixed(1)}%"></i></div><span class="bl">${labs[i]}</span></div>`).join('')+`</div>`;
+}
 function renderPu(){
   const host=$('pu');
   if(!HAS_HOT||!HOT.pu||!Object.keys(HOT.pu.years||{}).length){
@@ -2459,7 +2470,7 @@ function renderPu(){
   }
   const P=HOT.pu,ys=Object.keys(P.years).sort();if(!PUST.y||!P.years[PUST.y])PUST.y=ys.find(y=>+y===new Date().getFullYear())||ys[0];
   const y=PUST.y,Y=P.years[y],m=PUST.m,dn=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-  const ctl=`<div class="hctl"><label>Año<select onchange="puSet('y',this.value)">${ys.map(v=>`<option ${v===y?'selected':''}>${v}</option>`).join('')}</select></label><label>Mes<select onchange="puSet('m',+this.value)"><option value="0">Todo el año</option>${months.map((n,i)=>`<option value="${i+1}" ${m===i+1?'selected':''}>${n}</option>`).join('')}</select></label>${HOT_EDIT?'<button class="fb primary" onclick="puOpen()">Cargar PickUp</button>':''}</div>`;
+  const ctl=`<div class="hctl"><label>Año<select onchange="puSet('y',this.value)">${ys.map(v=>`<option ${v===y?'selected':''}>${v}</option>`).join('')}</select></label><label>Mes<select onchange="puSet('m',+this.value)"><option value="0">Todo el año</option>${months.map((n,i)=>`<option value="${i+1}" ${m===i+1?'selected':''}>${n}</option>`).join('')}</select></label>${m?'':`<label>Días<select onchange="puSet('n',+this.value)">${[30,60,120,365].map(v=>`<option value="${v}" ${(PUST.n||60)===v?'selected':''}>${v} días</option>`).join('')}</select></label>`}${HOT_EDIT?'<button class="fb primary" onclick="puOpen()">Cargar PickUp</button>':''}</div>`;
   const all=puAgg(puMonthRows(y,0)),sel=puAgg(puMonthRows(y,m)),updTxt=Y.asof.slice(8)+'/'+Y.asof.slice(5,7)+'/'+Y.asof.slice(0,4);
   const intro=`Informe de Revenue del <b>${updTxt}</b>. ${y}: <b>${fmtNum(all.rn)}</b> habitaciones-noche en libros desde esa fecha (${hn(all.rn/(all.n*PU_INV)*100,1)}% de ocupación), ${fmtNum(all.rv)} € de room revenue, ADR ${hn(all.rn?all.rv/all.rn:0,0)} €. Pickup del último informe: <b>${all.pu>=0?'+':''}${fmtNum(all.pu)}</b> hab y ${all.puRv>=0?'+':''}${fmtNum(all.puRv)} €.`;
   // mensual
@@ -2468,9 +2479,9 @@ function renderPu(){
     return`<tr class="${m===i+1?'sel':''}" onclick="puSet('m',${i+1})" style="cursor:pointer"><td class="vn">${n}${a.n<new Date(+y,i+1,0).getDate()?' <small>(desde hoy)</small>':''}</td><td>${hp(oc,1)}</td><td>${fmtNum(a.rn)}</td><td>${hn(adr,0)}</td><td>${fmtNum(a.rv)}</td><td class="${dcls(a.pu)}">${a.pu>=0?'+':''}${fmtNum(a.pu)}</td><td class="hm">${s.fcRn?fmtNum(s.fcRn):'—'}</td><td class="hm">${s.fcRv?fmtNum(s.fcRv):'—'}</td><td class="hm">${s.budRv?fmtNum(s.budRv):'—'}</td><td class="hm">${s.lyRn?fmtNum(s.lyRn):'—'}</td></tr>`}).join('');
   const mt=`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Mes</th><th>Ocup. libros</th><th>Hab-noche</th><th>ADR</th><th>Room revenue €</th><th>PickUp hab</th><th class="hm">Forecast mes hab</th><th class="hm">Forecast mes €</th><th class="hm">Budget mes €</th><th class="hm">Libros año ant. hab</th></tr></thead><tbody>${mrows}</tbody></table></div><p class="hnote">Pulsa un mes para ver su detalle. Las cuatro últimas columnas son del mes completo (Forecast y Budget de Revenue, y lo que había en libros a esta misma fecha el año pasado). Hab-noche, ADR y revenue son solo desde la fecha del informe.</p>`;
   // gráfico de ocupación por día
-  const dr=puMonthRows(y,m).slice(0,m?31:120),chart=hBarsV(dr.map(({r})=>Math.round(r[PU_I.rn]/PU_INV*100)),dr.map(({k})=>+k.slice(8,10)));
+  const NN=PUST.n||60,dr=m?puMonthRows(y,m).slice(0,31).map(o=>({...o,Y})):ys.flatMap(yy=>puMonthRows(yy,0).map(o=>({...o,Y:P.years[yy]}))).sort((a,b)=>a.k<b.k?-1:1).slice(0,NN),chart=puChart(dr,NN);
   // detalle diario
-  const trs=dr.map(({k,r})=>{const dt=new Date(k+'T12:00:00'),e=Y.ev[k]||'',oc=r[PU_I.rn]/PU_INV,gp=r[PU_I.fc]?r[PU_I.rn]/r[PU_I.fc]-1:null;
+  const trs=dr.map(({k,r,Y:YY})=>{const dt=new Date(k+'T12:00:00'),e=(YY||Y).ev[k]||'',oc=r[PU_I.rn]/PU_INV,gp=r[PU_I.fc]?r[PU_I.rn]/r[PU_I.fc]-1:null;
     return`<tr><td class="vn">${dn[dt.getDay()]} ${+k.slice(8,10)}/${k.slice(5,7)}${e?` <small>${escapeHTML(e)}</small>`:''}</td><td>${hp(oc,0)}</td><td>${r[PU_I.rnT]}/${r[PU_I.rnG]}</td><td>${r[PU_I.adr]?hn(r[PU_I.adr],0):'—'}</td><td>${fmtNum(r[PU_I.rv])}</td><td class="${dcls(r[PU_I.pu])}">${r[PU_I.pu]?(r[PU_I.pu]>0?'+':'')+r[PU_I.pu]:'·'}</td>${fcOk?`<td class="hm">${r[PU_I.fc]}</td><td class="hm ${gp==null?'':dcls(gp)}">${gp==null?'—':(gp>=0?'+':'−')+hn(Math.abs(gp)*100,0)+'%'}</td>`:''}<td class="hm">${hp(r[PU_I.lyO]/100,0)}</td><td class="hm">${r[PU_I.fit]?hn(r[PU_I.fit],0):'—'}</td></tr>`}).join('');
   const dt=`<div class="fscroll tall"><table class="ftab htab"><thead><tr><th>Día</th><th>Ocup.</th><th>Trans/Grupo</th><th>ADR</th><th>Revenue €</th><th>PickUp</th>${fcOk?'<th class="hm">FC hab</th><th class="hm">vs FC</th>':''}<th class="hm">Año ant.</th><th class="hm">Tarifa FIT</th></tr></thead><tbody>${trs}</tbody></table></div>`;
   // segmentos
@@ -2480,7 +2491,7 @@ function renderPu(){
   const lt=`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Informe del</th><th>Año</th><th>Hab-noche</th><th>Revenue €</th><th>PickUp</th><th>Cargado por</th></tr></thead><tbody>${lg}</tbody></table></div><p class="hnote">Con cada carga se guarda la foto de cada día a distintas antelaciones (hoy, +7, +14, +30, +60, +90… días) para medir el ritmo de reservas y proyectar cierres. Cuantas más cargas, más fiable.</p>`;
   host.innerHTML=`<div class="hwrap">${hHead('PICKUP','PickUp',intro,ctl)}
   ${hCard('Resumen por mes · '+y,'OTB, forecast de Revenue y año anterior',mt)}
-  <div class="hgrid"><div class="hcol">${hCard('Ocupación en libros por día','% sobre '+PU_INV+' hab · '+(m?months[m-1]:'próximos 120 días'),chart)}${hCard('Segmentos de cliente','',sg)}${hCard('Historial de cargas','',lt)}</div>
+  <div class="hgrid"><div class="hcol">${hCard('Ocupación en libros por día','% sobre '+PU_INV+' hab · '+(m?months[m-1]:'próximos '+NN+' días'+(NN>60?' · media semanal':'')),chart)}${hCard('Segmentos de cliente','',sg)}${hCard('Historial de cargas','',lt)}</div>
   <div class="hcol">${hCard('Detalle por día','PickUp = reservas netas desde el informe anterior',dt)}</div></div>
   <p class="hnote">Fuente: «Daily Business Report» de Revenue (hoja Daily PU). Los ingresos de días ya pasados de ese informe no coinciden con el Revenue Flash, por eso aquí solo se guardan días desde la fecha del informe.</p></div>`;
 }

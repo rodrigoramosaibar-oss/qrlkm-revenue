@@ -1960,7 +1960,8 @@ function hRef(key,m,fromM=m,frac=1){ // referencia mensual (el último mes puede
   o.ot=o.tot-o.rr-o.fb;return o;
 }
 function hPtdRef(m){ // comparador exacto "a la fecha" que trae el propio Flash (Forecast / Budget / 2025)
-  const x=HOT.ptdRef,L=hLastInfo();if(!x||x.key!==L.key||m!==L.m||!x[HST.cmp])return null;
+  const x=HOT.ptdRef,L=hLastInfo();if(!x||x.key!==L.key||m!==L.m||!x[HST.cmp])return null;if(HST.cmp==='forecast26'&&HOT.ref&&HOT.ref.fc26)return null; // forecast único: el «a la fecha» sale del forecast oficial, no del que trae el Flash
+  
   const c=x[HST.cmp];return{av:c.av,so:c.so,rr:c.rr,fb:c.fb,tot:c.tot,ot:c.tot-c.rr-c.fb};
 }
 function hPeriod(){
@@ -3837,7 +3838,7 @@ function mobIsMobile(){return true}
 const mEu=v=>(v==null||!isFinite(v))?'—':hn(Math.round(v),0)+' €';
 const mSg=v=>(v==null||!isFinite(v))?'—':(v>0.5?'+':v<-0.5?'−':'')+hn(Math.abs(Math.round(v)),0)+' €';
 const mCls=v=>v==null||!isFinite(v)?'':v>=0?'mp':'mn';
-function mPtd(key,L,m){const x=HOT.ptdRef;if(x&&x.key===L.key&&x[key]){const c=x[key];return{av:c.av,so:c.so,rr:c.rr,fb:c.fb,tot:c.tot,ot:c.tot-c.rr-c.fb}}return hRef(key,m,m,L.d/L.dim)}
+function mPtd(key,L,m){const x=HOT.ptdRef;if(x&&x.key===L.key&&x[key]&&!(key==='forecast26'&&HOT.ref&&HOT.ref.fc26)){const c=x[key];return{av:c.av,so:c.so,rr:c.rr,fb:c.fb,tot:c.tot,ot:c.tot-c.rr-c.fb}}return hRef(key,m,m,L.d/L.dim)}
 function mRow(n,real,sh,fcv,need,unit,o){
   o=o||{};const f=o.f||mEu,dev=sh!=null&&Math.abs(sh)>0.5?real/sh-1:null,dv=o.fd||mSg;
   const pct=o.full>0?Math.min(100,Math.max(0,real/o.full*100)):0,mk=o.full>0&&sh>0?Math.min(100,sh/o.full*100):0;

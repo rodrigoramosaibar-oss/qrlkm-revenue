@@ -63,6 +63,9 @@ function sources(){
   // 6 Budget
   const B=R.b27;
   out.push({n:'Budget'+(B?' '+B.year:'')+' (Excel)',q:'Referencia presupuestaria por mes',cad:'Una vez al año',last:B?B.upd:null,a:age(B&&B.upd),st:B?'ok':'warn',ll:lastLoad(/^Budget/),hint:B?'':'Sin cargar'});
+  // 7 Forecast
+  const FC=R.fc26;
+  out.push({n:'Forecast'+(FC&&FC.label?' ('+FC.label+')':'')+' (Excel P&L)',q:'Forecast oficial de IHG por mes: Rooms, F&B y venues; única referencia de forecast en la app',cad:'Mensual (cada vez que Revenue lo actualice)',last:FC?FC.upd:null,a:age(FC&&FC.upd),st:FC?'ok':'warn',ll:lastLoad(/^Forecast/),hint:FC?'':'Sin cargar'});
   return out;
 }
 function glRow(){

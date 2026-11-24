@@ -1939,6 +1939,7 @@ Object.assign(window,{pdfAutoHandle,flashOpen,flashClose,flashHandleFile,flashMo
 // ======================= v47 · Hotel (Rooms + F&B + Otros) =======================
 const HOT=window.__HOT||null,HAS_HOT=!!HOT,HOT_EDIT=HAS_HOT&&IS_EDITOR;
 const HCMP={forecast26:'Forecast 2026 (13 nov)',budget26:'Budget 2026',py25:'2025'};
+if(HOT&&HOT.ref&&HOT.ref.fc26)fcApply();
 const HST={cmp:'forecast26',mode:'month',month:null,dirty:false};
 const MS3=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const hn=(v,d=0)=>Number(v||0).toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -2586,7 +2587,7 @@ function fzMonth(Y,M,h,ctx){
     const sea=closed[M]?null:fzSeason(pr,M,true),vv={},done=cur0?((V[v][M]||{t:0}).t):0;if(sea)vv.r=done+Math.max(0,RN-mt.so)*sea;
     const mo=M<=12&&DATA.config.year===Y?monthObjectives(M)[v]||{}:{},scs=Object.keys(mo).filter(k=>/^Forecast/i.test(k)).sort((a,b)=>(parseFloat(a.replace(/\D+/,''))||0)-(parseFloat(b.replace(/\D+/,''))||0)),last=scs[scs.length-1];
     if(last&&+mo[last]>0)vv.f=+mo[last];if(+mo.Original>0)vv.b=+mo.Original;
-    b27VenV(Y,M,v,vv);const EV=isBq&&ty?evBq(Y,M,cur0?L.d:0,ctx):null;if(EV&&EV.exp>0)vv.g=done+EV.exp;const b=fzBlend('ven',vv,h,1,done);
+    b27VenV(Y,M,v,vv);fcVenV(Y,M,v,vv);const EV=isBq&&ty?evBq(Y,M,cur0?L.d:0,ctx):null;if(EV&&EV.exp>0)vv.g=done+EV.exp;const b=fzBlend('ven',vv,h,1,done);
     if(b&&isBq&&PU&&hasPUm){const before=b.val;if(gRem<=0)b.val=done;else{const sh=nRem>0?gRem/nRem:0,typ=gAllTyp(PU,ctx);if(typ>0&&sh<typ)b.val=done+(b.val-done)*(sh/typ)}b.cut=before-b.val;banqCut+=b.cut}
     if(b&&EV){b.ev=EV;const lo=done+EV.firm;if(b.val<lo){b.evUp=lo-b.val;evUp+=b.evUp;b.val=lo}}
     if(b)ven[v]=b;
@@ -2811,7 +2812,7 @@ Object.assign(window,{fzManAdd,fzManDel});
 const B27_MC=Array.from({length:12},(_,i)=>18+13*i);
 const B27_SH=[['rooms',/^Rooms Totals/],['fb',/^F&B Department Totals/],['cb',/^C&B Totals/],['jara',/^Restaurant1/],['azul',/^Bar1/],['pool',/^Bar2/],['esc',/^Bar3/],['raq',/^Bar4/],['rs',/^Room Service/]];
 let B27_ST=null;
-async function b27Read(file){
+async function b27Read(file,colOk,list){
   const z=await puZip(await file.arrayBuffer());
   const wb=await z.get('xl/workbook.xml'),rels=await z.get('xl/_rels/workbook.xml.rels');
   if(!wb||!rels)throw new Error('Este Excel no tiene el formato esperado.');
@@ -2820,11 +2821,11 @@ async function b27Read(file){
   const ss=[],sst=await z.get('xl/sharedStrings.xml');
   if(sst)for(const m of sst.matchAll(/<si>([\s\S]*?)<\/si>/g)){let t='';for(const x of m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g))t+=x[1];ss.push(puUnesc(t))}
   const out={};
-  for(const [key,re] of B27_SH){
+  for(const [key,re] of (list||B27_SH)){
     const s=sheets.find(x=>re.test(x.name)&&x.path);if(!s)continue;
     const xml=await z.get(s.path.startsWith('/')?s.path.slice(1):'xl/'+s.path);if(!xml)continue;const g={};
     for(const m of xml.matchAll(/<c r="([A-Z]+)(\d+)"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)){
-      const r=+m[2];if(r>135||m[4]==null)continue;const c=puCol(m[1]);if(c>170||!(c===2||c===3||(c>=18&&[0,3,6].includes((c-18)%13))))continue;
+      const r=+m[2];if(r>135||m[4]==null)continue;const c=puCol(m[1]);if(c>170||!(c===2||c===3||(colOk?colOk(c):(c>=18&&[0,3,6].includes((c-18)%13)))))continue;
       const t=/\bt="(\w+)"/.exec(m[3]),v=/<v>([\s\S]*?)<\/v>/.exec(m[4]);let val=null;
       if(t&&t[1]==='s'&&v)val=ss[+v[1]];else if(t&&t[1]==='inlineStr'){const x=/<t[^>]*>([\s\S]*?)<\/t>/.exec(m[4]);val=x?puUnesc(x[1]):null}
       else if(t&&(t[1]==='e'||t[1]==='b'))val=null;else if(t&&t[1]==='str')val=v?puUnesc(v[1]):null;else if(v){const f=parseFloat(v[1]);val=isFinite(f)?f:null}
@@ -2856,7 +2857,7 @@ function b27Open(){
   <label class="fpick"><input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden onchange="b27Handle(this.files[0])"><span>Elegir Excel del Budget</span><small>o arrástralo aquí</small></label>`;
 }
 async function b27Handle(file){
-  if(!file)return;const body=$f('flashBody');body.innerHTML='<p class="fp">Leyendo «'+escapeHTML(file.name)+'»…</p>';
+  if(!file)return;if(await fcIsFc(file))return fcHandle(file);const body=$f('flashBody');body.innerHTML='<p class="fp">Leyendo «'+escapeHTML(file.name)+'»…</p>';
   try{
     const R=b27Parse(await b27Read(file));R.src=file.name;R.upd=new Date().toISOString();B27_ST=R;const c=R.chk,had=HOT.ref&&HOT.ref.b27;
     const ok=c.sold>0&&c.rev>0&&c.av>0;
@@ -2881,6 +2882,63 @@ function b27Fb(Y,M,fbv){const B=HOT.ref&&HOT.ref.b27;if(!B)return;const i=M-1;
 function b27VenV(Y,M,v,vv){const B=HOT.ref&&HOT.ref.b27,k=b27Ven(v);if(!B||!k)return;const i=M-1;
   if(Y===B.year&&B.b[k]&&B.b[k][i]>0)vv.b=B.b[k][i];else if(Y===B.year-1&&B.f[k]&&B.f[k][i]>0&&!vv.f)vv.f=B.f[k][i]}
 Object.assign(window,{b27Open,b27Handle,b27Commit});
+
+// ======================= v60 · Forecast oficial (P&L mensual de IHG con grupos de mes) =======================
+// El Excel trae tres grupos de columnas por hoja: Total Period (nov+dic), November y December. Se elige el grupo por NOMBRE de mes, nunca por posición.
+const FC_SH=[['tot',/^QRLKM/],['rooms',/^Rooms Totals/],['fb',/^F&B Department Totals/],['cb',/^C&B Totals/],['jara',/^Restaurant1/],['azul',/^Bar1/],['pool',/^Bar2/],['esc',/^Bar3/],['raq',/^Bar4/],['rs',/^Room Service/]];
+const FC_MN={january:1,february:2,march:3,april:4,may:5,june:6,july:7,august:8,september:9,october:10,november:11,december:12};
+const fcCols=c=>c>=5&&c<=70;
+async function fcIsFc(file){try{if(!/\.xlsx$/i.test(file.name))return false;const g=(await b27Read(file,fcCols,[['rooms',/^Rooms Totals/]])).rooms||{};return Object.values(g[10]||{}).some(v=>/^Total Period/i.test(String(v)))}catch(e){return false}}
+function fcParse(sh,name){
+  if(!sh.rooms)throw new Error('No encuentro la hoja «Rooms Totals». ¿Es el P&L mensual con Forecast?');
+  const h=sh.rooms[10]||{},t11=sh.rooms[11]||{},grp=[];let tp=0;
+  Object.keys(h).map(Number).sort((a,b)=>a-b).forEach(c=>{const t=String(h[c]).trim().toLowerCase();if(FC_MN[t])grp.push({m:FC_MN[t],c});else if(/^total period/.test(t))tp=c});
+  if(!grp.length)throw new Error('No encuentro columnas de mes (November, December…) en la cabecera.');
+  const find=(g,label,pre)=>{if(!g)return null;for(const r of Object.keys(g).map(Number).sort((a,b)=>a-b)){const row=g[r];if(row[2]===label&&(!pre||String(row[3]||'').startsWith(pre)))return row}return null};
+  const R={months:{},chk:{}},sc=[['f',0],['p',3],['b',6],['a',9]],num=v=>typeof v==='number'?Math.round(v*100)/100:0;
+  grp.forEach(({m,c})=>{
+    if(!/Forecast/i.test(String(t11[c]||''))||!/Budget/i.test(String(t11[c+6]||''))||!/Actual/i.test(String(t11[c+9]||'')))throw new Error('Las cabeceras del grupo de '+Object.keys(FC_MN)[m-1]+' no son Forecast / Budget / Actual.');
+    const o={f:{},p:{},b:{},a:{}},put=(k,row)=>{if(row)sc.forEach(([s,d])=>{o[s][k]=num(row[c+d])})};
+    put('av',find(sh.rooms,'Rooms Available'));put('sold',find(sh.rooms,'Rooms Sold'));put('rev',find(sh.rooms,'Total Revenue','C00200'));
+    put('tot',find(sh.tot,'Total Operating Revenue'));
+    ['fb','cb','jara','azul','pool','esc','raq','rs'].forEach(k=>{if(sh[k])put(k,find(sh[k],'Total Revenue','C00200'))});
+    R.months[m]=o;
+  });
+  const ms=Object.keys(R.months).map(Number).sort((a,b)=>a-b),a0=R.months[ms[0]].f;
+  if(!(a0.sold>0&&a0.rev>0))throw new Error('El grupo de '+Object.keys(FC_MN)[ms[0]-1]+' no trae habitaciones vendidas o revenue.');
+  // controles: suma de meses = Total Period; F&B = suma de venues
+  if(tp&&sh.tot){const rw=find(sh.tot,'Total Operating Revenue');if(rw){const s=ms.reduce((t,m)=>t+R.months[m].f.tot,0);R.chk.tp=Math.abs(s-num(rw[tp]))<2}}
+  R.chk.fbv=ms.map(m=>{const f=R.months[m].f,sv=['jara','azul','pool','esc','raq','rs','cb'].reduce((t,k)=>t+(f[k]||0),0);return{m,fb:f.fb,sv,ok:Math.abs(f.fb-sv)<2}});
+  const d=/^(\d{1,2})([A-Za-z]{3})(\d{4})/.exec(name||'');R.label=d?d[1]+' '+d[2].toLowerCase():'';
+  R.months_list=ms;return R;
+}
+let FC_ST=null;
+async function fcHandle(file){
+  if(!file)return;if(!HOT_EDIT){toast('Tu usuario no puede cargar datos.');return}
+  const m=flashModalEl();m.classList.add('show');$f('flashTitle').textContent='Cargar Forecast (P&L mensual de IHG)';const body=$f('flashBody');body.innerHTML='<p class="fp">Leyendo «'+escapeHTML(file.name)+'»…</p>';
+  try{
+    const R=fcParse(await b27Read(file,fcCols,FC_SH),file.name);R.src=file.name;R.upd=new Date().toISOString();FC_ST=R;
+    const MN=['','ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    const li=R.months_list.map(mm=>{const f=R.months[mm].f;return`<li class="ok">✓ <b>${MN[mm]}</b> · ${fmtNum(f.sold)} hab. vendidas · Rooms ${fmtNum(f.rev)} € · ADR ${hn(f.sold?f.rev/f.sold:0,2)} € · F&amp;B ${fmtNum(f.fb||0)} € · total hotel ${fmtNum(f.tot)} €</li>`}).join('');
+    const bad=R.chk.fbv.filter(x=>!x.ok),tpk=R.chk.tp;
+    body.innerHTML=`<ul class="fchk">${li}${tpk===false?'<li class="ko">✗ La suma de meses no cuadra con «Total Period».</li>':'<li class="ok">✓ Suma de meses = Total Period</li>'}
+    ${bad.length?'<li class="ko">✗ F&amp;B ≠ suma de venues en '+bad.map(x=>MN[x.m]).join(', ')+'</li>':'<li class="ok">✓ F&amp;B del hotel = suma de venues (Jara, Azul, Pool, Escondido, Racquet, Room Service, banquetes)</li>'}
+    ${HOT.ref&&HOT.ref.fc26?'<li class="ko">Sustituye al forecast guardado ('+escapeHTML(HOT.ref.fc26.src)+')</li>':''}</ul>
+    <p class="fp">Se lee solo el grupo de cada mes (no «Total Period»). Este forecast pasa a ser el único en toda la app.</p>
+    <div class="fbtns"><button class="fb" onclick="flashClose()">Cancelar</button><button class="fb" onclick="fcCommit(false)">Guardar</button><button class="fb primary" onclick="fcCommit(true)">${ghConfigured()?'Guardar y publicar para todos':'Guardar y descargar para publicar'}</button></div>`;
+  }catch(e){console.error(e);body.innerHTML=`<div class="ferr">${escapeHTML(e.message||String(e))}</div><div class="fbtns"><button class="fb" onclick="dataOpen()">Reintentar</button></div>`}
+}
+function fcApply(){const F=HOT.ref&&HOT.ref.fc26,T=HOT.ref&&HOT.ref.forecast26;if(!F)return;
+  if(F.label)HCMP.forecast26='Forecast 2026 ('+F.label+')';
+  if(T)Object.keys(F.months).forEach(m=>{const f=F.months[m].f,i=m-1;T.avail[i]=f.av;T.sold[i]=f.sold;T.rooms[i]=f.rev;T.fb[i]=f.fb||0;T.total[i]=f.tot});}
+async function fcCommit(publish){
+  if(!FC_ST)return;HOT.ref=HOT.ref||{};HOT.ref.fc26=FC_ST;FC_ST=null;fcApply();
+  HOT.loads=(HOT.loads||[]).slice(-60);HOT.loads.push({at:new Date().toISOString(),what:'Forecast ('+HOT.ref.fc26.src+')',by:PUB.name});
+  HST.dirty=true;await hotDraftSave();flashClose();hRender();
+  if(publish){const ok=await hotelPublish();if(ok&&ghConfigured())toast('Forecast publicado ✓',6000)}else toast('Forecast guardado en este dispositivo.');
+}
+function fcVenV(Y,M,v,vv){const F=HOT.ref&&HOT.ref.fc26,k=b27Ven(v);if(!F||!k||Y!==2026||!F.months[M])return;const x=F.months[M].f[k];if(x!=null&&(x>0||F.months[M].f.fb>0))vv.f=x}
+Object.assign(window,{fcHandle,fcCommit});
 // ======================= v56 · Group Pace y calendario de eventos =======================
 // Group Pace: grupos del año por mes (RN, rooms, banqueting, meeting rental, neto de IVA). Events Calendar: eventos con estado y pax, sin importes.
 // El forecast de banquetes usa: lo firmado en Group Pace (calibrado contra lo realmente facturado) + eventos fuera de Group Pace valorados por €/pax y estado.

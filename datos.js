@@ -120,6 +120,7 @@ function audit(){
 }
 function auditHtml(){
   let A=[];try{A=audit()}catch(e){A=[{lv:'warn',t:'Control de cifras',d:'Error al calcular: '+esc(e.message),ok:false}]}
+  try{if(typeof computeValidations==='function'){const V=computeValidations()||[];V.forEach(v=>{const ok=v.level==='ok';A.push({lv:'warn',t:'F&B del mes',d:esc(v.text),ok})})}}catch(e){}
   if(!A.length)return'';
   const ko=A.filter(a=>!a.ok),crit=ko.filter(a=>a.lv==='crit').length;
   const col=a=>a.ok?ST.ok[1]:a.lv==='crit'?ST.ko[1]:ST.warn[1];

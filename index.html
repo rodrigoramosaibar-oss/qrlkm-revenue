@@ -851,7 +851,8 @@ body.skin-glass.pal-kimpton.mode-light:not(.mobHome) .main{padding-bottom:104px}
   <div class="sbGroup" data-hot>Hotel</div>
   <button class="tab" data-hot data-view="hotel" onclick="setArea('hotel')"><svg viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13M9 21v-6h6v6"/></svg>Hoy y mes</button>
   <button class="tab" data-hot data-view="rooms" onclick="setArea('rooms')"><svg viewBox="0 0 24 24"><path d="M3 18v-7a3 3 0 013-3h12a3 3 0 013 3v7M3 15h18M3 21v-3M21 21v-3"/></svg>Habitaciones</button>
-  <button class="tab" data-hot data-view="otb" onclick="showView('otb',this)"><svg viewBox="0 0 24 24"><path d="M4 20V10M9 20V4M14 20v-8M19 20V7"/></svg>Reservas</button>
+  <button class="tab" data-hot data-view="rsv" onclick="showView('rsv',this)"><svg viewBox="0 0 24 24"><path d="M4 20V10M9 20V4M14 20v-8M19 20V7"/></svg>Reservas</button>
+  <button class="tab subtab" data-hot data-view="otb" onclick="showView('otb',this)"><svg viewBox="0 0 24 24"><path d="M4 20V10M9 20V4M14 20v-8M19 20V7"/></svg>Ocupación OTB</button>
   <button class="tab" data-hot data-view="fz" onclick="showView('fz',this)"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-9M15 6h6v6"/></svg>Forecast</button>
   <button class="tab subtab" data-hot data-view="wx" onclick="showView('wx',this)"><svg viewBox="0 0 24 24"><path d="M7 19a4 4 0 010-8 5.5 5.5 0 0110.6-1.2A4.5 4.5 0 0117 19H7z"/></svg>Meteo y revenue</button>
   <button class="tab subtab" data-hot data-view="pu" onclick="showView('pu',this)"><svg viewBox="0 0 24 24"><path d="M4 19h16M6 16l4-5 3 3 5-7"/></svg>PickUp</button>
@@ -903,6 +904,7 @@ body.skin-glass.pal-kimpton.mode-light:not(.mobHome) .main{padding-bottom:104px}
     <span id="saveStatus"></span><img class="ctxHorn" data-logo="sym" alt="Kimpton">
   </div>
   <div id="subNav" class="subNav"></div>
+  <div id="kStrip" class="kStrip"></div>
   <div class="views">
 
 <div id="dash" class="view active"><div id="dashAlt"></div><div class="rpt" id="rpt">
@@ -928,7 +930,7 @@ body.skin-glass.pal-kimpton.mode-light:not(.mobHome) .main{padding-bottom:104px}
 
 <div id="hotel" class="view"></div>
 <div id="rooms" class="view"></div>
-<div id="otb" class="view"></div>
+<div id="otb" class="view"></div><div id="rsv" class="view"></div>
 <div id="wx" class="view"></div>
 <div id="pu" class="view"></div><div id="fz" class="view"></div><div id="m2" class="view"></div><div id="dq" class="view"></div><script src="motor2.js?v=3"></script><script src="grc.js?v=1"></script><script src="datos.js?v=2"></script><script src="nuevos.js?v=1"></script>
 <div id="entry" class="view" data-edit><div class="entry">
@@ -2130,9 +2132,9 @@ function renderHotel(){
   const bul=hBul([`<b>${hn(a.tot)} €</b> en total · <span class="${dcls(a.tot-r.tot)}">${hsg(a.tot-r.tot)} €</span> vs comp. (${hp(tp,0)})`,
     `Rooms <b>${hn(a.rr)} €</b> <span class="${dcls(a.rr-r.rr)}">${hsg(a.rr-r.rr)}</span> · F&amp;B <b>${hn(a.fb)} €</b> <span class="${dcls(a.fb-r.fb)}">${hsg(a.fb-r.fb)}</span>`,
     `Otros <b>${hn(a.ot)} €</b> · Ocupación <b>${hp(K.occ)}</b> (${hp(Kr.occ)})`,`ADR <b>${hn(K.adr,2)} €</b> · RevPAR <b>${hn(K.revpar,2)} €</b>`,pr?`Cierre estimado <b>${hn(pr.tot)} €</b> (<span class="${dcls(pr.tot-P.full.tot)}">${hsg(pr.tot-P.full.tot)}</span> vs mes)`:'']);
-  const left=(P.ytd?hCard('Rooms · F&B · Otros','vs '+C,tbl):hDualCards(P,pr))+hPaceCard(P,false)+hCard('Evolución mensual','total hotel · vs Forecast y Budget',hMonthTable(P))+hFcstAcc(P);
-  const right=(P.ytd?hCard('Ocupación por mes','%',hBars(Array.from({length:P.m},(_,i)=>kpis(hAgg(i+1)).occ*100),MS3.slice(0,P.m))):hCard('Revenue total por día','mes de '+months[P.m-1].toLowerCase(),hBars(vals,dayKeys.map(k=>+k.slice(8,10)))))
-    +hCard('Ocupación en libros · próximos 14 días','Opera',hOtbMini())+hCard('Previsión meteorológica · 7 días','Open-Meteo',hWxMini())+(P.ytd?'':hCard('Mejores días del mes','revenue total',hTopDays(P)));
+  const left=(P.ytd?hCard('Rooms · F&B · Otros','vs '+C,tbl):hDualCards(P,pr))+hPaceCard(P,false)+hCard('Evolución mensual','¿qué meses van por debajo del Forecast? · total hotel',hMonthTable(P))+hFcstAcc(P);
+  const right=(P.ytd?hCard('Ocupación por mes','%',hBars(Array.from({length:P.m},(_,i)=>kpis(hAgg(i+1)).occ*100),MS3.slice(0,P.m))):hCard('Revenue total por día','qué días empujar · mes de '+months[P.m-1].toLowerCase(),hBars(vals,dayKeys.map(k=>+k.slice(8,10)))))
+    +hCard('Ocupación en libros · próximos 14 días','huecos que vender y staff · Opera',hOtbMini())+(P.ytd?'':hCard('Mejores días del mes','qué repetir · revenue total',hTopDays(P)));
   host.innerHTML=`<div class="hwrap">${hHead('HOTEL',P.ytd?'Informe de ingresos · acumulado':'Informe de ingresos del hotel',intro,hCtl())}<div class="mOnly">${bul}</div>${strip}<div class="dOnly">${kp}</div>
   <div class="hgrid"><div class="hcol">${left}</div><div class="hcol">${right}</div></div>
   ${pr?`<p class="hnote dOnly">Cierre estimado = lo facturado + Opera en libros (${pr.days} días, ${hn(pr.rr)} € Rooms, foto del ${pr.asof.slice(0,10)}) + F&amp;B/Otros al ratio actual por habitación vendida. Es una estimación que se afinará con las semanas de OTB.</p>`:''}${hNote(P)}</div>`;
@@ -2162,7 +2164,7 @@ function renderRooms(){
   const chart=P.ytd?hBarsV(Array.from({length:P.m},(_,i)=>kpis(hAgg(i+1)).occ*100),MS3.slice(0,P.m)):hBarsV(dk.map(k=>HOT.days[k].av?HOT.days[k].so/HOT.days[k].av*100:0),dk.map(k=>+k.slice(8,10)));
   const tbl=`<div class="fscroll"><table class="ftab htab"><thead><tr><th>${P.ytd?'Mes':'Día'}</th><th>Ocup.</th><th>ADR</th><th>RevPAR</th><th>Room rev.</th><th class="${P.ytd?'':'hm'}">${P.ytd?'Δ vs '+hCL(P):'Vendidas'}</th></tr></thead><tbody>${tr}</tbody></table></div>`;
   const bul=hBul([`Ocupación <b>${hp(K.occ)}</b> · <span class="${dcls(K.occ-Kr.occ)}">${K.occ>=Kr.occ?'+':'−'}${hn(Math.abs(K.occ-Kr.occ)*100,1)} pts</span> vs ${hCL(P)}`,`ADR <b>${hn(K.adr,2)} €</b> <span class="${dcls(K.adr-Kr.adr)}">${hsg(K.adr-Kr.adr)}</span> · RevPAR <b>${hn(K.revpar,2)} €</b> <span class="${dcls(K.revpar-Kr.revpar)}">${hsg(K.revpar-Kr.revpar)}</span>`,`Room revenue <b>${hn(a.rr)} €</b> <span class="${dcls(a.rr-r.rr)}">${hsg(a.rr-r.rr)}</span> · ${hn(a.so)} hab. vendidas`,!P.ytd&&best?`Mejor día: ${dn[new Date(best.k+'T12:00:00').getDay()].toLowerCase()} ${+best.k.slice(8,10)} (${hp(best.o,0)})`:'']);
-  const left=hRoomsDual(P,hProjection(P))+hPaceCard(P,true)+hCard(P.ytd?'Ocupación por mes':'Ocupación diaria','%',chart)+(P.ytd?'':hCard('ADR por día','€',hAdrBars(dk)))+hCard('Ocupación en libros · próximos 14 días','Opera',hOtbMini());
+  const left=hRoomsDual(P,hProjection(P))+hPaceCard(P,true)+hCard(P.ytd?'Ocupación por mes':'Ocupación diaria','%',chart)+(P.ytd?'':hCard('ADR por día','€',hAdrBars(dk)))+hCard('Ocupación en libros · próximos 14 días','huecos que vender y staff · Opera',hOtbMini());
   host.innerHTML=`<div class="hwrap">${hHead('ROOMS',P.ytd?'Habitaciones · acumulado':'Habitaciones',intro,hCtl())}<div class="mOnly">${bul}</div>${strip}
   <div class="hgrid"><div class="hcol">${left}</div><div class="hcol">${hCard(P.ytd?'Detalle por mes':'Detalle por día',P.ytd?'':'* día estimado',tbl)}</div></div>${hNote(P)}</div>`;
 }
@@ -3775,7 +3777,7 @@ function showView(id,btn){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   $(id).classList.add('active');
   document.body.dataset.view=id;
-  {const hv=['hotel','rooms','otb','wx','pu','fz'].includes(id);document.body.classList.toggle('area-hotel',hv);document.body.classList.toggle('area-fb',!hv);try{localStorage.setItem('fbViewV58',btn&&btn.dataset&&btn.dataset.view?btn.dataset.view:id)}catch(e){}}
+  {const hv=['hotel','rooms','rsv','otb','wx','pu','fz'].includes(id);document.body.classList.toggle('area-hotel',hv);document.body.classList.toggle('area-fb',!hv);try{localStorage.setItem('fbViewV58',btn&&btn.dataset&&btn.dataset.view?btn.dataset.view:id)}catch(e){}}
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   if(btn)btn.classList.add('active');
   const tb=btn||document.querySelector('.tab[data-view="'+id+'"]');
@@ -3907,7 +3909,7 @@ function mobShare(){const v=MOB.area==='fb'?'dash':MOB.area;document.body.datase
 function mobView(id){mobSheet(false);document.body.classList.remove('mobHome');mobNav('more');const b=document.querySelector('.tab[data-view="'+id+'"]');if(id==='dash-ytd')setDashMode('ytd',b);else showView(id,b)}
 function mobSheet(on){const s=$('mSheet');if(!s)return;if(on===false){s.classList.remove('show');return}
   const it=(l,f)=>`<button class="mSI" onclick="${f}">${l}</button>`;let h='';
-  if(HAS_HOT)h+='<div class="mSG">Previsión y análisis</div>'+it('Ocupación OTB',"mobView('otb')")+it('Meteo y revenue',"mobView('wx')")+it('PickUp',"mobView('pu')")+it('Forecast hotel',"mobView('fz')");
+  if(HAS_HOT)h+='<div class="mSG">Previsión y análisis</div>'+it('Reservas',"mobView('rsv')")+it('Ocupación OTB (PDF)',"mobView('otb')")+it('Meteo y revenue',"mobView('wx')")+it('PickUp',"mobView('pu')")+it('Forecast hotel',"mobView('fz')");
   h+='<div class="mSG">Food & Beverage</div>'+it('Acumulado YTD',"mobView('dash-ytd')")+it('Forecast F&B',"mobView('forecast')")+it('Resumen F&B',"mobView('summary')");if(IS_OWNER)h+=it('Entrada diaria',"mobView('entry')")+it('Objetivos',"mobView('objectives')")+it('Configurar',"mobView('config')");
   h+='<div class="mSG">Datos</div>';
   if(IS_EDITOR)h+=it('Cargar datos',"mobSheet(false);dataOpen()")+it('Publicar datos',"mobSheet(false);publishData()");
@@ -4282,10 +4284,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 <script>if('serviceWorker' in navigator&&location.protocol.startsWith('http')&&!(window.__PUSH&&window.__PUSH.appId))navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
-<style id="navCss">.tab.subtab{display:none!important}.subNav{display:none;gap:.4rem;flex-wrap:wrap;padding:.55rem var(--gx,1.2rem) .1rem}.subNav.on{display:flex}.subNav button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:.32rem .85rem;font-size:.78rem;cursor:pointer;font-family:inherit}.subNav button.on{background:var(--hi,#F4C20D);color:#17150F;border-color:transparent;font-weight:650}</style>
+<style id="navCss">.tab.subtab{display:none!important}.subNav{display:none;gap:.4rem;flex-wrap:wrap;padding:.55rem var(--gx,1.2rem) .1rem}.subNav.on{display:flex}.subNav button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:.32rem .85rem;font-size:.78rem;cursor:pointer;font-family:inherit}.subNav button.on{background:var(--hi,#F4C20D);color:#17150F;border-color:transparent;font-weight:650}.kStrip{display:none;margin:.5rem var(--gx,1.2rem) .2rem;padding:.7rem 1rem;background:var(--panel);border:1px solid var(--line);border-radius:12px}.kStrip.on{display:block}.kHead{display:flex;flex-wrap:wrap;gap:.3rem .9rem;align-items:baseline;margin-bottom:.45rem}.kHead b{font-size:.82rem;letter-spacing:.04em}.kHead span{font-size:.68rem;color:var(--muted)}.kGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:.6rem}.kc{display:flex;flex-direction:column;gap:.1rem;min-width:0}.kc small{font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}.kc b{font-size:1.02rem;line-height:1.25}.kc span{font-size:.7rem;color:var(--muted)}@media(max-width:900px){.kGrid{grid-template-columns:repeat(2,1fr)}}</style>
 <script id="navJs">(function(){
 const G=[
- {p:'otb',v:[['otb','Ocupación OTB'],['pu','PickUp']]},
+ {p:'rsv',v:[['rsv','Reservas'],['otb','Ocupación OTB (PDF)'],['pu','PickUp']]},
  {p:'fz',v:[['fz','Forecast hotel'],['wx','Meteo y revenue']]},
  {p:'forecast',v:[['forecast','Forecast F&B'],['m2','Motor v2']]},
  {p:'dq',v:[['dq','Estado de datos'],['entry','Entrada diaria'],['objectives','Objetivos'],['config','Configurar']]}
@@ -4312,4 +4314,96 @@ window.showView=function(id,btn){
 };
 window.__NAV={G:G,draw:draw};
 })();</script>
+<script id="navJs2">(function(){
+const E=v=>hn(v)+' €',SG=v=>(v>0?'+':v<0?'−':'')+hn(Math.abs(v))+' €';
+const pc=(v,d=1)=>(v>0?'+':v<0?'−':'')+hn(Math.abs(v)*100,d)+'%';
+/* ============ FRANJA SUPERIOR COMÚN ============ */
+function hotelScope(rooms){
+  const P=hPeriod();if(P.ytd)return null;
+  const L=P.L,M=P.m,dim=hdim(L.y,M),cur=M===L.m,upto=cur?L.d:dim,rem=cur?dim-L.d:0,a=hAgg(M,upto),k=rooms?'rr':'tot';
+  const R=key=>{try{const mt=(cur?mPtd(key,L,M):hRef(key,M,M,1))[k],mo=hRef(key,M,M,1)[k];return mo>0?{mtd:mt,mon:mo}:null}catch(e){return null}};
+  return{title:(rooms?'Room revenue':'Hotel total')+' · '+months[M-1]+' '+L.y,real:a[k]||0,days:cur?L.d:dim,dim,rem,bud:R('budget26'),fc:R('forecast26'),
+    src:'Real: Revenue Flash · Budget: Excel de Budget · Forecast: Excel de IHG'};
+}
+function fbScope(){
+  const m=Number(DATA.config.month),S=calcState(),dim=S.monthDays,ld=S.lastDay,obj=monthObjectives(m),V=getVenues(),scs=scenariosForMonth(m);
+  const sum=n=>n?V.reduce((s,v)=>s+Number((obj[v]||{})[n]||0),0):0;
+  const bn=scs.find(x=>/^original$/i.test(x))||scs.find(x=>/budget/i.test(x)),fn=scs.find(x=>/forecast/i.test(x));
+  const mk=n=>{const t=sum(n);return t>0?{mtd:t/dim*ld,mon:t}:null};
+  return{title:'F&B · '+months[m-1]+' '+DATA.config.year,real:S.revenue,days:ld,dim,rem:Math.max(dim-ld,0),bud:mk(bn),fc:mk(fn),
+    src:'Real: Entrada diaria de venues · Budget: «'+(bn||'—')+'» · Forecast: «'+(fn||'—')+'» (Excel de IHG)'};
+}
+const kc=(l,b,s,c)=>`<div class="kc"><small>${l}</small><b class="${c||''}">${b}</b><span>${s||''}</span></div>`;
+function stripHtml(s){
+  const dv=(r,n)=>{if(!r||!(r.mtd>0))return kc('Real vs '+n,'—','sin '+n.toLowerCase()+' cargado');const d=s.real-r.mtd;return kc('Real vs '+n+' a la fecha',SG(d),pc(s.real/r.mtd-1)+' · llevábamos '+E(r.mtd),d>=0?'pos':'neg')};
+  const fin=(s.bud||s.fc)?kc('Fin de mes',(s.bud?'Budget '+E(s.bud.mon):'')+(s.bud&&s.fc?'<br>':'')+(s.fc?'Forecast '+E(s.fc.mon):''),'objetivo del mes'):kc('Fin de mes','—','');
+  const need=r=>r?(s.rem>0?(r.mon-s.real>0?E((r.mon-s.real)/s.rem)+'/día':'cumplido'):(s.real>=r.mon?'cumplido':'no llegó')):'—';
+  const fal=kc('Falta por día',s.rem>0?'Budget '+need(s.bud)+'<br>Forecast '+need(s.fc):'Mes cerrado',s.rem>0?'quedan '+s.rem+' días':'');
+  return`<div class="kHead"><b>${s.title}</b><span>${s.src}</span></div><div class="kGrid">${kc('Real a la fecha',E(s.real),'día '+s.days+' de '+s.dim+' · '+E(s.days?s.real/s.days:0)+'/día')}${dv(s.bud,'Budget')}${dv(s.fc,'Forecast')}${fin}${fal}</div>`;
+}
+function strip(){
+  const el=document.getElementById('kStrip');if(!el)return;
+  const v=document.body.dataset.view;let s=null;
+  try{
+    const hot=typeof HAS_HOT!=='undefined'&&HAS_HOT;
+    if(['hotel','rsv','otb','pu','wx','fz'].includes(v)){if(hot)s=hotelScope(false)}
+    else if(v==='rooms'){if(hot)s=hotelScope(true)}
+    else if((v==='dash'&&DATA.dashboardMode!=='ytd')||['forecast','summary','m2'].includes(v))s=fbScope();
+  }catch(e){s=null}
+  if(!s){el.className='kStrip';el.innerHTML='';return}
+  el.className='kStrip on';el.innerHTML=stripHtml(s);
+}
+/* ============ RESERVAS (Reservation Summary) ============ */
+let RH=60;try{RH=Number(localStorage.getItem('rsHzn'))||60}catch(e){}
+window.__setRsH=function(h){RH=h;try{localStorage.setItem('rsHzn',String(h))}catch(e){}renderRsv()};
+const dd=s=>s.slice(8,10)+'/'+s.slice(5,7);
+function addDays(s,n){const d=new Date(s+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
+function renderRsv(){
+  const host=document.getElementById('rsv');if(!host)return;
+  if(!(typeof HAS_HOT!=='undefined'&&HAS_HOT)){host.innerHTML='';return}
+  const rs=HOT.rs;
+  if(!rs||!rs.rows||!rs.rows.length||!rs.cols){host.innerHTML='<div class="hwrap"><p class="hnote">Aún no hay ningún Reservation Summary cargado. Súbelo desde «Cargar datos» (cada 2-3 días).</p></div>';return}
+  const I=c=>rs.cols.indexOf(c)+1,asof=rs.asof,end=addDays(asof,RH),L=hLastInfo();
+  const rows=rs.rows.filter(r=>r[0]>=asof&&r[0]<end);
+  const key=d=>RH<=31?d:RH<=120?addDays(d,-((new Date(d+'T12:00:00Z').getUTCDay()+6)%7)):d.slice(0,7);
+  const G={},order=[];
+  rows.forEach(r=>{const k=key(r[0]);if(!G[k]){G[k]={k,n:0,tot:0,ind:0,av:0,rev:0,pax:0,last:r[0]};order.push(k)}const x=G[k];x.n++;x.tot+=r[I('tot')]||0;x.ind+=r[I('ind')]||0;x.av+=r[I('av')]||0;x.rev+=r[I('rev')]||0;x.pax+=(r[I('adl')]||0)+(r[I('chl')]||0);x.last=r[0]});
+  const T=order.reduce((o,k)=>{const x=G[k];o.tot+=x.tot;o.av+=x.av;o.rev+=x.rev;o.pax+=x.pax;o.ind+=x.ind;return o},{tot:0,av:0,rev:0,pax:0,ind:0});
+  const monthly=RH>120,asm=+asof.slice(5,7),asd=+asof.slice(8,10);
+  let cmp=false;
+  const body=order.map(k=>{
+    const x=G[k],occ=x.av?x.tot/x.av:null,adr=x.tot?x.rev/x.tot:0,grp=Math.max(x.tot-x.ind,0);
+    let lab=RH<=31?dd(k)+' '+['dom','lun','mar','mié','jue','vie','sáb'][new Date(k+'T12:00:00Z').getUTCDay()]:RH<=120?'sem. '+dd(k):months[+k.slice(5,7)-1]+' '+k.slice(2,4);
+    let extra='<td class="hm"></td><td class="hm"></td><td class="hm"></td><td class="hm"></td>';
+    if(monthly){
+      const y=+k.slice(0,4),m=+k.slice(5,7),full=x.last.slice(0,7)===k&&+x.last.slice(8,10)===hdim(y,m);
+      if(y===L.y&&full){
+        try{
+          let tot=x.rev;if(m===asm&&asd>1)tot+=hAgg(m,asd-1).rr;
+          const B=hRef('budget26',m,m,1).rr,F=hRef('forecast26',m,m,1).rr;cmp=true;
+          extra=`<td class="hm">${B>0?E(B):'—'}</td><td class="hm ${B>0&&tot>=B?'pos':'neg'}">${B>0?hp(tot/B,0):'—'}</td><td class="hm">${F>0?E(F):'—'}</td><td class="hm ${F>0&&tot>=F?'pos':'neg'}">${F>0?hp(tot/F,0):'—'}</td>`;
+          if(m===asm&&asd>1)lab+=' <small>(real + libros)</small>';
+        }catch(e){}
+      }else if(!full)lab+=' <small>(parcial)</small>';
+    }
+    return`<tr><td>${lab}</td><td>${hn(x.tot)}</td><td class="hm">${hn(grp)}</td><td>${occ==null?'—':hp(occ,0)}</td><td>${hn(adr,0)} €</td><td>${E(x.rev)}</td><td class="hm">${hn(x.pax)}</td>${extra}</tr>`;
+  }).join('');
+  const head=`<thead><tr><th>${RH<=31?'Noche':RH<=120?'Semana':'Mes'}</th><th>Hab. en libros</th><th class="hm">de grupo</th><th>Ocup.</th><th>ADR</th><th>Room revenue</th><th class="hm">Huéspedes</th>${monthly?'<th class="hm">Budget</th><th class="hm">% Budget</th><th class="hm">Forecast</th><th class="hm">% Forecast</th>':'<th class="hm"></th><th class="hm"></th><th class="hm"></th><th class="hm"></th>'}</tr></thead>`;
+  const tbl=`<div class="fscroll"><table class="ftab htab">${head}<tbody>${body}</tbody></table></div>`+(monthly?'<p class="hnote">% Budget / % Forecast = lo que ya hay en libros (más lo facturado antes de la foto, en el mes en curso) sobre el total del mes. Solo en meses completos del año actual.</p>':'<p class="hnote">Para comparar con Budget y Forecast, elige 365 días.</p>');
+  const sn=(rs.snaps||[]).slice(-2);let pu='';
+  if(sn.length===2){const a=sn[0].sum,b=sn[1].sum;pu=`<p class="hnote">Desde la foto del ${dd(sn[0].asof)}: <b class="${b.tot-a.tot>=0?'pos':'neg'}">${(b.tot-a.tot>=0?'+':'−')+hn(Math.abs(b.tot-a.tot))} hab.</b> y <b class="${b.rev-a.rev>=0?'pos':'neg'}">${SG(b.rev-a.rev)}</b> en libros (todo el horizonte cargado).</p>`}
+  const chips=[30,60,120,365].map(h=>`<button class="${h===RH?'on':''}" onclick="__setRsH(${h})">${h} días</button>`).join('');
+  const kp=`<div class="hstrip k4">${hCell('Hab. en libros',hn(T.tot),'próximos '+RH+' días')}${hCell('Ocupación',T.av?hp(T.tot/T.av,0):'—','sobre disponibles')}${hCell('ADR',hn(T.tot?T.rev/T.tot:0,0)+' €','en libros')}${hCell('Room revenue',E(T.rev),'en libros')}</div>`;
+  host.innerHTML=`<div class="hwrap"><div class="subNav on" style="padding:.2rem 0 .6rem">${chips}</div>${kp}${hCard('Reservas en libros · próximos '+RH+' días','Reservation Summary del '+dd(asof)+' '+(rs.time||'')+' · ¿dónde hay huecos que vender o precio que subir?',tbl+pu)}</div>`;
+}
+window.renderRsv=renderRsv;
+/* ============ ganchos ============ */
+const post=()=>{try{strip()}catch(e){}};
+['hRender','renderDashboard','renderAll'].forEach(n=>{const o=window[n];if(typeof o!=='function')return;window[n]=function(){const r=o.apply(this,arguments);if(n==='hRender'&&document.body.dataset.view==='rsv'){try{renderRsv()}catch(e){}}post();return r}});
+const sv=window.showView;
+window.showView=function(id,btn){const r=sv.call(this,id,btn);if(document.body.dataset.view==='rsv'){try{renderRsv()}catch(e){}}post();return r};
+window.__strip=strip;
+post();
+})();
+</script>
 </body></html>

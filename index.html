@@ -1048,7 +1048,7 @@ const BAND_STOPS=[60,75,85,92,98,105,112,125];
 function perfStyle(v){const b=band(v);return`--tone:${b.c};--tone2:${b.c2};--softTone:${b.soft}`}
 function perfLabel(v){return band(v).label}
 function perfColor(v){return 'color-mix(in srgb,'+band(v).c+' 62%,var(--ink))'}
-function getVenues(){return DATA.venues.filter(v=>String(v||'').trim())}
+function getVenues(){return DATA.venues.filter(v=>String(v||'').trim()&&!/mini\s*-?\s*bar/i.test(String(v)))} // Minibar no es F&B: su ingreso va a Otros ingresos del hotel
 
 function monthObjectives(m=DATA.config.month){
   if(!DATA.monthlyObjectives[String(Number(m)||1)])DATA.monthlyObjectives[String(Number(m)||1)]={};

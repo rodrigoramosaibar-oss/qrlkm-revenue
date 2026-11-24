@@ -1055,7 +1055,7 @@ function monthObjectives(m=DATA.config.month){
   const o=DATA.monthlyObjectives[String(Number(m)||1)];fcObjFix(Number(m)||1,o);return o;
 }
 // Forecast único: en los meses del Excel de forecast (IHG) manda ese archivo; se descartan los «Forecast 1/2/3» de los objetivos por venue
-function fcObjFix(M,o){let F=null;try{F=HOT&&HOT.ref&&HOT.ref.fc26}catch(e){}if(!F||!F.months[M]||DATA.config.year!==2026)return;const f=F.months[M].f;getVenues().forEach(v=>{const k=b27Ven(v);if(!k||f[k]==null)return;const x=o[v]=o[v]||{};Object.keys(x).forEach(n=>{if(/^Forecast/i.test(n))delete x[n]});x['Forecast 1']=f[k]})}
+function fcObjFix(M,o){let F=null;try{F=HOT&&HOT.ref&&HOT.ref.fc26}catch(e){}if(!F||!F.months[M]||DATA.config.year!==2026)return;const f=F.months[M].f;getVenues().forEach(v=>{const k=b27Ven(v);if(!k)return;let val=f[k];if(val==null&&f.fb>0)val=0;if(val==null)return;const x=o[v]=o[v]||{};const ks=new Set(Object.keys(x).filter(n=>/^Forecast/i.test(n)));[DATA.activeScenario,DATA.compareScenario].forEach(n=>{if(/^Forecast/i.test(n||''))ks.add(n)});if(!ks.size)ks.add('Forecast 1');ks.forEach(n=>{x[n]=val})})} // se conservan los nombres «Forecast 1/2/3» (la pantalla puede tenerlos elegidos) pero todos valen lo mismo: el forecast del Excel
 function scenariosForMonth(m=DATA.config.month){
   let mo=monthObjectives(m)||{},set=new Set();
   getVenues().forEach(v=>Object.keys(mo[v]||{}).forEach(k=>{if(k!=='DiasApertura')set.add(k)}));
@@ -2940,7 +2940,7 @@ async function fcCommit(publish){
   HST.dirty=true;await hotDraftSave();flashClose();hRender();
   if(publish){const ok=await hotelPublish();if(ok&&ghConfigured())toast('Forecast publicado ✓',6000)}else toast('Forecast guardado en este dispositivo.');
 }
-function fcVenV(Y,M,v,vv){const F=HOT.ref&&HOT.ref.fc26,k=b27Ven(v);if(!F||!k||Y!==2026||!F.months[M])return;const x=F.months[M].f[k];if(x!=null&&(x>0||F.months[M].f.fb>0))vv.f=x}
+function fcVenV(Y,M,v,vv){const F=HOT.ref&&HOT.ref.fc26,k=b27Ven(v);if(!F||!k||Y!==2026||!F.months[M])return;let x=F.months[M].f[k];if(x==null&&F.months[M].f.fb>0)x=0;if(x!=null&&(x>0||F.months[M].f.fb>0))vv.f=x}
 Object.assign(window,{fcHandle,fcCommit});
 // ======================= v56 · Group Pace y calendario de eventos =======================
 // Group Pace: grupos del año por mes (RN, rooms, banqueting, meeting rental, neto de IVA). Events Calendar: eventos con estado y pax, sin importes.

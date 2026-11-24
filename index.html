@@ -853,17 +853,15 @@ body.skin-glass.pal-kimpton.mode-light:not(.mobHome) .main{padding-bottom:104px}
   <button class="tab" data-hot data-view="rooms" onclick="setArea('rooms')"><svg viewBox="0 0 24 24"><path d="M3 18v-7a3 3 0 013-3h12a3 3 0 013 3v7M3 15h18M3 21v-3M21 21v-3"/></svg>Rooms</button>
   <div class="sbGroup">Detalle F&amp;B</div>
   <button class="tab active" data-view="dash" onclick="setDashMode('month',this)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Food &amp; Beverage</button>
-  <button class="tab" data-own data-view="dash-ytd" onclick="setDashMode('ytd',this)"><svg viewBox="0 0 24 24"><path d="M3 20h18M5 16l4-5 4 3 6-8"/></svg>Acumulado YTD</button>
-  <button class="tab" data-own data-view="director" onclick="showView('director',this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Director View</button>
-  <button class="tab" data-own data-view="briefing" onclick="showView('briefing',this)"><svg viewBox="0 0 24 24"><path d="M5 3h14v18H5z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>Briefing F&amp;B</button>
-  <button class="tab" data-own data-view="forecast" onclick="showView('forecast',this)"><svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 3 4-7 5 5"/><path d="M3 21h18" stroke-dasharray="2 3"/></svg>Forecast F&amp;B</button>
-  <button class="tab" data-own data-view="summary" onclick="showView('summary',this)"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>Resumen F&amp;B</button>
+  <button class="tab" data-view="dash-ytd" onclick="setDashMode('ytd',this)"><svg viewBox="0 0 24 24"><path d="M3 20h18M5 16l4-5 4 3 6-8"/></svg>Acumulado YTD</button>
+  <button class="tab" data-view="forecast" onclick="showView('forecast',this)"><svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 3 4-7 5 5"/><path d="M3 21h18" stroke-dasharray="2 3"/></svg>Forecast F&amp;B</button>
+  <button class="tab" data-view="summary" onclick="showView('summary',this)"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>Resumen F&amp;B</button>
   <div class="sbGroup" data-hot>Previsión y análisis</div>
   <button class="tab" data-hot data-view="otb" onclick="showView('otb',this)"><svg viewBox="0 0 24 24"><path d="M4 20V10M9 20V4M14 20v-8M19 20V7"/></svg>Ocupación OTB</button>
   <button class="tab" data-hot data-view="wx" onclick="showView('wx',this)"><svg viewBox="0 0 24 24"><path d="M7 19a4 4 0 010-8 5.5 5.5 0 0110.6-1.2A4.5 4.5 0 0117 19H7z"/></svg>Meteo y revenue</button>
   <button class="tab" data-hot data-view="pu" onclick="showView('pu',this)"><svg viewBox="0 0 24 24"><path d="M4 19h16M6 16l4-5 3 3 5-7"/></svg>PickUp</button>
   <button class="tab" data-hot data-view="fz" onclick="showView('fz',this)"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-9M15 6h6v6"/></svg>Forecast hotel</button>
-  <button class="tab" data-own data-view="m2" onclick="showView('m2',this)"><svg viewBox="0 0 24 24"><path d="M3 17l4-4 3 3 5-8 6 6"/><path d="M3 21h18"/></svg>Motor v2 · prueba</button>
+  <button class="tab" data-view="m2" onclick="showView('m2',this)"><svg viewBox="0 0 24 24"><path d="M3 17l4-4 3 3 5-8 6 6"/><path d="M3 21h18"/></svg>Motor v2 · prueba</button>
   <button class="tab" data-edit data-view="dq" onclick="showView('dq',this)"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg>Estado de datos</button>
   <div class="sbGroup" data-edit>Gestión</div>
   <button class="tab" data-edit data-own data-view="entry" onclick="showView('entry',this)"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Entrada diaria</button>
@@ -949,17 +947,6 @@ body.skin-glass.pal-kimpton.mode-light:not(.mobHome) .main{padding-bottom:104px}
 <section class="textPanel"><h2>Venues</h2><p class="small" style="margin-bottom:.8rem">Añade, borra o renombra venues. El dashboard solo muestra venues con nombre.</p><button class="btn primary" onclick="addVenue()">Añadir venue</button><div class="venueList" id="venueList" style="margin-top:.8rem"></div></section>
 </div></div>
 
-<div id="director" class="view"><div class="viewGrid3">
-<section class="textPanel"><h2>Director View</h2><div id="directorContent"></div></section>
-<section class="textPanel"><h2>Top riesgos</h2><div id="directorRisks"></div></section>
-<section class="textPanel"><h2>Plan ejecutivo</h2><div id="directorPlan"></div></section>
-</div></div>
-
-<div id="briefing" class="view"><div class="viewGrid3">
-<section class="textPanel"><h2>Briefing F&amp;B</h2><div id="briefingContent"></div></section>
-<section class="textPanel"><h2>Validaciones</h2><div id="validationContent"></div></section>
-<section class="textPanel"><h2>Comentario del día</h2><textarea id="dayCommentBox" oninput="saveDayComment(this.value)" placeholder="Notas del turno / incidencias de hoy..."></textarea><div class="small" style="margin-top:.5rem" data-edit>Se guarda junto al día seleccionado en Entrada diaria.</div></section>
-</div></div>
 
 <div id="forecast" class="view"><div class="pad"><section class="textPanel"><h2>Forecast automático</h2><div class="scenarioGrid" id="forecastScenarios"></div><h2 style="margin-top:1.4rem">Forecast por venue · <span id="forecastMonthLabel"></span></h2><div class="tableWrap"><table class="wideTable" id="forecastOutlet"></table></div></section></div></div>
 
@@ -992,7 +979,7 @@ try{const t=JSON.parse(localStorage.getItem('fbThemeV44')||'null');if(t&&['kimpt
 window.bootApp=function(INIT,ROLE,PUB){'use strict';
 const STORAGE_KEY='fbDraftV44';
 const IS_EDITOR=ROLE==='edit';
-const IS_OWNER=!!PUB&&['Rodrigo Ramos','Admin'].includes(PUB.name);const OWN_VIEWS=['dash-ytd','ytd','director','briefing','forecast','summary','entry','objectives','config','m2'];
+const IS_OWNER=!!PUB&&['Rodrigo Ramos','Admin'].includes(PUB.name);const OWN_VIEWS=['entry','objectives','config'];
 const months=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const weekdaysShort=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 let DATA=JSON.parse(JSON.stringify(INIT));
@@ -3781,7 +3768,7 @@ function enterPresentationMode(){
 document.addEventListener('fullscreenchange',()=>{
   if(!document.fullscreenElement)document.body.classList.remove('screenshot');
 });
-const RENDERERS={entry:renderEntry,objectives:renderObjectives,config:renderConfig,director:renderDirector,briefing:renderBriefing,forecast:renderForecast,summary:renderSummary};
+const RENDERERS={entry:renderEntry,objectives:renderObjectives,config:renderConfig,forecast:renderForecast,summary:renderSummary};
 function showView(id,btn){
   document.body.classList.remove('mobHome');
   if((!IS_EDITOR&&['entry','objectives','config'].includes(id))||(!IS_OWNER&&OWN_VIEWS.includes(id)))id='dash';
@@ -3796,7 +3783,7 @@ function showView(id,btn){
   document.body.classList.remove('navopen');
   (RENDERERS[id]||(()=>{}))();
 }
-function setDashMode(mode,btn){if(!IS_OWNER&&mode==='ytd'){mode='month';btn=document.querySelector('.tab[data-view="dash"]')}DATA.dashboardMode=mode||'month';showView('dash',btn);renderDashboard();saveState()}
+function setDashMode(mode,btn){DATA.dashboardMode=mode||'month';showView('dash',btn);renderDashboard();saveState()}
 function manualSave(){saveState(false)}
 function setDashboardMonth(v){DATA.config.month=Number(v)||1;DATA.config.monthDays=daysInMonth(DATA.config.month,DATA.config.year);saveState();renderAll()}
 function syncMonthSelectors(){
@@ -3921,7 +3908,7 @@ function mobView(id){mobSheet(false);document.body.classList.remove('mobHome');m
 function mobSheet(on){const s=$('mSheet');if(!s)return;if(on===false){s.classList.remove('show');return}
   const it=(l,f)=>`<button class="mSI" onclick="${f}">${l}</button>`;let h='';
   if(HAS_HOT)h+='<div class="mSG">Previsión y análisis</div>'+it('Ocupación OTB',"mobView('otb')")+it('Meteo y revenue',"mobView('wx')")+it('PickUp',"mobView('pu')")+it('Forecast hotel',"mobView('fz')");
-  if(IS_OWNER)h+='<div class="mSG">Food & Beverage (solo tú)</div>'+it('Acumulado YTD',"mobView('dash-ytd')")+it('Director View',"mobView('director')")+it('Briefing F&B',"mobView('briefing')")+it('Forecast F&B',"mobView('forecast')")+it('Resumen F&B',"mobView('summary')")+it('Entrada diaria',"mobView('entry')")+it('Objetivos',"mobView('objectives')")+it('Configurar',"mobView('config')");
+  h+='<div class="mSG">Food & Beverage</div>'+it('Acumulado YTD',"mobView('dash-ytd')")+it('Forecast F&B',"mobView('forecast')")+it('Resumen F&B',"mobView('summary')");if(IS_OWNER)h+=it('Entrada diaria',"mobView('entry')")+it('Objetivos',"mobView('objectives')")+it('Configurar',"mobView('config')");
   h+='<div class="mSG">Datos</div>';
   if(IS_EDITOR)h+=it('Cargar datos',"mobSheet(false);dataOpen()")+it('Publicar datos',"mobSheet(false);publishData()");
   h+=it('Tarjeta WhatsApp',"mobSheet(false);mobShare()")+it('Cerrar sesión','logout()');

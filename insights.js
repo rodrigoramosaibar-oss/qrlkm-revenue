@@ -126,7 +126,7 @@ function calHtml(){
   const C=calData();if(!C.length)return'';const first=C[0].k,off=(dow(first)+6)%7;
   const cells=[];for(let i=0;i<off;i++)cells.push('<div class="insDay e"></div>');
   C.forEach(d=>{const o=d.occ||0,bg=`rgba(244,194,13,${Math.min(.92,.08+o*1.1).toFixed(2)})`,pax=sum(d.ev.map(e=>e[4]||0)),stE=d.ev.some(e=>e[5]==='D')?'D':d.ev.some(e=>e[5]==='T')?'T':d.ev.length?'P':'';
-    cells.push(`<button class="insDay${ST.cal===d.k?' sel':''}" style="background:${bg}" onclick="__INS.day('${d.k}')"><span class="n">${+d.k.slice(8)}${+d.k.slice(8)===1?' '+MS[+d.k.slice(5,7)-1]:''}</span><b>${d.occ!=null?hn(d.occ*100)+'%':'—'}</b><i>${d.fb!=null?K(d.fb):''}</i>${stE?`<em class="ev ${stE}">${hn(pax)} pax</em>`:''}${d.w?`<u>${wxIco(d.w)}</u>`:''}</button>`)});
+    cells.push(`<button class="insDay${ST.cal===d.k?' sel':''}" style="background:${bg}" onclick="__INS.day('${d.k}')"><span class="n">${+d.k.slice(8)}${+d.k.slice(8)===1?' '+MS[+d.k.slice(5,7)-1]:''}</span><b>${d.occ!=null?hn(Math.min(1,d.occ)*100)+'%':'—'}</b><i>${d.fb!=null?K(d.fb):''}</i>${stE?`<em class="ev ${stE}">${hn(pax)} pax</em>`:''}${d.w?`<u>${wxIco(d.w)}</u>`:''}</button>`)});
   const sel=C.find(d=>d.k===ST.cal);let det='<p class="hnote">Toca un día para ver el detalle.</p>';
   if(sel){const vs=Object.keys(sel.ven).filter(v=>sel.ven[v]>1).sort((a,b)=>sel.ven[b]-sel.ven[a]);
     det=`<div class="insDet"><b>${DW[dow(sel.k)]} ${+sel.k.slice(8)} ${MS[+sel.k.slice(5,7)-1]}</b>
@@ -168,14 +168,14 @@ function venHtml(){
   const ks=Object.keys(V).filter(k=>h[k]&&h[k].so>0&&!h[k].est).sort();if(ks.length<20)return'';
   const last=ks[ks.length-1],A=ks.filter(k=>k>addD(last,-28)),B=ks.filter(k=>k<=addD(last,-28)&&k>addD(last,-56));
   const rat=(set,v,dw)=>{const s=set.filter(k=>dw==null||dow(k)===dw);const r=sum(s.map(k=>h[k].so));return r>0?sum(s.map(k=>v?V[k][v]:sum(vs.map(x=>V[k][x]))))/r:null};
-  const order=[1,2,3,4,5,6,0],cells=[],moves=[];
-  const row=(v,lab)=>{const c=order.map(dw=>{const a=rat(A,v,dw),b=rat(B,v,dw),ch=a!=null&&b>0?a/b-1:null;if(v&&ch!=null&&b>2)moves.push({v,dw,ch,a,b});
+  const order=[1,2,3,4,5,6,0],cells=[],moves=[],rmA=dw=>sum(A.filter(k=>dow(k)===dw).map(k=>h[k].so));
+  const row=(v,lab)=>{const c=order.map(dw=>{const a=rat(A,v,dw),b=rat(B,v,dw),ch=a!=null&&b>0?a/b-1:null;if(v&&ch!=null)moves.push({v,dw,ch,a,b,imp:(a-b)*rmA(dw)});
       const al=ch==null?0:Math.min(.55,Math.abs(ch)*.9),bg=ch==null?'transparent':ch>=0?`rgba(30,138,76,${al})`:`rgba(194,59,79,${al})`;
       return`<td style="background:${bg}" title="${b!=null?'4 semanas antes: '+hn(b,1)+' €':''}">${a!=null?hn(a,a<10?1:0):'—'}<small>${ch!=null?PC(ch,0):''}</small></td>`}).join('');
     const ta=rat(A,v),tb=rat(B,v);return`<tr class="${v?'':'tot'}"><td class="vn">${lab}</td>${c}<td><b>${ta!=null?hn(ta,1):'—'}</b><small>${ta!=null&&tb>0?PC(ta/tb-1,0):''}</small></td></tr>`};
   const body=vs.filter(v=>sum(A.map(k=>V[k][v]))>0).map(v=>row(v,esc(v))).join('')+row(null,'Total sin banquetes');
-  moves.sort((a,b)=>a.ch-b.ch);const dn0=moves[0],up0=moves[moves.length-1];
-  const concl=`${dn0&&dn0.ch<-.1?`Mayor caída: <b>${esc(dn0.v)} los ${DW[dn0.dw].toLowerCase()}</b> (${hn(dn0.b,1)} → ${hn(dn0.a,1)} € por habitación, ${PC(dn0.ch,0)}).`:''} ${up0&&up0.ch>.1?`Mayor subida: <b>${esc(up0.v)} los ${DW[up0.dw].toLowerCase()}</b> (${PC(up0.ch,0)}).`:''}`;
+  moves.sort((a,b)=>a.imp-b.imp);const dn0=moves[0],up0=moves[moves.length-1];
+  const concl=`${dn0&&dn0.imp<-300?`Lo que más resta: <b>${esc(dn0.v)} los ${DW[dn0.dw].toLowerCase()}</b> (${hn(dn0.b,1)} → ${hn(dn0.a,1)} € por habitación: ${SG(dn0.imp)} en 4 semanas).`:''} ${up0&&up0.imp>300?`Lo que más suma: <b>${esc(up0.v)} los ${DW[up0.dw].toLowerCase()}</b> (${hn(up0.b,1)} → ${hn(up0.a,1)} €: ${SG(up0.imp)}).`:''}`;
   return card('insVen','Gasto F&B por habitación ocupada','Qué venue y qué día gana o pierde gasto',`<p class="insConc">${concl||'Sin cambios relevantes frente a las 4 semanas anteriores.'}</p><div class="fscroll"><table class="htab insHeat"><thead><tr><th>Venue</th>${order.map(d=>`<th>${DW[d]}</th>`).join('')}<th>Media</th></tr></thead><tbody>${body}</tbody></table></div><p class="hnote">€ por habitación ocupada, últimas 4 semanas (hasta el ${+last.slice(8)}/${+last.slice(5,7)}); el % y el color comparan con las 4 semanas anteriores. Verde = gasta más, rojo = gasta menos. Cuando se carguen los cubiertos de Micros se separará en clientes × ticket medio.</p>`);
 }
 
@@ -256,5 +256,5 @@ function mount(){
 }
 root.__INS={after(){setTimeout(mount,0)},mount,
   set(grp,k,val){if(grp==='star')ST.star=+val;else ST[grp][k]=val;mount()},
-  day(k){ST.cal=ST.cal===k?null:k;mount()},v:1};
+  day(k){ST.cal=ST.cal===k?null:k;mount()},v:2};
 })(window);

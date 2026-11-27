@@ -1,6 +1,6 @@
 /* FZ3 · motor de forecast v3 · QRLKM Revenue Control
    Mes en curso = real + Σ días que quedan. Cada día = en libros × curva de pickup (medida con el pace guardado),
-   F&B = habitaciones ocupadas × gasto por habitación de cada venue y día de la semana, banquetes solo con grupos o eventos.
+   F&B = habitaciones ocupadas × gasto por habitación de cada venue y día de la semana, banquetes solo con grupos o eventos; clima de la previsión en los venues exteriores.
    Meses +1..+3 = mezcla ponderada por fiabilidad (forecast IHG/Revenue, curva de pickup sobre lo que hay en libros,
    año anterior, budget). Venues cerrados = 0. F&B hotel = suma de venues. */
 (function(root){
@@ -79,6 +79,32 @@ function bqDays(days,Y,M,rem){ // banquetes que quedan: en las fechas de eventos
   days.forEach(x=>{const s=tw>0?rem*(W[x.k]||0)/tw:0;x.ven[v]=s;x.fb+=s});
 }
 
+
+/* ---------- clima: efecto medido en cada venue exterior y previsión de 8 días ---------- */
+const OUT=/escondido|raquet|pool|piscina|terraza|rooftop|beach/i;
+const WXC=['lluvia','frío','calor','viento'];
+function wxTags(w,ta){const t=[];if(!w)return t;if(w.pr>=1)t.push('lluvia');if(ta!=null&&w.tx!=null&&w.tx-ta<=-3)t.push('frío');if(ta!=null&&w.tx!=null&&w.tx-ta>=3)t.push('calor');if((w.ws||0)>=25||(w.wg||0)>=45)t.push('viento');return t}
+function trailTx(k,W,F){const a=[];for(let i=1;i<=14;i++){const q=addD(k,-i),w=W[q]||F[q];if(w&&w.tx!=null)a.push(w.tx)}return a.length?sum(a)/a.length:null}
+function wxEffects(VD){ // real ÷ lo normal (mismo día de la semana, 4 semanas antes, por habitación) según el tiempo que hizo
+  const h=H().days||{},W=((H().wx||{}).days)||{},vs=(X().getVenues?X().getVenues():[]).filter(v=>!isBq(v)),E={};
+  const days=realDays().filter(k=>VD[k]&&W[k]);
+  vs.concat(['_RN']).forEach(v=>{const res={all:[]};WXC.forEach(c=>{res[c]=[]});
+    days.forEach(k=>{const pr=days.filter(q=>q<k&&q>=addD(k,-28)&&dow(q)===dow(k));if(pr.length<3)return;
+      let act,base;if(v==='_RN'){act=h[k].so;base=med(pr.map(q=>h[q].so))}else{act=VD[k][v];base=med(pr.map(q=>VD[q][v]/h[q].so))*h[k].so}
+      if(!(base>50))return;const r=act/base;res.all.push(r);wxTags(W[k],trailTx(k,W,{})).forEach(c=>res[c].push(r))});
+    const m0=med(res.all)||1,o={n:res.all.length,out:v!=='_RN'&&OUT.test(v)};
+    WXC.forEach(c=>{const a=res[c],n=a.length;if(!n){o[c]=null;return}const raw=med(a)/m0-1,sh=raw*n/(n+8);o[c]={n,raw,e:Math.max(-.95,Math.min(.5,sh)),use:o.out&&n>=5&&Math.abs(sh)>=0.08}});E[v]=o});
+  return E;
+}
+function wxFc(){const fc=((H().wx||{}).fc)||[],l=fc[fc.length-1],F={};if(l&&l.rows)l.rows.forEach(r=>{F[r[0]]={tx:r[1],tn:r[2],pr:r[3],cc:r[4],ws:r[5],wd:r[6],wc:r[7],su:r[8]}});return{F,asof:l&&l.asof}}
+function applyWx(days){ // ajusta los venues exteriores de los días con previsión; devuelve el cambio por venue
+  const d0={},W=((H().wx||{}).days)||{},F=C.wf.F,asof=C.wf.asof;if(!asof)return d0;
+  days.forEach(x=>{const w=F[x.k];if(!w)return;const lead=dn(x.k)-dn(asof),wt=lead<=2?1:lead<=5?.7:.4,tags=wxTags(w,trailTx(x.k,W,F));x.wxt=tags;x.wxd=w;if(!tags.length)return;let b=0,a=0;
+    Object.keys(x.ven).forEach(v=>{const e=C.we[v];if(!e)return;let eff=0;tags.forEach(c=>{const q=e[c];if(q&&q.use&&Math.abs(q.e)>Math.abs(eff))eff=q.e});if(!eff)return;const nv=x.ven[v]*(1+eff*wt);d0[v]=(d0[v]||0)+nv-x.ven[v];b+=x.ven[v];a+=nv;x.fb+=nv-x.ven[v];x.ven[v]=nv});
+    if(b>0)x.wxf=a/b});
+  return d0;
+}
+
 /* ---------- mezcla ponderada por fiabilidad ---------- */
 function blend(vals,h,floor,keys){
   let sw=0,s=0;const ws={};(keys||Object.keys(vals)).forEach(e=>{const v=vals[e];if(!(v>0)||!ERR[e])return;const m=ERR[e][Math.min(3,h)];const w=1/(m*m);ws[e]=w;sw+=w;s+=w*v});
@@ -89,7 +115,7 @@ function blend(vals,h,floor,keys){
 /* ---------- ajuste de un mes del motor ---------- */
 function month(r,ctx){
   const x=X(),h=H(),L=ctx.L,Y=r.Y,M=r.M,cur=r.h===0;
-  if(!C||C.t!==L.key+'|'+((h.pu||{}).asof||'')+'|'+Object.keys(h.days||{}).length){const VD=venDaily();C={t:L.key+'|'+((h.pu||{}).asof||'')+'|'+Object.keys(h.days||{}).length,VD,curve:curve(),cap:cap(),sp:spend(VD),bq:(x.getVenues?x.getVenues():[]).find(isBq)}}
+  const ck=L.key+'|'+((h.pu||{}).asof||'')+'|'+Object.keys(h.days||{}).length+'|'+((h.wx||{}).upd||'');if(!C||C.t!==ck){const VD=venDaily();C={t:ck,VD,curve:curve(),cap:cap(),sp:spend(VD),we:wxEffects(VD),wf:wxFc(),bq:(x.getVenues?x.getVenues():[]).find(isBq)}}
   const vs=x.getVenues?x.getVenues():[],old={RN:r.RN,RV:r.RV,fb:r.fb?r.fb.val:null,ven:{}};vs.forEach(v=>{if(r.ven[v])old.ven[v]=r.ven[v].val});
   const mt=cur?x.hAgg(M,L.d):{so:0,rr:0,fb:0};
   const days=monthDays(Y,M,cur?L.d+1:1);fbDays(days,M,Y);
@@ -111,7 +137,7 @@ function month(r,ctx){
   // venues
   const VO={};let fbSum=0;
   // los venues pueden ir por detrás del Flash (Entrada diaria): se prevén desde su último día cargado
-  let vdays=days;if(cur){const vl=C.sp.last,vd=vl&&+vl.slice(0,4)===Y&&+vl.slice(5,7)===M?+vl.slice(8):0;if(vd<L.d){vdays=monthDays(Y,M,vd+1);fbDays(vdays,M,Y)}info.venTo=vd}
+  let vdays=days;if(cur){const vl=C.sp.last,vd=vl&&+vl.slice(0,4)===Y&&+vl.slice(5,7)===M?+vl.slice(8):0;if(vd<L.d){vdays=monthDays(Y,M,vd+1);fbDays(vdays,M,Y)}info.venTo=vd;const dw=applyWx(days);if(vdays!==days)applyWx(vdays);info.wx=sum(Object.values(dw))}
   vs.forEach(v=>{
     const o=r.ven[v]||{vals:{}},vals=Object.assign({},o.vals||{}),bq=v===C.bq;
     const ihg0=Object.prototype.hasOwnProperty.call(vals,'f')&&!(vals.f>0);
@@ -131,6 +157,7 @@ function month(r,ctx){
     if(!r.ven[v]&&!(val>0))return;
     r.ven[v]=Object.assign(o,{val,mape:o.mape||.12,why});if(why.startsWith('cerrado'))info.closed.push(v);VO[v]=val;fbSum+=val;
   });
+  if(!cur){const dw=applyWx(days);Object.keys(dw).forEach(v=>{if(r.ven[v]){r.ven[v].val=Math.max(0,r.ven[v].val+dw[v]);fbSum+=dw[v]}});info.wx=sum(Object.values(dw))}
   // F&B hotel = suma de venues (en el mes en curso: lo real del Flash + lo que queda de cada venue)
   const remV=sum(days.map(d=>d.fb||0));
   const fbv=cur?mt.fb+remV:fbSum;
@@ -157,14 +184,20 @@ function html(run){
     trk=Object.keys(z).sort().filter(d=>z[d][mk]&&z[d][mk].bl).map(d=>{const b=z[d][mk].bl;return`<tr><td class="vn">${d.slice(8)}/${d.slice(5,7)}</td><td>${hn(b.rn)}</td><td>${hn(b.rv)}</td><td>${hn(b.fb)}</td><td>${pc(b.rv/cur.RV-1)}</td></tr>`}).join('')
       +`<tr class="tot"><td class="vn">Hoy</td><td>${hn(cur.RN)}</td><td>${hn(cur.RV)}</td><td>${hn(cur.fb?cur.fb.val:0)}</td><td></td></tr>`+(ihg?`<tr><td class="vn">Forecast IHG</td><td>—</td><td>${hn(ihg.rv)}</td><td>${hn(ihg.fb)}</td><td>${pc(ihg.rv/cur.RV-1)}</td></tr>`:'')}
   const nPace=sum(cv.map(c=>c.n));
+  const ef=q=>q?`${q.use?'<b>':''}${pc(q.raw)}${q.use?'</b>':''} <small>(${q.n})</small>`:'—';
+  const wr=Object.keys(C.we).map(v=>{const e=C.we[v];return`<tr><td class="vn">${v==='_RN'?'Habitaciones':v}</td><td>${v==='_RN'?'—':e.out?'Exterior':'Interior'}</td>${WXC.map(c=>`<td>${ef(e[c])}</td>`).join('')}</tr>`}).join('');
+  const fd=[];R.slice(0,2).forEach(r=>(r.d3||[]).forEach(d=>{if(d.wxd)fd.push(d)}));
+  const fr=fd.slice(0,8).map(d=>`<tr><td class="vn">${['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][d.dow]} ${+d.k.slice(8)}/${+d.k.slice(5,7)}</td><td>${hn(d.wxd.tx,0)}° · ${hn(d.wxd.pr,1)} mm · ${hn(d.wxd.ws,0)} km/h</td><td>${(d.wxt||[]).join(', ')||'normal'}</td><td>${d.wxf?pc(d.wxf-1):'—'}</td></tr>`).join('');
+  const wxb=`<div><b>Clima</b><p class="hnote">Efecto medido: venta real ÷ lo normal de ese venue (mismo día de la semana de las 4 semanas anteriores, por habitación ocupada), según el tiempo que hizo. Solo se aplica a venues exteriores con al menos 5 días medidos y efecto de ±8 % o más (en negrita), y pesa menos cuanto más lejos está el día de la previsión.</p><div class="fscroll"><table class="ftab htab"><thead><tr><th>Venue</th><th></th>${WXC.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${wr}</tbody></table></div>${fr?`<div class="fscroll" style="margin-top:8px"><table class="ftab htab"><thead><tr><th>Día</th><th>Previsión</th><th>Tiempo</th><th>F&amp;B exterior</th></tr></thead><tbody>${fr}</tbody></table></div>`:''}<p class="hnote">Habitaciones: el tiempo no se aplica, porque salen de lo que hay en libros; el efecto se mide igualmente y se activará si las reservas de última hora resultan sensibles al tiempo.</p></div>`;
   return`<div class="hCard" style="margin-top:14px"><div class="hCardT">Cómo aprende el forecast</div>
   <p class="hnote">Mes en curso = real hasta ayer + cada día que queda: <b>en libros × curva de pickup</b> (habitaciones y room revenue) y <b>habitaciones ocupadas × gasto por habitación</b> de cada venue según el día de la semana (F&amp;B). Banquetes solo si hay grupos o eventos. Meses siguientes: mezcla del forecast IHG/Revenue, la curva de pickup sobre lo que hay en libros, año anterior y budget, cada uno pesado por lo que acierta. Venues cerrados = 0 y F&amp;B hotel = suma de venues.</p>
   <div class="hgrid2" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
   <div><b>Curva de pickup</b> <small>(${nPace} medidas desde las subidas del PickUp)</small><div class="fscroll"><table class="ftab htab"><thead><tr><th>Antelación</th><th>Días medidos</th><th>Medido</th><th>Usado</th></tr></thead><tbody>${rows}</tbody></table></div><p class="hnote">Real final ÷ lo que había en libros a esa antelación. Con pocos días medidos pesa el punto de partida; cada PickUp que subes la afina.</p></div>
   <div><b>F&amp;B por habitación ocupada</b><p class="hnote">Últimos 14 días previstos con sus habitaciones reales: error medio <b>${sp.mape!=null?hn(sp.mape*100,1)+'%':'—'}</b>, sesgo ${pc(sp.bias)} (${sp.nbt} días). Corrección aplicada ×${hn(sp.corr,3)}.${C.sp.vs.filter(v=>sp.closed[v]).length?' Cerrados ahora: '+C.sp.vs.filter(v=>sp.closed[v]).join(', ')+'.':''}</p>
   <b>Lo previsto día a día frente a lo real</b>${sc?`<div class="fscroll"><table class="ftab htab"><thead><tr><th>Antelación</th><th>Días</th><th>Error hab.</th><th>Sesgo hab.</th><th>Error F&amp;B</th><th>Sesgo F&amp;B</th></tr></thead><tbody>${sc}</tbody></table></div>`:'<p class="hnote">Empieza a medirse con la primera publicación de hoy: cada publicación guarda la previsión de cada día y se compara cuando llega el Flash de ese día.</p>'}</div>
+  ${wxb}
   ${trk?`<div><b>Cierre del mes en curso, publicación a publicación</b><div class="fscroll"><table class="ftab htab"><thead><tr><th>Foto</th><th>Hab.</th><th>Room rev.</th><th>F&amp;B</th><th>vs hoy</th></tr></thead><tbody>${trk}</tbody></table></div></div>`:''}
   </div></div>`;
 }
-root.FZ3={month,html,score,curve:()=>C&&C.curve,info:()=>C,NAME,ERR,v:1};
+root.FZ3={month,html,score,curve:()=>C&&C.curve,info:()=>C,NAME,ERR,v:2};
 })(typeof window!=='undefined'?window:globalThis);

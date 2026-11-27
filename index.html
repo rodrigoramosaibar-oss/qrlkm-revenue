@@ -932,7 +932,7 @@ body.skin-glass.pal-kimpton.mode-light:not(.mobHome) .main{padding-bottom:104px}
 <div id="rooms" class="view"></div>
 <div id="otb" class="view"></div><div id="rsv" class="view"></div>
 <div id="wx" class="view"></div>
-<div id="pu" class="view"></div><div id="fz" class="view"></div><div id="m2" class="view"></div><div id="dq" class="view"></div><script src="motor2.js?v=3"></script><script src="grc.js?v=1"></script><script src="datos.js?v=2"></script><script src="nuevos.js?v=1"></script>
+<div id="pu" class="view"></div><div id="fz" class="view"></div><div id="m2" class="view"></div><div id="dq" class="view"></div><script src="fz3.js?v=1"></script><script src="motor2.js?v=3"></script><script src="grc.js?v=1"></script><script src="datos.js?v=2"></script><script src="nuevos.js?v=1"></script>
 <div id="entry" class="view" data-edit><div class="entry">
 <section class="formPanel"><h2>Entrada diaria</h2><p class="small" style="margin-bottom:.9rem">Carga el revenue por venue. Puedes sumar importes con +, por ejemplo 120+35,50+18.</p><div class="formGrid" id="dailyForm"></div><div class="totalLine"><span>Total día</span><b id="formTotal">0,00K€</b></div><label style="display:block;margin:.9rem 0 .3rem;font-size:.8rem;color:var(--muted)">Comentario del día (notas de turno, incidencias)</label><textarea id="dayCommentBox" style="width:100%;min-height:5rem" placeholder="Qué pasó hoy: eventos, clima, incidencias…" onchange="saveDayComment(this.value)"></textarea><button class="btn primary wide" onclick="saveDay()">Guardar día y recalcular</button>
 <details class="paste"><summary>Pegar varios días desde Excel</summary><p class="small" style="margin:.4rem 0 .6rem">Una fila por día: <code>Día, Venue1, Venue2, ...</code> separados por tabulador o punto y coma, en el orden de las columnas de la tabla.</p><textarea id="pasteArea" placeholder="1&#9;2649,55&#9;651,13&#9;949,98"></textarea><button class="btn primary wide" style="margin-top:.6rem" onclick="importPaste()">Importar filas pegadas</button><div class="small" id="pasteResult" style="margin-top:.5rem"></div></details>
@@ -2509,7 +2509,7 @@ Object.assign(window,{puOpen,puHandle,puCommit,puSet,puAsofSet,renderPu});
 // Idea: varios estimadores independientes por mes; se mezclan con pesos que salen de lo bien que ha acertado cada uno
 // (backtest con 2025/2026 + cada cierre real que va llegando). Todo lo que calcula se enseña en «Racional».
 const FZ_PRIOR={rn:{p:.30,y:.20,f:.15,u:.25,b:.10},rv:{p:.30,y:.20,f:.15,u:.25,b:.10},fbh:{r:.45,u:.40,b:.15},ven:{r:.50,f:.35,b:.15,g:.40}};
-const FZ_NAME={p:'Ritmo de reservas (pickup vs año anterior)',y:'Tendencia interanual',f:'Forecast de Revenue (PickUp)',u:'Último forecast subido',b:'Budget',r:'Ratio por habitación vendida',g:'Group Pace y calendario de eventos'};
+const FZ_NAME={p:'Ritmo de reservas (pickup vs año anterior)',y:'Tendencia interanual',f:'Forecast de Revenue (PickUp)',u:'Último forecast subido',b:'Budget',r:'Ratio por habitación vendida',g:'Group Pace y calendario de eventos',c:'Real + en libros × curva de pickup',sv:'Suma de venues'};
 const FZ_MET={rn:'Habitaciones vendidas',rv:'Room revenue',fbh:'F&B hotel',ven:'F&B por venue'};
 const FZST={m:null,view:'week'};let FZ_BK=null;
 const fzYear=()=>+hlast().slice(0,4);
@@ -2608,11 +2608,12 @@ function fzRun(){
   FZ_BK=null;
   const A=fzAct(),P=HOT.ref&&HOT.ref.py25,V=fzVen(),L=hLastInfo(),yoy=fzYoy(A,P,L.partial?L.m-1:L.m),ctx={A,P,V,yoy,L};
   const out=[];
-  for(let h=0;h<=3;h++){const t=new Date(L.y,L.m-1+h,1),Y=t.getFullYear(),M=t.getMonth()+1;const r=fzMonth(Y,M,h,ctx);if(r){fzMan(r);out.push(r)}}
+  for(let h=0;h<=3;h++){const t=new Date(L.y,L.m-1+h,1),Y=t.getFullYear(),M=t.getMonth()+1;const r=fzMonth(Y,M,h,ctx);if(r){if(window.FZ3)try{window.FZ3.month(r,ctx)}catch(e){console.warn('fz3',e)}fzMan(r);out.push(r)}}
   return{res:out,A,P,V,yoy,L};
 }
 // ---- días: reparto del mes en días con el OTB de Revenue ----
 function fzDaily(mf,run){
+  if(mf.d3&&mf.d3.length){const cur=mf.h===0,a=cur?hAgg(mf.M,run.L.d):{so:0,rr:0,fb:0},s=f=>mf.d3.reduce((t,x)=>t+(x[f]||0),0),kr=s('rn')>0?Math.max(0,mf.RN-a.so)/s('rn'):1,kv=s('rv')>0&&mf.RV!=null?Math.max(0,mf.RV-a.rr)/s('rv'):1,kf=s('fb')>0&&mf.fb?Math.max(0,mf.fb.val-a.fb)/s('fb'):1;return mf.d3.map(x=>{const o=Object.assign({},x,{rn:x.rn*kr,add:x.rn*kr-x.otb,rv:x.rv*kv,fb:x.fb*kf,ven:{}});Object.keys(x.ven||{}).forEach(v=>{o.ven[v]=x.ven[v]*kf});return o})}
   const {A,L}=run,Y=mf.Y,M=mf.M,dim=hdim(Y,M),PU=HOT.pu&&HOT.pu.years&&HOT.pu.years[Y],cur=mf.h===0,first=cur?L.d+1:1;
   if(first>dim)return[];
   const a=cur?hAgg(M,L.d):{so:0,rr:0,fb:0},days=[];
@@ -2646,7 +2647,7 @@ function fzWeeks(days){
 // ---- aprendizaje: foto de lo pronosticado y puntuación al cerrar cada mes ----
 function fzLearn(run){
   if(!HOT_EDIT)return false;const z=HOT.fzl=HOT.fzl||{snaps:{},err:{},done:{}};let ch=false;const today=wxToday();
-  if(!z.snaps[today]){const q=ob=>{const x={};Object.keys(ob||{}).forEach(e=>{x[e]=Math.round(ob[e])});return x},t={};run.res.forEach(r=>{const key=r.Y+'-'+wxP(r.M),o={h:r.h,rn:q(r.rn.vals),rv:q(r.rv&&r.rv.vals),fb:q(r.fb&&r.fb.vals),ven:{},bl:{rn:Math.round(r.RN),rv:Math.round(r.RV||0),fb:Math.round(r.fb?r.fb.val:0)},bl0:r.bl0?{rn:Math.round(r.bl0.rn),rv:Math.round(r.bl0.rv||0),fb:Math.round(r.bl0.fb)}:null,man:r.man||null};Object.keys(r.ven).forEach(v=>{o.ven[v]=q(r.ven[v].vals)});t[key]=o});
+  if(!z.snaps[today]){const q=ob=>{const x={};Object.keys(ob||{}).forEach(e=>{x[e]=Math.round(ob[e])});return x},t={};run.res.forEach(r=>{const key=r.Y+'-'+wxP(r.M),o={h:r.h,rn:q(r.rn.vals),rv:q(r.rv&&r.rv.vals),fb:q(r.fb&&r.fb.vals),ven:{},bl:{rn:Math.round(r.RN),rv:Math.round(r.RV||0),fb:Math.round(r.fb?r.fb.val:0)},bl0:r.bl0?{rn:Math.round(r.bl0.rn),rv:Math.round(r.bl0.rv||0),fb:Math.round(r.bl0.fb)}:null,man:r.man||null,a:hlast(),dd:r.h<=1&&r.d3?fzDaily(r,run).map(x=>[x.k.slice(5),Math.round(x.rn),Math.round(x.rv),Math.round(x.fb)]):null};Object.keys(r.ven).forEach(v=>{o.ven[v]=q(r.ven[v].vals)});t[key]=o});
     z.snaps[today]=t;const ks=Object.keys(z.snaps).sort();while(ks.length>200)delete z.snaps[ks.shift()];ch=true}
   const L=run.L,A=run.A,V=run.V;
   Object.keys(z.snaps).forEach(day=>{Object.keys(z.snaps[day]).forEach(key=>{
@@ -2727,7 +2728,7 @@ function fzPage(){
   ${hCard('Resumen · rooms y F&B','mezcla de métodos con su rango',t1)}
   ${hCard('F&B por venue','mes completo',t2)}
   <div class="hgrid"><div class="hcol">${hCard('Detalle del mes','<span style="display:inline-flex;gap:.6rem;align-items:center">'+msel+tabs+'</span>',tdet)}</div>
-  <div class="hcol">${hCard('Racional','por qué sale esta cifra',t4)}${hCard('Aprendizaje','cuánto ha acertado cada método',t5)}</div></div>${fzCardsExtra(run)}${gpCards(run)}</div>`;
+  <div class="hcol">${hCard('Racional','por qué sale esta cifra',t4)}${hCard('Aprendizaje','cuánto ha acertado cada método',t5)}</div></div>${fzCardsExtra(run)}${gpCards(run)}${window.FZ3?window.FZ3.html(run):''}</div>`;
 }
 Object.assign(window,{fzSet,renderFz});
 // ======================= v55 · Memoria de predicciones, ajustes manuales y análisis =======================
@@ -3320,6 +3321,7 @@ async function hFaImport(fa){ // guarda el archivo de forecasts en los datos cif
 }
 async function hotelPublish(){
   if(!HOT_EDIT||!HST.dirty)return true;
+  try{if(HOT.fzl&&HOT.fzl.snaps)delete HOT.fzl.snaps[wxToday()];fzLearn2(fzRun())}catch(e){console.warn('fz snap',e)}
   const now=new Date().toISOString(),prevUpd=HOT.updated;HOT.updated=now;
   const out=await Crypto44.encryptData(window.__DEKH,JSON.stringify(HOT));out.updated=now;
   if(ghConfigured()){

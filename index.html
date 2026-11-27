@@ -932,7 +932,7 @@ body.skin-glass.pal-kimpton.mode-light:not(.mobHome) .main{padding-bottom:104px}
 <div id="rooms" class="view"></div>
 <div id="otb" class="view"></div><div id="rsv" class="view"></div>
 <div id="wx" class="view"></div>
-<div id="pu" class="view"></div><div id="fz" class="view"></div><div id="m2" class="view"></div><div id="dq" class="view"></div><script src="fz3.js?v=2"></script><script src="motor2.js?v=3"></script><script src="grc.js?v=1"></script><script src="datos.js?v=2"></script><script src="nuevos.js?v=1"></script>
+<div id="pu" class="view"></div><div id="fz" class="view"></div><div id="m2" class="view"></div><div id="dq" class="view"></div><script src="insights.js?v=2"></script><script src="fz3.js?v=3"></script><script src="motor2.js?v=3"></script><script src="grc.js?v=1"></script><script src="datos.js?v=2"></script><script src="nuevos.js?v=1"></script>
 <div id="entry" class="view" data-edit><div class="entry">
 <section class="formPanel"><h2>Entrada diaria</h2><p class="small" style="margin-bottom:.9rem">Carga el revenue por venue. Puedes sumar importes con +, por ejemplo 120+35,50+18.</p><div class="formGrid" id="dailyForm"></div><div class="totalLine"><span>Total día</span><b id="formTotal">0,00K€</b></div><label style="display:block;margin:.9rem 0 .3rem;font-size:.8rem;color:var(--muted)">Comentario del día (notas de turno, incidencias)</label><textarea id="dayCommentBox" style="width:100%;min-height:5rem" placeholder="Qué pasó hoy: eventos, clima, incidencias…" onchange="saveDayComment(this.value)"></textarea><button class="btn primary wide" onclick="saveDay()">Guardar día y recalcular</button>
 <details class="paste"><summary>Pegar varios días desde Excel</summary><p class="small" style="margin:.4rem 0 .6rem">Una fila por día: <code>Día, Venue1, Venue2, ...</code> separados por tabulador o punto y coma, en el orden de las columnas de la tabla.</p><textarea id="pasteArea" placeholder="1&#9;2649,55&#9;651,13&#9;949,98"></textarea><button class="btn primary wide" style="margin-top:.6rem" onclick="importPaste()">Importar filas pegadas</button><div class="small" id="pasteResult" style="margin-top:.5rem"></div></details>
@@ -3924,7 +3924,7 @@ function mobShare(){const v=MOB.area==='fb'?'dash':MOB.area;document.body.datase
 function mobView(id){mobSheet(false);document.body.classList.remove('mobHome');mobNav('more');const b=document.querySelector('.tab[data-view="'+id+'"]');if(id==='dash-ytd')setDashMode('ytd',b);else showView(id,b)}
 function mobSheet(on){const s=$('mSheet');if(!s)return;if(on===false){s.classList.remove('show');return}
   const it=(l,f)=>`<button class="mSI" onclick="${f}">${l}</button>`;let h='';
-  if(HAS_HOT)h+='<div class="mSG">Previsión y análisis</div>'+it('Reservas',"mobView('rsv')")+it('Ocupación OTB (PDF)',"mobView('otb')")+it('Meteo y revenue',"mobView('wx')")+it('PickUp',"mobView('pu')")+it('Forecast hotel',"mobView('fz')");
+  if(HAS_HOT)h+='<div class="mSG">Previsión y análisis</div>'+it('Reservas',"mobView('rsv')")+it('Meteo y revenue',"mobView('wx')")+it('PickUp',"mobView('pu')")+it('Forecast hotel',"mobView('fz')");
   h+='<div class="mSG">Food & Beverage</div>'+it('Acumulado YTD',"mobView('dash-ytd')")+it('Forecast F&B',"mobView('forecast')")+it('Resumen F&B',"mobView('summary')");if(IS_OWNER)h+=it('Entrada diaria',"mobView('entry')")+it('Objetivos',"mobView('objectives')")+it('Configurar',"mobView('config')");
   h+='<div class="mSG">Datos</div>';
   if(IS_EDITOR)h+=it('Cargar datos',"mobSheet(false);dataOpen()")+it('Publicar datos',"mobSheet(false);publishData()");
@@ -4303,9 +4303,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <script id="navJs">(function(){
 const X=()=>window.__GX||{};
 const G=[
- {p:'rsv',v:[['rsv','Reservas'],['otb','Ocupación OTB (PDF)'],['pu','PickUp']]},
+ {p:'rsv',v:[['rsv','Reservas'],['pu','PickUp']]},
  {p:'fz',v:[['fz','Forecast hotel'],['wx','Meteo y revenue']]},
- {p:'forecast',v:[['forecast','Forecast F&B'],['m2','Motor v2']]},
+ {p:'forecast',v:[['forecast','Forecast F&B']]},
  {p:'dq',v:[['dq','Estado de datos'],['entry','Entrada diaria'],['objectives','Objetivos'],['config','Configurar']]}
 ];
 const grpOf=id=>G.find(g=>g.v.some(x=>x[0]===id));
@@ -4410,6 +4410,7 @@ window.__navAfter=function(){
   }catch(e){console.warn('nav',e)}
   try{strip()}catch(e){console.warn('strip',e)}
   try{if(window.__NV2&&window.__NV2.after)window.__NV2.after()}catch(e){}
+  try{if(window.__INS)window.__INS.after()}catch(e){}
 };
 })();
 </script>

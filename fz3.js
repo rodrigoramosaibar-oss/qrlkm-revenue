@@ -132,6 +132,9 @@ function month(r,ctx){
     if(r.rv){const vv=Object.assign({},r.rv.vals);if(cRv>0)vv.c=cRv;const b2=blend(vv,r.h,fv);if(b2){r.RV=b2.val;r.rv.val=b2.val;r.rv.ws=b2.ws;r.rv.mape=b2.mape;r.rv.vals=vv}}
     // reparto diario coherente con el total del mes
     const fr=cRn>0?r.RN/cRn:1,fv2=cRv>0&&r.RV?r.RV/cRv:1;days.forEach(d=>{d.rn*=fr;d.rv*=fv2;Object.keys(d.ven).forEach(v=>{d.ven[v]*=fr});d.fb*=fr});
+    // ningún día por encima de la capacidad: el exceso se reparte entre los días con hueco
+    const sc=(d,k)=>{d.rn*=k;d.rv*=k;d.fb*=k;Object.keys(d.ven).forEach(v=>{d.ven[v]*=k})};
+    for(let it=0;it<6;it++){let ex=0,room=0;days.forEach(d=>{if(d.rn>C.cap){ex+=d.rn-C.cap;sc(d,C.cap/d.rn)}else room+=d.rn});if(ex<0.5||!room)break;days.forEach(d=>{if(d.rn<C.cap)sc(d,1+ex/room)})}
   }
   r.ADR=r.RV&&r.RN?r.RV/r.RN:r.ADR;
   // venues
@@ -199,5 +202,5 @@ function html(run){
   ${trk?`<div><b>Cierre del mes en curso, publicación a publicación</b><div class="fscroll"><table class="ftab htab"><thead><tr><th>Foto</th><th>Hab.</th><th>Room rev.</th><th>F&amp;B</th><th>vs hoy</th></tr></thead><tbody>${trk}</tbody></table></div></div>`:''}
   </div></div>`;
 }
-root.FZ3={month,html,score,curve:()=>C&&C.curve,info:()=>C,NAME,ERR,v:2};
+root.FZ3={month,html,score,curve:()=>C&&C.curve,info:()=>C,NAME,ERR,v:3};
 })(typeof window!=='undefined'?window:globalThis);
